@@ -1,0 +1,22 @@
+#!/bin/sh
+echo
+sVer=$(date +%Y-%m-%d-qt4)
+sFolder=outputinspector
+sReleaseFolderNoSlash=~/Documents/www/sourceforge/outputinspector
+cd ..
+cp -Rf $sFolder $sFolder-$sVer
+
+cd $sFolder-$sVer
+find . -regex .*~ | xargs rm
+cd ..
+
+tar -czf $sFolder-$sVer.tar.gz $sFolder-$sVer
+rm -Rvf $sFolder-$sVer
+mv $sFolder-$sVer.tar.gz $sReleaseFolderNoSlash/
+echo
+echo "Finished creating archive:"
+echo " $sReleaseFolderNoSlash/$sFolder-$sVer.tar.gz"
+echo
+echo
+cd $sReleaseFolderNoSlash
+cadaver https://frs.sourceforge.net/p/pr/protoarmor/uploads

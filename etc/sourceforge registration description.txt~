@@ -1,0 +1,7 @@
+Output Inspector tells Kate to jump to correct file and location of error in C# compiler output.  It is a standalone helper app for kate which I may eventually make into a Kate plugin.  It is available for immediate upload with code, readme, and install script.
+
+Future plans:
+-lower requirements (Compiles in QtDevelop with qt4)
+-parse exception output from program
+-parse other compiler output (c++?)
+-have the option of Kate plugin

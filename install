@@ -1,0 +1,67 @@
+#!/bin/bash
+echo
+echo
+echo "If you have trouble with included binary, compile in QtDevelop."
+echo
+echo
+echo "Remember to edit /etc/outputinspector.conf specifying kate i.e.:"
+echo "kate=/usr/lib/kde4/bin/kate"
+echo
+echo "You have to run outputinspector from the location of the cs files"
+echo " that you are compiling, and your compiler error output has"
+echo " to be redirected to err.txt, i.e.:"
+echo "     mcs AssemblyInfo.cs MainForm.cs 2>err.txt"
+echo " then run:"
+echo "     outputinspector"
+echo " from the same folder as the source code files and err.txt."
+echo
+cp -f ./bin/outputinspector /usr/bin/
+echo "(you must run this install script with root permissions)"
+echo
+
+sCreate="no"
+sExistNote="changed"
+if [ -f $outputconf ]
+then
+	echo "Do you want to create a new $outputconf[y/N]?"
+else
+	sExistNote="created"
+	echo "Do you want to create a new $outputconf[Y/n]?"
+fi
+
+
+read sCreate
+
+if [ "${sCreate:0:1}" = "y" ]
+then
+outputconf="/etc/outputinspector.conf"
+echo
+echo
+echo "Resetting $outputconf"
+#rm $outputconf
+echo "kate=/usr/bin/kate" > $outputconf
+#echo "kate=/usr/lib/kde4/bin/kate" >> $outputconf
+#echo "xEditorOffset=-1" >> $outputconf
+#echo "yEditorOffset=-1" >> $outputconf
+echo "ExitOnNoErrors=no" >> $outputconf
+echo "FindTODOs=yes" >> $outputconf
+echo "Kate2TabWidth=8" >> $outputconf
+echo "CompilerTabWidth=6" >> $outputconf
+echo "ShowWarningsLast=yes" >> $outputconf
+echo
+echo "(you need root permissions to use this file)"
+echo
+echo "Result (to change, edit $outputconf):"
+chmod a+rw $outputconf
+cat $outputconf
+echo
+echo
+else
+echo "$outputconf not $sExistNote"
+fi
+
+echo
+echo
+
+
+

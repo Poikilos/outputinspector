@@ -1,0 +1,176 @@
+<!DOCTYPE UI><UI version="3.0" stdsetdef="1">
+<class>frmMain</class>
+<widget class="QMainWindow">
+    <property name="name">
+        <cstring>frmMain</cstring>
+    </property>
+    <property name="geometry">
+        <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>505</width>
+            <height>535</height>
+        </rect>
+    </property>
+    <property name="caption">
+        <string>Address Book</string>
+    </property>
+    <grid>
+        <property name="name">
+            <cstring>unnamed</cstring>
+        </property>
+        <property name="margin">
+            <number>0</number>
+        </property>
+        <property name="spacing">
+            <number>6</number>
+        </property>
+        <widget class="QListView" row="0" column="0">
+            <column>
+                <property name="text">
+                    <string>Name</string>
+                </property>
+                <property name="clickable">
+                    <bool>true</bool>
+                </property>
+                <property name="resizeable">
+                    <bool>true</bool>
+                </property>
+            </column>
+            <column>
+                <property name="text">
+                    <string>E-Mail</string>
+                </property>
+                <property name="clickable">
+                    <bool>true</bool>
+                </property>
+                <property name="resizeable">
+                    <bool>true</bool>
+                </property>
+            </column>
+            <column>
+                <property name="text">
+                    <string>Phone Number</string>
+                </property>
+                <property name="clickable">
+                    <bool>true</bool>
+                </property>
+                <property name="resizeable">
+                    <bool>true</bool>
+                </property>
+            </column>
+            <property name="name">
+                <cstring>lvContacts</cstring>
+            </property>
+            <property name="allColumnsShowFocus">
+                <bool>true</bool>
+            </property>
+        </widget>
+    </grid>
+</widget>
+<menubar>
+    <property name="name">
+        <cstring>menubar</cstring>
+    </property>
+    <item text="&amp;File" name="PopupMenu">
+        <action name="aExit"/>
+    </item>
+    <item text="&amp;Contacts" name="PopupMenu_2">
+        <action name="aAddContact"/>
+        <action name="aEditContact"/>
+        <action name="aRemoveContact"/>
+    </item>
+</menubar>
+<toolbars>
+</toolbars>
+<actions>
+    <action>
+        <property name="name">
+            <cstring>aRemoveContact</cstring>
+        </property>
+        <property name="text">
+            <string>Remove Contact</string>
+        </property>
+        <property name="menuText">
+            <string>&amp;Remove Contact</string>
+        </property>
+    </action>
+    <action>
+        <property name="name">
+            <cstring>aEditContact</cstring>
+        </property>
+        <property name="text">
+            <string>Edit Contact</string>
+        </property>
+        <property name="menuText">
+            <string>&amp;Edit Contact</string>
+        </property>
+    </action>
+    <action>
+        <property name="name">
+            <cstring>aAddContact</cstring>
+        </property>
+        <property name="text">
+            <string>Add Contact</string>
+        </property>
+        <property name="menuText">
+            <string>&amp;Add Contact</string>
+        </property>
+    </action>
+    <action>
+        <property name="name">
+            <cstring>aExit</cstring>
+        </property>
+        <property name="text">
+            <string>Exit</string>
+        </property>
+        <property name="menuText">
+            <string>E&amp;xit</string>
+        </property>
+    </action>
+</actions>
+<connections>
+    <connection>
+        <sender>aExit</sender>
+        <signal>activated()</signal>
+        <receiver>frmMain</receiver>
+        <slot>close()</slot>
+    </connection>
+    <connection>
+        <sender>aAddContact</sender>
+        <signal>activated()</signal>
+        <receiver>frmMain</receiver>
+        <slot>addContact()</slot>
+    </connection>
+    <connection>
+        <sender>aEditContact</sender>
+        <signal>activated()</signal>
+        <receiver>frmMain</receiver>
+        <slot>editContact()</slot>
+    </connection>
+    <connection>
+        <sender>aRemoveContact</sender>
+        <signal>activated()</signal>
+        <receiver>frmMain</receiver>
+        <slot>removeContact()</slot>
+    </connection>
+</connections>
+<includes>
+    <include location="local" impldecl="in declaration">contact.h</include>
+    <include location="global" impldecl="in implementation">qmessagebox.h</include>
+    <include location="local" impldecl="in implementation">dlgcontact.h</include>
+    <include location="global" impldecl="in implementation">qlineedit.h</include>
+    <include location="local" impldecl="in implementation">frmmain.ui.h</include>
+</includes>
+<variables>
+    <variable>QValueList&lt;Contact&gt; m_contacts</variable>
+</variables>
+<slots>
+    <slot>addContact()</slot>
+    <slot access="private">editContact()</slot>
+    <slot access="private">init()</slot>
+    <slot access="private">removeContact()</slot>
+</slots>
+<pixmapinproject/>
+<layoutdefaults spacing="6" margin="11"/>
+</UI>

@@ -1,0 +1,22 @@
+-Doesn't add to error count for lines that contain string "previous error"
+-Shows errors first (including lines that contain "previous error") (ShowWarningsLast=yes in conf file)
+-Counts errors, warnings, and ToDos correctly thanks to correct indexOf (QString not const char*) syntax for case-insensitivity
+
+2008-10-qt4
+(for configurable settings, edit the variable name in /etc/outputinspector.conf)
+-Opens source files and looks for TODO comments (FindTODOs=yes in conf file)
+-Allows auto-close if no errors (ExitOnNoErrors=yes in conf file)
+-Shows count of errors and warnings (and TODOs unless specified -- see above) in status bar
+-Fixed problem caused by Kate line & row args starting with zero (configurable: by default xEditorOffset=-1 and xEditorOffset-1)
+-Kate is no longer linked as a child process of outputinspector
+-Compensates for different tab handling between Kate 3, and mcs, and attempts to work around Kate 2 tab traversal glitches related to the column command line parameter (see README)
+Known Issues:
+-At least in Kate 3.0.3, "kate -u" becomes ineffective when Kate 2 is open at the same time, so more copies of Kate 3 open.
+
+2008-09-30-qt4 (Initial release):
+-opens err.txt if in the same folder as outputinspector (see README under "Usage")
+-allows you to double-click on lines of code, then tells kate to navigate to that file and location, as long as the file (or relative path) is in the same folder as outputinspector and err.txt.
+-kate (at least 2.5.9) does not go to exact code location since -l and -c args start at origin (0,0)
+Known issues:
+-kate 2.5.x, Kate 3.0.x, and mcs all have different ways of counting tabs, so column numbering is not exact.
+
