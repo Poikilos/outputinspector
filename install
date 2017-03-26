@@ -1,28 +1,44 @@
-#!/bin/bash
+#!/bin/sh
+BIN_FILE_NAME=outputinspector
+PROJECT_NAME=outputinspector
+CONF_NAME=outputinspector.conf
+uhoh="is in"
 echo
 echo
-echo "If you have trouble with included binary, compile in QtDevelop."
+echo "If you have trouble with downloaded binary, compile in QtDevelop."
 echo
 echo
-echo "Remember to edit /etc/outputinspector.conf specifying kate i.e.:"
-echo "kate=/usr/lib/kde4/bin/kate"
+echo "Remember to edit /etc/$BIN_FILE_NAME.conf specifying kate i.e.:"
+echo "kate=/usr/bin"
+echo "#formerly kate=/usr/lib/kde4/bin/kate"
 echo
-echo "You have to run outputinspector from the location of the cs files"
+echo "You have to run $BIN_FILE_NAME from the location of the cs files"
 echo " that you are compiling, and your compiler error output has"
 echo " to be redirected to err.txt, i.e.:"
 echo "     mcs AssemblyInfo.cs MainForm.cs 2>err.txt"
 echo " then run:"
-echo "     outputinspector"
+echo "     $BIN_FILE_NAME"
 echo " from the same folder as the source code files and err.txt."
 echo
-cp -f ./bin/outputinspector /usr/bin/
+SOURCE_BIN_DIR=../build-$PROJECT_NAME-Desktop-Debug
+BIN_FILE_PATH=$SOURCE_BIN_DIR/$BIN_FILE_NAME
+#cp -f ./bin/$BIN_FILE_NAME /usr/bin/
+BIN_DEST_DIR=/usr/bin
+BIN_DEST_FILE_PATH=$BIN_DEST_DIR/$BIN_FILE_NAME
+
+if [ -f "$BIN_DEST_FILE_PATH" ]; then
+    uhoh="was already in"
+fi
+
+echo
+cp -f $BIN_FILE_PATH $BIN_DEST_DIR/
 echo "(you must run this install script with root permissions)"
 echo
 
 sCreate="no"
 sExistNote="changed"
-if [ -f $outputconf ]
-then
+outputconf="/etc/$CONF_NAME"
+if [ -f $outputconf ]; then
 	echo "Do you want to create a new $outputconf[y/N]?"
 else
 	sExistNote="created"
@@ -32,9 +48,7 @@ fi
 
 read sCreate
 
-if [ "${sCreate:0:1}" = "y" ]
-then
-outputconf="/etc/outputinspector.conf"
+if [ "${sCreate:0:1}" = "y" ]; then
 echo
 echo
 echo "Resetting $outputconf"
@@ -58,6 +72,17 @@ echo
 echo
 else
 echo "$outputconf not $sExistNote"
+fi
+
+if [ ! -f "$BIN_FILE_PATH" ]; then
+    echo "$BIN_FILE_PATH not found!"
+else
+    echo "found $BIN_FILE_PATH"
+fi
+
+if [ -f "$BIN_DEST_FILE_PATH" ]; then
+    echo "$BIN_FILE_NAME $uhoh $BIN_DEST_FILE_PATH"
+    chmod a+x "$BIN_DEST_FILE_PATH"
 fi
 
 echo
