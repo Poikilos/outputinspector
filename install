@@ -27,7 +27,7 @@ BIN_DEST_DIR=/usr/bin
 BIN_DEST_FILE_PATH=$BIN_DEST_DIR/$BIN_FILE_NAME
 
 if [ -f "$BIN_DEST_FILE_PATH" ]; then
-    uhoh="was already in"
+    uhoh="was already installed: "
 fi
 
 echo

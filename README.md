@@ -46,7 +46,9 @@ Then Output Inspector should work when you double-click on the error.
         * changed listMain (in old code) to ui->mainListWidget (renamed in new code from listWidget which was present by default for new widget form)
         * deprecated manually resizing list widget (in favor of sizePolicy Expanding [and default aka MAX_INT maximumSize] for both vertical and horizontal)
     * changes to new code (had MainWindow, centralWIdget, menuBar, mainToolBar and statusBar all by default for new widget form):
-        * nothing renamed, but created a List Widget (Item-Based Widget) named mainListWidget
+        * nothing renamed
+        * created a List Widget (QListWidget, and Item-Based Widget) named mainListWidget
+        * right-click mainListWidget in form designer, go to slot, pasted content of QListWidget::itemDoubleClicked from old qt4
 
 * (2008-10-qt4) fixes and improvements
 (for configurable settings, edit the variable name in /etc/outputinspector.conf)
@@ -74,6 +76,8 @@ Then Output Inspector should work when you double-click on the error.
 * Shows errors first (including lines that contain "previous error") (ShowWarningsLast=yes in conf file)
 * Counts errors, warnings, and ToDos correctly thanks to correct indexOf (QString not const char*) syntax for case-insensitivity
 * application icon doesn't work (see comments in main.cpp for setting via the QApplication object named 'a')
+* allow param for compiler output text file name (instead of only err.txt in current directory)
+* allow param for directory containing source files to which error output refers
 
 ## Notes that only applied to qt4 version
 * Compile First (if desired, but there is a binary built on Ubuntu Hardy):
