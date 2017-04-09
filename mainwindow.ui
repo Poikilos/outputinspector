@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>OutputInspector</string>
   </property>
   <property name="windowIcon">
    <iconset>
@@ -58,7 +58,7 @@
      <x>0</x>
      <y>0</y>
      <width>456</width>
-     <height>27</height>
+     <height>28</height>
     </rect>
    </property>
   </widget>
