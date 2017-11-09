@@ -13,7 +13,7 @@ or
 foo.cs(1,10): reason
 ```
 
-Your source file should not be open in any other program at the time.
+Your source file should not have any unsaved changes in any other program at the time (it is ok if in Kate, but saving first and using your parser on that version is recommended for accuracy).
 Other than jshint output, Output Inspector has only been tested on mcs [mono compiler] output, but may work for any C# compiler and will work for any compiler or other tool using the formatting above.
 The parsing is not fault-tolerant at this time, especially for the first type of formatting.
 Output of jshint is expected unless the second formatting is used by your parser (such as mcs).
@@ -144,6 +144,8 @@ Usually from nodejs-jshint package, jshint is a linting and/or hinting tool for 
     * Known issues with this sf.net release:
         * kate 2.5.x, Kate 3.0.x, and mcs all have different ways of counting tabs, so column numbering is not exact.
 
+## Planned Features
+* paste from an online code quality tool
 
 ## Known Issues
 * should have user-space config generated at startup if doesn't exist (instead of requiring install script to run as root and generate /etc/outputinspector.conf)
