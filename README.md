@@ -66,16 +66,16 @@ Usually from nodejs-jshint package, jshint is a linting and/or hinting tool for 
  * Kate removed jslinter, and some say the kde team got complaints that jslinter was too opinionated
  * jshint and possibly other js linting/hinting tools were created to fill the gap left by jslinter
  * Kate-plugins can still be installed but is either difficult or impossible to get working (only via `python2 -m pip install Kate-plugins` as trying to use python3 such as via pip directly if python3 is the default python, you will only get errors regarding python2 style code that remains in Kate-plugins), but how to install it and where to put the plugins is unclear. For example, creating a symlink as instructed by the project doesn't work even if the extra slash is removed after the closing parenthesis of the kde4-config output. Searching all files in '/' with max file size 2048000bytes using DeepFileFind for the phrase Replicode does not yield any non-binary files or folders that look like plugin folders (only results in mo, docbook, pmapc, pmap, qm, so files, and the config file for DeepFileFind itself where search history is saved). The so file found is:
- /usr/lib/qt/plugins/ktexteditor/katereplicodeplugin.so
- How to install in userspace remains unclear, but perhaps jslinter could be placed there.
- However, one should note that after installing the package via the python2 command above:
- * there are no binaries from the Kate-plugins project, only python and python-related files, in:
-    /usr/lib/python2.7/site-packages/
-      /usr/lib/python2.7/site-packages/kate_plugins/
-      /usr/lib/python2.7/site-packages/Kate_plugins-0.2.3-py2.7.egg-info
-      /usr/lib/python2.7/site-packages/pyjslint-0.3.3-py2.7.egg-info/
-        or any of their subfolders.
-  * a filename search for jslint in /usr/lib/python2.7/site-packages yields no binaries or files other than those in the folders above
+`/usr/lib/qt/plugins/ktexteditor/katereplicodeplugin.so`
+ * How to install in userspace remains unclear, but perhaps jslinter could be placed there.
+ * However, one should note that after installing the package via the python2 command above:
+   * there are no binaries from the Kate-plugins project, only python and python-related files, in:
+     * /usr/lib/python2.7/site-packages/
+       * /usr/lib/python2.7/site-packages/kate_plugins/
+       * /usr/lib/python2.7/site-packages/Kate_plugins-0.2.3-py2.7.egg-info
+       * /usr/lib/python2.7/site-packages/pyjslint-0.3.3-py2.7.egg-info/
+         * or any of their subfolders.
+     * a filename search for jslint in /usr/lib/python2.7/site-packages yields no binaries or files other than those in the folders above
 
     
 ## Configure
@@ -110,11 +110,10 @@ Usually from nodejs-jshint package, jshint is a linting and/or hinting tool for 
   * jshint example output (result of running jshint etc/foo.js if you have jshint installed):
     ```
     etc/foo.js: line 2, col 9, Use '!==' to compare with 'null'.
-    
+
     1 error
     ```
 
-```
 * (2017-03-25) migrated from qt4 to qt5
     * changes to old code (had MainWindow, listMain, menubar, and statusbar):
         * changed menubar to menuBar
