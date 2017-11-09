@@ -93,6 +93,16 @@ MainWindow::MainWindow(QWidget *parent) :
     statusbarNow=ui->statusBar;
 }
 
+bool MainWindow::is_fatal_source_error(QString sErrStreamLine)
+{
+    return (
+                sErrStreamLine.indexOf("Can't open",0,Qt::CaseInsensitive)>-1 //jshint could not find a source file
+                || sErrStreamLine.indexOf("Too many errors",0,Qt::CaseInsensitive)>-1 //jshint already showed the error for this line, but can't display more errors
+                || sErrStreamLine.indexOf("could not be found",0,Qt::CaseInsensitive) //mcs could not find a source file
+                || sErrStreamLine.indexOf("compilation failed",0,Qt::CaseInsensitive) //mcs could not compile the sources
+            );
+}
+
 MainWindow::~MainWindow()
 {
     delete ui;
@@ -101,7 +111,7 @@ void MainWindow::init() {
     readini();
     if (!bForceOffset) CompensateForEditorVersion();
 
-    QFile qfileTest("err.txt");
+    QFile qfileTest(sErrorsListFileName);
     QString sLine;
     QString sError="Error";
     QString sWarning="Warning";
@@ -113,54 +123,69 @@ void MainWindow::init() {
         QTextStream qtextNow( &qfileTest );
         while ( !qtextNow.atEnd() ) {
             sLine=qtextNow.readLine(0); //does trim off newline characters
+            QString sLinePrev=sLine;
+            if (sLine.length()>0) {
+                if (!is_fatal_source_error(sLine)) {
+                    sLine=getConvertedSourceErrorAndWarnElseGetUnmodified(sLine);
+                    bool jshint_enable = false;
+                    if (sLine!=sLinePrev) jshint_enable = true;
 
-            if (!bShowWarningsLast) ui->mainListWidget->addItem(new QListWidgetItem(sLine,ui->mainListWidget));
-            if (sLine.indexOf(sError,0,Qt::CaseInsensitive)>-1) {
-                if (sLine.indexOf("previous error",0,Qt::CaseInsensitive)<0) iErrors++;
-                if (bShowWarningsLast) stringsErrors.append(sLine);
-            }
-            else if (sLine.indexOf(sWarning,0,Qt::CaseInsensitive)>-1) {
-                iWarnings++;
-                if (bShowWarningsLast) stringsWarnings.append(sLine);
-            }
-            if (bFindTODOs && sLine.indexOf("(")>-1) {
-                QString sFileX=sLine.mid(0,sLine.indexOf("("));
-                if (!qslistFiles.contains(sFileX, Qt::CaseSensitive)) {
-                    qslistFiles.append(sFileX);
-                    QFile qfileSource(sFileX);
-                    if (qfileSource.open(QFile::ReadOnly)) {
-                        QTextStream qtextSource( &qfileSource );
-                        int iSourceLineFindToDo=0;
-                        while ( !qtextSource.atEnd() ) {
-                            QString sSourceLine=qtextSource.readLine(0);
-                            iSourceLineFindToDo++;//add first since compiler line numbering starts at 1
-                            int iColTODOFound=sSourceLine.indexOf(sToDo,0,Qt::CaseInsensitive);
-                            if (iColTODOFound>-1) {
-                                QString sNumLine;
-                                sNumLine.setNum(iSourceLineFindToDo,10);
-                                QString sNumPos;
-                                int iCookedStart=iColTODOFound;
-                                for (int iNow=0; iNow<sSourceLine.length(); iNow++) {
-                                    if (sSourceLine.mid(iNow,1)=="\t") iCookedStart+=(iCompilerTabWidth-1);
-                                    else break;
-                                }
-                                iCookedStart+=1;//start numbering at 1 to mimic compiler
-                                iCookedStart+=2;//+2 to start after slashes
-                                sNumPos.setNum(iCookedStart,10);
-                                qslistTODOs.append(sFileX+"("+sNumLine+","+sNumPos+") "+sSourceLine.mid(iColTODOFound+2));
-                                iTODOs++;
-                            }
-                        }//end while not at end of source file
-                        qDebug() << "outputinspector finished reading sourcecode";
-                        qDebug() << "(processed " << iSourceLineFindToDo << " line(s))";
-                        qfileSource.close();
-                    }//end if could open sourcecode
-                    else {
-                        qDebug() << "outputinspector could not open source file";
+
+                    if (!bShowWarningsLast) ui->mainListWidget->addItem(new QListWidgetItem(sLine,ui->mainListWidget));
+
+                    if ((jshint_enable&&sLine.indexOf(".js")>-1) || sLine.indexOf(sError,0,Qt::CaseInsensitive)>-1) {
+                        if (jshint_enable || sLine.indexOf("previous error",0,Qt::CaseInsensitive)<0) iErrors++;
+                        if (bShowWarningsLast) stringsErrors.append(sLine);
                     }
-                }//end if list does not already contain this file
-            }//if bFindTODOs and found filename ender
-        }//end while not at end of err.txt
+                    else if (sLine.indexOf(sWarning,0,Qt::CaseInsensitive)>-1) {
+                        iWarnings++;
+                        if (bShowWarningsLast) stringsWarnings.append(sLine);
+                    }
+                    if (bFindTODOs) {
+                        if (sLine.indexOf("(")>-1) {
+                            QString sFileX=sLine.mid(0,sLine.indexOf("("));
+                            if (!qslistFiles.contains(sFileX, Qt::CaseSensitive)) {
+                                qslistFiles.append(sFileX);
+                                QFile qfileSource(sFileX);
+                                if (qfileSource.open(QFile::ReadOnly)) {
+                                    QTextStream qtextSource( &qfileSource );
+                                    int iSourceLineFindToDo=0;
+                                    while ( !qtextSource.atEnd() ) {
+                                        QString sSourceLine=qtextSource.readLine(0);
+                                        iSourceLineFindToDo++;//add first since compiler line numbering starts at 1
+                                        int iColTODOFound=sSourceLine.indexOf(sToDo,0,Qt::CaseInsensitive);
+                                        if (iColTODOFound>-1) {
+                                            QString sNumLine;
+                                            sNumLine.setNum(iSourceLineFindToDo,10);
+                                            QString sNumPos;
+                                            int iCookedStart=iColTODOFound;
+                                            for (int iNow=0; iNow<sSourceLine.length(); iNow++) {
+                                                if (sSourceLine.mid(iNow,1)=="\t") iCookedStart+=(iCompilerTabWidth-1);
+                                                else break;
+                                            }
+                                            iCookedStart+=1;//start numbering at 1 to mimic compiler
+                                            iCookedStart+=2;//+2 to start after slashes
+                                            sNumPos.setNum(iCookedStart,10);
+                                            qslistTODOs.append(sFileX+"("+sNumLine+","+sNumPos+") "+sSourceLine.mid(iColTODOFound+2));
+                                            iTODOs++;
+                                        }
+                                    }//end while not at end of source file
+                                    qDebug() << "outputinspector finished reading sourcecode";
+                                    qDebug() << "(processed " << iSourceLineFindToDo << " line(s))";
+                                    qfileSource.close();
+                                }//end if could open sourcecode
+                                else {
+                                    qDebug() << "outputinspector could not open source file";
+                                }
+                            }//end if list does not already contain this file
+                        }//end if found filename ender
+                        else qDebug() << "WARNING: filename ender in "+sLine;
+                    }//end if bFindTODOs
+                    else qDebug() <<"WARNING: bFindTODOs off so skipped parsing "+sLine;
+                } // end if not a fatal error
+                else ui->mainListWidget->addItem(new QListWidgetItem(sLine+" <your compiler (or other tool) recorded this fatal or summary error before outputinspector ran>",ui->mainListWidget));
+            }//end if length>0 (after trim using 0 option for readLine)
+        }//end while not at end of file named sErrorsListFileName
         qfileTest.close();
         QString sNumErrors;
         sNumErrors.setNum(iErrors,10);
@@ -184,9 +209,9 @@ void MainWindow::init() {
         QString sMsg="Errors: "+sNumErrors+"; Warnings:"+sNumWarnings;
         if (bFindTODOs) sMsg+="; TODOs:"+sNumTODOs;
         ui->statusBar->showMessage(sMsg,0);
-    }//end if could open err.txt
+    }//end if could open file named sErrorsListFileName
     else {
-        QMessageBox::information(this,"Output Inspector - Help","Output Inspector cannot find the output file to process.  File must be \"./err.txt\"");
+        QMessageBox::information(this,"Output Inspector - Help","Output Inspector cannot find the output file to process.  File must be \"./"+sErrorsListFileName+"\"");
     }
 
 }//end init
@@ -275,7 +300,7 @@ void MainWindow::readini() {
         sKateCmd="/usr/lib/kde4/bin/kate";
     }
     if (!bFoundKateCmd && !bDebug) {
-        QMessageBox::information(this,"Output Inspector - Configuration","/etc/outputinspector.conf has no line reading \"kate=/usr/bin/kate\" so reverting to /usr/lib/kde4/bin/kate");
+        QMessageBox::information(this,"Output Inspector - Configuration","/etc/outputinspector.conf has no line reading \"kate=/usr/bin/kate\" so reverting to /usr/lib/kde4/bin/kate (in order to try to detect path and prevent this error, try running the following terminal command from inside the outputinspector directory: sudo ./install)");
     }
 }//end readini
 void MainWindow::CompensateForEditorVersion() {
@@ -290,13 +315,14 @@ void MainWindow::CompensateForEditorVersion() {
 
     QFile qfileTmp(sFileTemp);
     QString sLine;
-    bool bFoundKateCmd=false;
+    //bool bFoundKateCmd=false;
     if ( qfileTmp.open(QFile::ReadOnly) ) { //| QFile::Translate
+        //detect Kate version using output of Kate command above
         QTextStream qtextNow( &qfileTmp );
         QString sKateOpener="Kate: ";
         while ( !qtextNow.atEnd() ) {
             sLine=qtextNow.readLine(0); //does trim off newline characters
-            if (bDebug) QMessageBox::information(this,"Finding Kate version...",sLine);
+            if (bDebug) QMessageBox::information(this,"Output Inspector - Finding Kate version...",sLine);
             if (sLine.startsWith(sKateOpener,Qt::CaseInsensitive)) {
                 int iDot=sLine.indexOf(".",0);
                 if (iDot>-1) {
@@ -310,7 +336,7 @@ void MainWindow::CompensateForEditorVersion() {
     }//end if could open temp file
     QString sRevisionMajor;
     sRevisionMajor.setNum(iKateRevisionMajor,10);
-    if (bDebug) QMessageBox::information(this,"Kate Version",bFound?("Detected Kate "+sRevisionMajor):"Could not detect Kate version.");
+    if (bDebug) QMessageBox::information(this,"Output Inspector - Kate Version",bFound?("Detected Kate "+sRevisionMajor):"Could not detect Kate version.");
     if (iKateRevisionMajor>2) {
         xEditorOffset=0;
         yEditorOffset=0;
@@ -324,11 +350,64 @@ void MainWindow::CompensateForEditorVersion() {
     }
 }//end CompensateForEditorVersion
 
+// converts jshint output such as:
+// functions.js: line 32, col 26, Use '!==' to compare with 'null'.
+// to mcs format which is a result of:
+// etc/foo.cs(10,24): error CS0103: The name `Path' does not exist in the current context
+QString MainWindow::getConvertedSourceErrorAndWarnElseGetUnmodified(QString sLine)
+{
+    QString jshint_filename_ender = ": line ";
+    int src_jshint_filename_ender_i = sLine.indexOf(jshint_filename_ender);
+    //on purpose for readability:
+    //* string operations are done separately and as soon as required info becomes available
+    //* offset is used even on the second indexOf (even thougth first search term theoretically does not ever contain the second one)
+    if (src_jshint_filename_ender_i>-1) {
+        QString src_filename_s = sLine.mid(0,src_jshint_filename_ender_i);
+        int src_row_i = src_jshint_filename_ender_i + jshint_filename_ender.length();
+        QString src_line_ender = ", col ";
+        int src_line_ender_i = sLine.indexOf(src_line_ender, src_row_i+1);
+        if (src_line_ender_i>-1) {
+            int src_row_len = src_line_ender_i-src_row_i;
+            QString src_line_s = sLine.mid(src_row_i, src_row_len);
+            int src_col_i = src_line_ender_i + src_line_ender.length();
+            QString col_closer = ", ";
+            int src_col_ender_i = sLine.indexOf(col_closer,src_col_i+1);
+            if (src_col_ender_i>-1) {
+                int src_col_len = src_col_ender_i - src_col_i;
+                QString src_col_s = sLine.mid(src_col_i, src_col_len);
+                int src_comment_i = src_col_ender_i + col_closer.length();
+                QString src_comment_s = sLine.mid(src_comment_i);
+                sLine = src_filename_s + "(" + src_line_s + "," + src_col_s + "): " + src_comment_s;
+                if (bDebugBadHint) {
+                    QMessageBox::information(this,"Output Inspector - Parsing Notice","error format was converted to "+sLine);
+                    bDebugBadHint=false;
+                }
+            }
+            else if (bDebugBadHint) {
+                QMessageBox::information(this,"Output Inspector - Parsing Error","jshint parsing error: missing '"+col_closer+"' after column number after '"+src_line_ender+"' after '"+jshint_filename_ender+"'");
+                bDebugBadHint=false;
+            }
+        }
+        else if (bDebugBadHint) {
+            QMessageBox::information(this,"Output Inspector - Parsing Error","jshint parsing error: missing '"+src_line_ender+"' after '"+jshint_filename_ender+"'");
+            bDebugBadHint=false;
+        }
+    }
+    else if (bDebugBadHint) {
+        QMessageBox::information(this,"Output Inspector - Parsing Notice","Detected mcs error format"); //debug only
+        bDebugBadHint=false;
+    }
+    return sLine;
+}//end getConvertedSourceErrorAndWarnElseGetUnmodified
+
+
 void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem *item)
 {
     QString sCwd=QDir::currentPath(); //current() returns a QDir object
-    QString sLine=item->text();
+    QString sLine=item->text();    
     QString sSlash="/";
+    sLine = getConvertedSourceErrorAndWarnElseGetUnmodified(sLine);
+
     int iOpener=sLine.indexOf("(",0,Qt::CaseSensitive);
     int iCloser=sLine.indexOf(")",0,Qt::CaseSensitive);
     int iComma=sLine.indexOf(",",0,Qt::CaseSensitive);
@@ -347,7 +426,7 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem *item)
         if (bCompensateForKateTabDifferences) {
             QFile qfileSource(sFileAbs);
             QString sLine;
-            bool bFoundKateCmd=false;
+            //bool bFoundKateCmd=false;
             int iParseSourceLine=0;
             if ( qfileSource.open(QFile::ReadOnly) ) { //| QFile::Translate
                 QTextStream qtextNow( &qfileSource );
@@ -423,6 +502,9 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem *item)
                 }//while not at end of source file
                 qfileSource.close();
             }//end if can open source file
+            else {
+                QMessageBox::information(this,"Output Inspector - Parsing",sFileAbs+" cannot be accessed. Try running from location of err.txt");
+            }
         }//end if bCompensateForKateTabDifferences
         //QString sArgs="-u "+sFileAbs+" -l "+sLineTarget+" -c "+sColTarget;
         //QProcess qprocNow(sKateCmd+sArgs);

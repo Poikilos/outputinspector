@@ -13,7 +13,10 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
+    bool bDebugBadHint=true;
     explicit MainWindow(QWidget *parent = 0);
+    bool is_fatal_source_error(QString);
+    QString sErrorsListFileName="err.txt";
     ~MainWindow();
 
 private slots:
@@ -24,6 +27,7 @@ private:
     void init();
     void readini();
     void CompensateForEditorVersion();
+    QString getConvertedSourceErrorAndWarnElseGetUnmodified(QString);
 };
 
 #endif // MAINWINDOW_H

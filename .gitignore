@@ -35,4 +35,14 @@ Makefile*
 
 # QtCtreator CMake
 CMakeLists.txt.user
-
+/err.txt
+/err.txt
+echo
+/etc/err.txt
+/etc/foo.exe
+/etc/out.txt
+/out.txt
+/err.txt
+echo
+/err.txt
+echo 

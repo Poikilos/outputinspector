@@ -2,28 +2,58 @@
 BIN_FILE_NAME=outputinspector
 PROJECT_NAME=outputinspector
 CONF_NAME=outputinspector.conf
+BIN_DEST_DIR=/usr/local/bin
+#remember, project-specific info is also at end of this script (post-install notes)
+
+BIN_CONFLICT_DIR=/usr/bin
+if [ -f "$BIN_CONFLICT_DIR/$BIN_FILE_NAME" ]; then
+  echo
+  echo
+  echo "You are installing the source version of $PROJECT_NAME, so you must first remove the packaged version of outputinspector to avoid conflicting file '$BIN_CONFLICT_DIR/$BIN_FILE_NAME'--if you used an earlier version of $PROJECT_NAME, you may have this file from a installer that was not yet up to standards so before running install again as root you will have to run:"
+  echo "su root"
+  echo "rm -f /usr/bin/$BIN_FILE_NAME"
+  echo
+  echo
+  exit 1
+fi
+
 uhoh="is in"
-echo
-echo
-echo "If you have trouble with downloaded binary, compile in QtDevelop."
-echo
-echo
-echo "Remember to edit /etc/$BIN_FILE_NAME.conf specifying kate i.e.:"
-echo "kate=/usr/bin"
-echo "#formerly kate=/usr/lib/kde4/bin/kate"
-echo
-echo "You have to run $BIN_FILE_NAME from the location of the cs files"
-echo " that you are compiling, and your compiler error output has"
-echo " to be redirected to err.txt, i.e.:"
-echo "     mcs AssemblyInfo.cs MainForm.cs 2>err.txt"
-echo " then run:"
-echo "     $BIN_FILE_NAME"
-echo " from the same folder as the source code files and err.txt."
-echo
-SOURCE_BIN_DIR=../build-$PROJECT_NAME-Desktop-Debug
+DEBUG_DIR="../build-$PROJECT_NAME-Desktop-Debug"
+RELEASE_DIR="../build-$PROJECT_NAME-Desktop-Debug"
+SOURCE_BIN_DIR="$RELEASE_DIR"
+if [ ! -f "$RELEASE_DIR/$BIN_FILE_NAME" ]; then
+  SOURCE_BIN_DIR="$DEBUG_DIR"
+  if [ ! -f "$DEBUG_DIR/$BIN_FILE_NAME" ]; then
+    if [ -f "./$BIN_FILE_NAME" ]; then
+      SOURCE_BIN_DIR=.
+      echo "Using only copy of $BIN_FILE_NAME which is in current directory '.'"
+    else
+      echo
+      echo "Could not find '$DEBUG_DIR/$BIN_FILE_NAME' nor '$RELEASE_DIR/$BIN_FILE_NAME' so cannot install"
+      exit 2
+      echo
+      echo
+    fi
+  else
+    echo "WARNING: Found '$DEBUG_DIR/$BIN_FILE_NAME' (but not '$RELEASE_DIR/$BIN_FILE_NAME') so installing debug version"
+  fi
+else
+  echo "Found '$RELEASE_DIR/$BIN_FILE_NAME'"
+fi
+
+#if both exist, do not use one that is -ot (older than) other one
+if [ -f "$RELEASE_DIR/$BIN_FILE_NAME" ]; then
+  if [ -f "$DEBUG_DIR/$BIN_FILE_NAME" ]; then
+    if [ "$DEBUG_DIR/$BIN_FILE_NAME" -ot "$RELEASE_DIR/$BIN_FILE_NAME" ]; then
+      SOURCE_BIN_DIR="$RELEASE_DIR/$BIN_FILE_NAME"
+      echo "Using newer install source in '$RELEASE_DIR'"
+    else
+      echo "WARNING: Using newer install source in '$DEBUG_DIR'"
+    fi
+  fi
+fi
 BIN_FILE_PATH=$SOURCE_BIN_DIR/$BIN_FILE_NAME
-#cp -f ./bin/$BIN_FILE_NAME /usr/bin/
-BIN_DEST_DIR=/usr/bin
+#cp -f ./bin/$BIN_FILE_NAME /usr/local/bin/
 BIN_DEST_FILE_PATH=$BIN_DEST_DIR/$BIN_FILE_NAME
 
 if [ -f "$BIN_DEST_FILE_PATH" ]; then
@@ -31,18 +61,41 @@ if [ -f "$BIN_DEST_FILE_PATH" ]; then
 fi
 
 echo
-cp -f $BIN_FILE_PATH $BIN_DEST_DIR/
-echo "(you must run this install script with root permissions)"
+
+was_there=false
+if [ -f "$BIN_DEST_DIR/$BIN_FILE_NAME" ]; then
+  was_there=true
+  rm -f "$BIN_DEST_DIR/$BIN_FILE_NAME"
+  if [ -f "$BIN_DEST_DIR/$BIN_FILE_NAME" ]; then
+    echo
+    echo
+    echo "ERROR: install could not remove existing '$BIN_DEST_DIR/$BIN_FILE_NAME' since you don't have root permission (you must run this install script with root permissions)."
+    exit 3
+    echo
+    echo
+  fi
+fi
+
+cp -f "$BIN_FILE_PATH" "$BIN_DEST_DIR/"
+if [ ! -f "$BIN_DEST_DIR/$BIN_FILE_NAME" ]; then
+  echo
+  echo
+  #this error is always accurate since program would have exited already if file were already there before the cp command and couldn't be deleted: 
+  echo "ERROR: install could not create '$BIN_DEST_DIR/$BIN_FILE_NAME' since you don't have root permission (you must run this install script with root permissions)."
+  echo
+  echo
+  exit 4
+fi
 echo
 
 sCreate="no"
 sExistNote="changed"
 outputconf="/etc/$CONF_NAME"
 if [ -f $outputconf ]; then
-	echo "Do you want to create a new $outputconf[y/N]?"
+  echo "Do you want to create a new $outputconf[y/N]?"
 else
-	sExistNote="created"
-	echo "Do you want to create a new $outputconf[Y/n]?"
+  sExistNote="created"
+  echo "Do you want to create a new $outputconf[Y/n]?"
 fi
 
 
@@ -75,16 +128,43 @@ echo "$outputconf not $sExistNote"
 fi
 
 if [ ! -f "$BIN_FILE_PATH" ]; then
-    echo "$BIN_FILE_PATH not found!"
+  echo "$BIN_FILE_PATH not found!"
 else
-    echo "found $BIN_FILE_PATH"
+   echo "found $BIN_FILE_PATH"
 fi
 
 if [ -f "$BIN_DEST_FILE_PATH" ]; then
-    echo "$BIN_FILE_NAME $uhoh $BIN_DEST_FILE_PATH"
-    chmod a+x "$BIN_DEST_FILE_PATH"
+  echo "$BIN_FILE_NAME $uhoh $BIN_DEST_FILE_PATH"
+  chmod a+x "$BIN_DEST_FILE_PATH"
 fi
 
+echo
+echo "TROUBLESHOOTING"
+echo "If you have trouble with a release binary, open"
+echo ".pro file in Qt Creator and build $BIN_FILE_NAME"
+echo
+echo "USAGE AFTER SUCCESSFUL INSTALL"
+echo "In terminal, in project folder run something like:"
+echo "     mcs AssemblyInfo.cs MainForm.cs 2>err.txt"
+echo "     $BIN_FILE_NAME"
+echo "     or"
+echo "     jshint foo.js > err.txt"
+echo "     $BIN_FILE_NAME"
+echo " or your compiler or jshint output has"
+echo " to be otherwise redirected to err.txt,"
+echo " then run with that working directory:"
+echo "     $BIN_FILE_NAME"
+echo " from the same folder as the source code files and err.txt."
+echo
+echo "Then $BIN_FILE_NAME will automatically get working directory and"
+echo " send the absolute path to kate upon double-clicking a line"
+echo " from the error log using the outputinspector window."
+echo
+echo "Your err.txt lines must be formatted exactly like one of these"
+echo " examples:"
+echo "   functions.js: line 32, col 26, error"
+echo "     or"
+echo "   foo.cs(10,24): error"
 echo
 echo
 
