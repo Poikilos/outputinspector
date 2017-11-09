@@ -4,7 +4,6 @@ PROJECT_NAME=outputinspector
 CONF_NAME=outputinspector.conf
 BIN_DEST_DIR=/usr/local/bin
 #remember, project-specific info is also at end of this script (post-install notes)
-
 BIN_CONFLICT_DIR=/usr/bin
 if [ -f "$BIN_CONFLICT_DIR/$BIN_FILE_NAME" ]; then
   echo
@@ -19,7 +18,7 @@ fi
 
 uhoh="is in"
 DEBUG_DIR="../build-$PROJECT_NAME-Desktop-Debug"
-RELEASE_DIR="../build-$PROJECT_NAME-Desktop-Debug"
+RELEASE_DIR="../build-$PROJECT_NAME-Desktop-Release"
 SOURCE_BIN_DIR="$RELEASE_DIR"
 if [ ! -f "$RELEASE_DIR/$BIN_FILE_NAME" ]; then
   SOURCE_BIN_DIR="$DEBUG_DIR"
@@ -29,7 +28,7 @@ if [ ! -f "$RELEASE_DIR/$BIN_FILE_NAME" ]; then
       echo "Using only copy of $BIN_FILE_NAME which is in current directory '.'"
     else
       echo
-      echo "Could not find '$DEBUG_DIR/$BIN_FILE_NAME' nor '$RELEASE_DIR/$BIN_FILE_NAME' so cannot install"
+      echo "Could not find '$DEBUG_DIR/$BIN_FILE_NAME' nor '$RELEASE_DIR/$BIN_FILE_NAME' so cannot install--$solution_ps outputinspector.pro must be first built using Qt Creator 5, or the binary must be built by other means and placed in the same folder as this script."
       exit 2
       echo
       echo
@@ -161,10 +160,11 @@ echo " send the absolute path to kate upon double-clicking a line"
 echo " from the error log using the outputinspector window."
 echo
 echo "Your err.txt lines must be formatted exactly like one of these"
-echo " examples:"
-echo "   functions.js: line 32, col 26, error"
+echo " (the purpose of $BIN_FILE_NAME is to tell Kate to go"
+echo " to the file and location of warnings/errors such as):"
+echo "   foo.js: line 32, col 26, reason"
 echo "     or"
-echo "   foo.cs(10,24): error"
+echo "   foo.cs(10,24): reason"
 echo
 echo
 

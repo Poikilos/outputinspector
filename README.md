@@ -1,58 +1,45 @@
 # Output Inspector
-Output Inspector is a helper app for Kate which allows you to double-click to jump to the file and line of code at which your compiler or other tool found issues (tested only on mcs [mono compiler] and but may work for any C# compiler and will work for any compiler or other tool using the following line formatting):
-* filename(0,10): error
-  (where 0 is a line number and 10 is a position on the line)
-* filename.js: line 0, col 10, error
-  (where 0 is a line number and 10 is a position on the line)
+Output Inspector is a parser for parser output that makes errors clickable so you can get back to your software's source code.
 
-Q: What is jshint?
-A: Usually from nodejs-jshint package, jshint is a linter (or hinter?) for javascript (especially node.js) which is considered a successor to jslinter. Here is the timeline:
- * Kate-plugins project (original source of jslinter and other plugins) is no longer maintained since merged with Kate.
- * Kate removed jslinter, and some say it was because jslinter was too opinionated
- * jshint and possibly other js linters/hinters were created to fill the gap left by jslinter
- * Kate-plugins can still be installed (only via `python2 -m pip install Kate-plugins` as trying to use python3 such as via pip directly if python3 is the default python, you will only get errors regarding python2 style code that remains in Kate-plugins), but how to install it and where to put the plugins is unclear. For example, creating a symlink as instructed by the project doesn't work even if the extra slash is removed after the closing parenthesis of the kde4-config output. Searching all files in '/' with max file size 2048000bytes using DeepFileFind for the phrase Replicode does not yield any non-binary files or folders that look like plugin folders (only results in mo, docbook, pmapc, pmap, qm, so files, and the config file for DeepFileFind itself where search history is saved). The so file found is:
- /usr/lib/qt/plugins/ktexteditor/katereplicodeplugin.so
- How to install in userspace remains unclear, but perhaps jslinter could be placed there.
- However, one should note that after installing the package via the python2 command above:
- * there are no binaries from the Kate-plugins project, only python and python-related files, in:
-	/usr/lib/python2.7/site-packages/
-	  /usr/lib/python2.7/site-packages/kate_plugins/
-	  /usr/lib/python2.7/site-packages/Kate_plugins-0.2.3-py2.7.egg-info
-	  /usr/lib/python2.7/site-packages/pyjslint-0.3.3-py2.7.egg-info/
-		or any of their subfolders.
-  * a filename search for jslint in /usr/lib/python2.7/site-packages yields no binaries or files other than those in the folders above
-  
-## Purpose:
-Allows you to double-click lines of your compiler output, telling kate to jump to the appropriate file, line and position in the code.
+
+## Purpose
+The main function of Output Inspector is to tell Kate to go
+to the file and location of warnings/errors such as:
+```
+foo.js: line 1, col 10, reason
+```
+or
+```
+foo.cs(1,10): reason
+```
+
+Your source file should not be open in any other program at the time.
+Other than jshint output, Output Inspector has only been tested on mcs [mono compiler] output, but may work for any C# compiler and will work for any compiler or other tool using the formatting above.
+The parsing is not fault-tolerant at this time, especially for the first type of formatting.
+Output of jshint is expected unless the second formatting is used by your parser (such as mcs).
 
 
 ## Install
 * Right-click the downloaded zip file, then click Extract Here
-```
-cd outputinspector
-```
 * open in QT Creator 5
 * then push the F7 key.  When it is finished compiling, exit.
 * open a terminal
-    * cd to the directory where you extracted outputinspector i.e. cd outputinspector-2008-10-08-qt4
-    ```
-    sudo ./install (OR: su root && ./install)
-    ```
-    * If you have never installed outputinspector before you must run:
-    ```
-    sudo ./install-conf (OR: su root && ./install)
-    ```
-    (this will reset to default settings if outputinspector was already installed)
-
-    
-## Configure
-* Remember to edit /etc/outputinspector.conf specifying the kate binary (i.e. include the line kate=/usr/bin/kate such as for Fedora 25 or kate=/usr/lib/kde4/bin/kate for Ubuntu Hardy or appropriate command).
-* Tab handling:  If you are using mcs 1.2.6 or other compiler that reads tabs as 6 spaces, and you are using Kate 2 with the default tab width of 8 or are using Kate 3, you don't have to change anything.  Otherwise:
-* Set CompilerTabWidth and Kate2TabWidth in /etc/outputinspector.conf -- kate 3.0.0+ is handled automatically, but CompilerTabWidth may have to be set.  If the compiler treats tabs as 1 character, make sure you set CompilerTabWidth=1 -- as of 1.2.6, mcs counts tabs as 6 spaces (outputinspector default).
+    * cd to the directory where you extracted outputinspector such as:
+      ```
+      # if you don't have sudo installed or are not a sudoer,
+      # `su root` before attempting install below
+      cd outputinspector
+      # or
+      cd outputinspector-master
+      ```
+      ```
+      sudo ./install
+      # or if you don't have sudo installed and are root, just `./install`
+      ```
 
 
 ## Use
-* make sure kate is installed
+* make sure kate is installed (run install script again if wasn't when install script ran--it recreates the config based on detecting kate's location if you enter y for yes)
 * For cs files, you have to run outputinspector from the location of the cs files you are compiling, and your compiler error output has to be redirected to err.txt.
   example:
   ```
@@ -71,6 +58,30 @@ cd outputinspector
   If these instructions have been followed, and your compiler errors are in err.txt in the same folder, specified with lines starting with:
   
   Then Output Inspector should work when you double-click on the error.
+
+
+## Overview of jshint
+Usually from nodejs-jshint package, jshint is a linting and/or hinting tool for javascript (especially node.js) which is considered a successor to jslinter. Here is the timeline:
+ * Kate-plugins project (original source of jslinter and other plugins) is no longer maintained since merged with Kate.
+ * Kate removed jslinter, and some say the kde team got complaints that jslinter was too opinionated
+ * jshint and possibly other js linting/hinting tools were created to fill the gap left by jslinter
+ * Kate-plugins can still be installed but is either difficult or impossible to get working (only via `python2 -m pip install Kate-plugins` as trying to use python3 such as via pip directly if python3 is the default python, you will only get errors regarding python2 style code that remains in Kate-plugins), but how to install it and where to put the plugins is unclear. For example, creating a symlink as instructed by the project doesn't work even if the extra slash is removed after the closing parenthesis of the kde4-config output. Searching all files in '/' with max file size 2048000bytes using DeepFileFind for the phrase Replicode does not yield any non-binary files or folders that look like plugin folders (only results in mo, docbook, pmapc, pmap, qm, so files, and the config file for DeepFileFind itself where search history is saved). The so file found is:
+ /usr/lib/qt/plugins/ktexteditor/katereplicodeplugin.so
+ How to install in userspace remains unclear, but perhaps jslinter could be placed there.
+ However, one should note that after installing the package via the python2 command above:
+ * there are no binaries from the Kate-plugins project, only python and python-related files, in:
+    /usr/lib/python2.7/site-packages/
+      /usr/lib/python2.7/site-packages/kate_plugins/
+      /usr/lib/python2.7/site-packages/Kate_plugins-0.2.3-py2.7.egg-info
+      /usr/lib/python2.7/site-packages/pyjslint-0.3.3-py2.7.egg-info/
+        or any of their subfolders.
+  * a filename search for jslint in /usr/lib/python2.7/site-packages yields no binaries or files other than those in the folders above
+
+    
+## Configure
+* Remember to edit /etc/outputinspector.conf specifying the kate binary (i.e. include the line kate=/usr/bin/kate such as for Fedora 25 or kate=/usr/lib/kde4/bin/kate for Ubuntu Hardy or appropriate command).
+* Tab handling:  If you are using mcs 1.2.6 or other compiler that reads tabs as 6 spaces, and you are using Kate 2 with the default tab width of 8 or are using Kate 3, you don't have to change anything.  Otherwise:
+* Set CompilerTabWidth and Kate2TabWidth in /etc/outputinspector.conf -- kate 3.0.0+ is handled automatically, but CompilerTabWidth may have to be set.  If the compiler treats tabs as 1 character, make sure you set CompilerTabWidth=1 -- as of 1.2.6, mcs counts tabs as 6 spaces (outputinspector default).
 
   
 ## Changes
@@ -101,7 +112,7 @@ cd outputinspector
     etc/foo.js: line 2, col 9, Use '!==' to compare with 'null'.
     
     1 error
-	```
+    ```
 
 ```
 * (2017-03-25) migrated from qt4 to qt5
@@ -133,9 +144,9 @@ cd outputinspector
     * Known issues with this sf.net release:
         * kate 2.5.x, Kate 3.0.x, and mcs all have different ways of counting tabs, so column numbering is not exact.
 
-        
+
 ## Known Issues
-* should have user-level config generated at startup if doesn't exist (instead of requiring install script to run as root and generate /etc/outputinspector.conf)
+* should have user-space config generated at startup if doesn't exist (instead of requiring install script to run as root and generate /etc/outputinspector.conf)
 * Move OutputInspectorSleepThread to new h and cpp
 * Move declarations from cpp to h file (keep initialization in cpp file); possibly move to class
 * Encapsulate settings functions; possibly use an existing class from qt or other source
@@ -154,4 +165,4 @@ cd outputinspector
 qdevelop outputinspector.pro
 ```
 * Install:
-	(Requires: qt4 libqt4 libqt4-gui libqt4-core)
+    (Requires: qt4 libqt4 libqt4-gui libqt4-core)
