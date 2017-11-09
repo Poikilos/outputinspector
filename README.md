@@ -159,11 +159,9 @@ Usually from nodejs-jshint package, jshint is a linting and/or hinting tool for 
 * allow param for directory containing source files to which error output refers
 
 
-## Notes that only applied to qt4 version
-* Compile First (if desired, but there is a binary built on Ubuntu Hardy):
-* Build using qdevelop  (formerly required: qt4 libqt4-dev qdevelop):
-```
-qdevelop outputinspector.pro
-```
-* Install:
-    (Requires: qt4 libqt4 libqt4-gui libqt4-core)
+~~## Notes that only applied to qt4 version~~
+~~* Compile First (if desired, but there is a binary built on Ubuntu Hardy):~~
+~~* Build using qdevelop  (formerly required: qt4 libqt4-dev qdevelop):~~
+~~`qdevelop outputinspector.pro`~~
+~~* Install:~~
+    ~~Requires: qt4 libqt4 libqt4-gui libqt4-core~~
