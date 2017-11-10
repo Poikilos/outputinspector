@@ -105,7 +105,13 @@ echo
 echo
 echo "Resetting $outputconf"
 #rm $outputconf
-echo "kate=/usr/bin/kate" > $outputconf
+kate_path=$(command -v kate)
+if [ -f "$kate_path" ]; then
+  echo "kate=$kate_path" > $outputconf
+else
+  echo "WARNING: path to kate could not be found. Kate must be installed in order for this program to work."
+  echo "kate=/usr/bin/kate" > $outputconf
+fi
 #echo "kate=/usr/lib/kde4/bin/kate" >> $outputconf
 #echo "xEditorOffset=-1" >> $outputconf
 #echo "yEditorOffset=-1" >> $outputconf
@@ -165,8 +171,11 @@ echo " to the file and location of warnings/errors such as):"
 echo "   foo.js: line 32, col 26, reason"
 echo "     or"
 echo "   foo.cs(10,24): reason"
-echo
-echo
-
+if [ ! -f "$kate_path" ]; then
+  echo "WARNING: path to kate could not be found--install it or set the kate variable in $outputconf to full path of another binary which accepts -l <line> and -c <column> parameters."
+else
+  echo
+  echo
+fi
 
 
