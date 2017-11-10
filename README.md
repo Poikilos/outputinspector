@@ -113,7 +113,6 @@ Usually from nodejs-jshint package, jshint is a linting and/or hinting tool for 
 
     1 error
     ```
-* (2017-03-25) moved from sourceforge to GitHub
 
 * (2017-03-25) migrated from qt4 to qt5
     * changes to old code (had MainWindow, listMain, menubar, and statusbar):
@@ -125,6 +124,8 @@ Usually from nodejs-jshint package, jshint is a linting and/or hinting tool for 
         * nothing renamed
         * created a List Widget (QListWidget, and Item-Based Widget) named mainListWidget
         * right-click mainListWidget in form designer, go to slot, pasted content of QListWidget::itemDoubleClicked from old qt4
+
+* (2017-03-25) moved from sourceforge to GitHub
 
 * (2008-10-qt4) fixes and improvements
 (for configurable settings, edit the variable name in /etc/outputinspector.conf)
