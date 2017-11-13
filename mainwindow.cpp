@@ -98,8 +98,8 @@ bool MainWindow::is_fatal_source_error(QString sErrStreamLine)
     return (
                 sErrStreamLine.indexOf("Can't open",0,Qt::CaseInsensitive)>-1 //jshint could not find a source file
                 || sErrStreamLine.indexOf("Too many errors",0,Qt::CaseInsensitive)>-1 //jshint already showed the error for this line, but can't display more errors
-                || sErrStreamLine.indexOf("could not be found",0,Qt::CaseInsensitive) //mcs could not find a source file
-                || sErrStreamLine.indexOf("compilation failed",0,Qt::CaseInsensitive) //mcs could not compile the sources
+                || sErrStreamLine.indexOf("could not be found",0,Qt::CaseInsensitive)>-1 //mcs could not find a source file
+                || sErrStreamLine.indexOf("compilation failed",0,Qt::CaseInsensitive)>-1 //mcs could not compile the sources
             );
 }
 
@@ -170,8 +170,8 @@ void MainWindow::init() {
                                             iTODOs++;
                                         }
                                     }//end while not at end of source file
-                                    qDebug() << "outputinspector finished reading sourcecode";
-                                    qDebug() << "(processed " << iSourceLineFindToDo << " line(s))";
+                                    if (bDebug) qDebug() << "outputinspector finished reading sourcecode";
+                                    if (bDebug) qDebug() << "(processed " << iSourceLineFindToDo << " line(s))";
                                     qfileSource.close();
                                 }//end if could open sourcecode
                                 else {
@@ -179,7 +179,7 @@ void MainWindow::init() {
                                 }
                             }//end if list does not already contain this file
                         }//end if found filename ender
-                        else qDebug() << "WARNING: filename ender in "+sLine;
+                        else if (bDebug) qDebug() << "WARNING: filename ender in "+sLine;
                     }//end if bFindTODOs
                     else qDebug() <<"WARNING: bFindTODOs off so skipped parsing "+sLine;
                 } // end if not a fatal error
@@ -378,10 +378,10 @@ QString MainWindow::getConvertedSourceErrorAndWarnElseGetUnmodified(QString sLin
                 int src_comment_i = src_col_ender_i + col_closer.length();
                 QString src_comment_s = sLine.mid(src_comment_i);
                 sLine = src_filename_s + "(" + src_line_s + "," + src_col_s + "): " + src_comment_s;
-                if (bDebugBadHint) {
-                    QMessageBox::information(this,"Output Inspector - Parsing Notice","error format was converted to "+sLine);
-                    bDebugBadHint=false;
-                }
+                //if (bDebugBadHint) {
+                //    QMessageBox::information(this,"Output Inspector - Parsing Notice","error format was converted to "+sLine);
+                //    bDebugBadHint=false;
+                //}
             }
             else if (bDebugBadHint) {
                 QMessageBox::information(this,"Output Inspector - Parsing Error","jshint parsing error: missing '"+col_closer+"' after column number after '"+src_line_ender+"' after '"+jshint_filename_ender+"'");
@@ -394,8 +394,10 @@ QString MainWindow::getConvertedSourceErrorAndWarnElseGetUnmodified(QString sLin
         }
     }
     else if (bDebugBadHint) {
-        QMessageBox::information(this,"Output Inspector - Parsing Notice","Detected mcs error format"); //debug only
-        bDebugBadHint=false;
+        if (bDebug) {
+            QMessageBox::information(this,"Output Inspector - Parsing Notice","Detected mcs error format"); //debug only
+            bDebugBadHint=false;
+        }
     }
     return sLine;
 }//end getConvertedSourceErrorAndWarnElseGetUnmodified

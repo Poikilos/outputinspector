@@ -44,7 +44,7 @@ fi
 if [ -f "$RELEASE_DIR/$BIN_FILE_NAME" ]; then
   if [ -f "$DEBUG_DIR/$BIN_FILE_NAME" ]; then
     if [ "$DEBUG_DIR/$BIN_FILE_NAME" -ot "$RELEASE_DIR/$BIN_FILE_NAME" ]; then
-      SOURCE_BIN_DIR="$RELEASE_DIR/$BIN_FILE_NAME"
+      SOURCE_BIN_DIR="$RELEASE_DIR"
       echo "Using newer install source in '$RELEASE_DIR'"
     else
       echo "WARNING: Using newer install source in '$DEBUG_DIR'"
@@ -165,7 +165,7 @@ echo "Then $BIN_FILE_NAME will automatically get working directory and"
 echo " send the absolute path to kate upon double-clicking a line"
 echo " from the error log using the outputinspector window."
 echo
-echo "Your err.txt lines must be formatted exactly like one of these"
+echo "DEVELOPMENT: err.txt must be formatted exactly like one of these"
 echo " (the purpose of $BIN_FILE_NAME is to tell Kate to go"
 echo " to the file and location of warnings/errors such as):"
 echo "   foo.js: line 32, col 26, reason"
@@ -174,7 +174,8 @@ echo "   foo.cs(10,24): reason"
 if [ ! -f "$kate_path" ]; then
   echo "WARNING: path to kate could not be found--install it or set the kate variable in $outputconf to full path of another binary which accepts -l <line> and -c <column> parameters."
 else
-  echo
+  #NOTE: this is accurate since would have exited already if couldn't edit
+  echo "Sucessfully installed."
   echo
 fi
 
