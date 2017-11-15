@@ -109,7 +109,8 @@ kate_path=$(command -v kate)
 if [ -f "$kate_path" ]; then
   echo "kate=$kate_path" > $outputconf
 else
-  echo "WARNING: path to kate could not be found. Kate must be installed in order for this program to work."
+  end_error="WARNING: path to kate could not be found. Kate must be installed in order for this program to work."
+  echo $end_error
   echo "kate=/usr/bin/kate" > $outputconf
 fi
 #echo "kate=/usr/lib/kde4/bin/kate" >> $outputconf
@@ -171,8 +172,9 @@ echo " to the file and location of warnings/errors such as):"
 echo "   foo.js: line 32, col 26, reason"
 echo "     or"
 echo "   foo.cs(10,24): reason"
-if [ ! -f "$kate_path" ]; then
-  echo "WARNING: path to kate could not be found--install it or set the kate variable in $outputconf to full path of another binary which accepts -l <line> and -c <column> parameters."
+if [ ! -z "$end_error" ]; then
+  #echo "WARNING: path to kate could not be found--install it or set the kate variable in $outputconf to full path of another binary which accepts -l <line> and -c <column> parameters."
+  echo "$end_error"
 else
   #NOTE: this is accurate since would have exited already if couldn't edit
   echo "Sucessfully installed."
