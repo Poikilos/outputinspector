@@ -8,7 +8,7 @@ BIN_CONFLICT_DIR=/usr/bin
 if [ -f "$BIN_CONFLICT_DIR/$BIN_FILE_NAME" ]; then
   echo
   echo
-  echo "You are installing the source version of $PROJECT_NAME, so you must first remove the packaged version of outputinspector to avoid conflicting file '$BIN_CONFLICT_DIR/$BIN_FILE_NAME'--if you used an earlier version of $PROJECT_NAME, you may have this file from a installer that was not yet up to standards so before running install again as root you will have to run:"
+  echo "You are installing the source version of $PROJECT_NAME, so you must first remove the packaged version of $PROJECT_NAME to avoid conflicting file '$BIN_CONFLICT_DIR/$BIN_FILE_NAME'--if you used an earlier version of $PROJECT_NAME, you may have this file from a installer that was not yet up to standards so before running install again as root you will have to run:"
   echo "su root"
   echo "rm -f /usr/bin/$BIN_FILE_NAME"
   echo
