@@ -29,7 +29,7 @@ QStringList stringsName;
 QStringList stringsVal;
 QStringList stringsErrors;
 QStringList stringsWarnings;
-bool bShowWarningsLast=true;
+bool bShowWarningsLast=false;
 int iKateRevisionMajor=0;//i.e. 2.5.9 is 2, kde3 version; and 3.0.3 is 3, the kde4 version
 bool bForceOffset=false;
 bool bCompensateForKateTabDifferences=true;
@@ -115,7 +115,7 @@ void MainWindow::init() {
     QString sLine;
     QString sError="Error";
     QString sWarning="Warning";
-    QString sToDo="//TODO:";
+    QString sToDo="//TODO";
     //ui->mainListWidget is a QListWidget
     //setCentralWidget(ui->mainListWidget);
     //ui->mainListWidget->setSizePolicy(QSizePolicy::)
@@ -133,6 +133,9 @@ void MainWindow::init() {
 
                     if (!bShowWarningsLast) ui->mainListWidget->addItem(new QListWidgetItem(sLine,ui->mainListWidget));
 
+                    if (sLine.indexOf(".py")>-1) sToDo = "#TODO";
+                    else sToDo = "//TODO";
+
                     if ((jshint_enable&&sLine.indexOf(".js")>-1) || sLine.indexOf(sError,0,Qt::CaseInsensitive)>-1) {
                         if (jshint_enable || sLine.indexOf("previous error",0,Qt::CaseInsensitive)<0) iErrors++;
                         if (bShowWarningsLast) stringsErrors.append(sLine);
@@ -141,12 +144,21 @@ void MainWindow::init() {
                         iWarnings++;
                         if (bShowWarningsLast) stringsWarnings.append(sLine);
                     }
+                    else {
+                        iWarnings++;
+                        if (bShowWarningsLast) stringsWarnings.append(sLine);
+                    }
+
                     if (bFindTODOs) {
                         if (sLine.indexOf("(")>-1) {
                             QString sFileX=sLine.mid(0,sLine.indexOf("("));
                             if (!qslistFiles.contains(sFileX, Qt::CaseSensitive)) {
                                 qslistFiles.append(sFileX);
                                 QFile qfileSource(sFileX);
+                                if (bDebug) qDebug() << "outputinspector trying to open '"+sFileX+"'...";
+                                //if (!qfileSource.open(QFile::ReadOnly)) {
+
+                                //}
                                 if (qfileSource.open(QFile::ReadOnly)) {
                                     QTextStream qtextSource( &qfileSource );
                                     int iSourceLineFindToDo=0;
@@ -175,13 +187,13 @@ void MainWindow::init() {
                                     qfileSource.close();
                                 }//end if could open sourcecode
                                 else {
-                                    qDebug() << "outputinspector could not open source file";
+                                    qDebug() << "outputinspector could not open source file \"" << sFileX << "\"";
                                 }
                             }//end if list does not already contain this file
                         }//end if found filename ender
                         else if (bDebug) qDebug() << "WARNING: filename ender in "+sLine;
                     }//end if bFindTODOs
-                    else qDebug() <<"WARNING: bFindTODOs off so skipped parsing "+sLine;
+                    else qDebug() << "WARNING: bFindTODOs off so skipped parsing "+sLine;
                 } // end if not a fatal error
                 else ui->mainListWidget->addItem(new QListWidgetItem(sLine+" <your compiler (or other tool) recorded this fatal or summary error before outputinspector ran>",ui->mainListWidget));
             }//end if length>0 (after trim using 0 option for readLine)
@@ -211,7 +223,8 @@ void MainWindow::init() {
         ui->statusBar->showMessage(sMsg,0);
     }//end if could open file named sErrorsListFileName
     else {
-        QMessageBox::information(this,"Output Inspector - Help","Output Inspector cannot find the output file to process.  File must be \"./"+sErrorsListFileName+"\"");
+        QString my_path = QCoreApplication::applicationFilePath();
+        QMessageBox::information(this,"Output Inspector - Help",my_path+": Output Inspector cannot find the output file to process.  File must be \"./"+sErrorsListFileName+"\"");
     }
 
 }//end init
