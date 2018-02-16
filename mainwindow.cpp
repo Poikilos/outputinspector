@@ -532,11 +532,13 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem *item)
         //qslistArgs.append("\""+sFileAbs+"\"");
         qslistArgs.append(sFileAbs);
         sDebug+=" "+sFileAbs;
-        qslistArgs.append("-l "+sLineTarget);
-        sDebug+=" -l "+sLineTarget;
+        qslistArgs.append("--line");  // split into separate arg, otherwise geany complains it doesn't understand the arg "--line 1"
+        qslistArgs.append(sLineTarget);
+        sDebug+=" --line "+sLineTarget;
         //qslistArgs.append(sLineTarget);
-        qslistArgs.append("-c "+sColTarget);
-        sDebug+=" -c "+sColTarget;
+        qslistArgs.append("--column");//NOTE: -c is column in kate, but alternate config dir in geany, so use --column
+        qslistArgs.append(sColTarget);//NOTE: -c is column in kate, but alternate config dir in geany, so use --column
+        sDebug+=" --column "+sColTarget;
         //qslistArgs.append(sColTarget);
         QProcess::startDetached(sKateCmd,qslistArgs);
         if (!QFile::exists(sKateCmd)) {

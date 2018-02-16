@@ -45,4 +45,8 @@ echo
 /err.txt
 echo
 /err.txt
-echo 
+echo
+/10/geany.conf
+/10/filedefs/filetypes.README
+/10/keybindings.conf
+/10/templates/templates.README
