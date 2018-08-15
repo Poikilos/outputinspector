@@ -16,15 +16,15 @@ public:
     bool bDebugBadHint=true;
     explicit MainWindow(QWidget *parent = 0);
     bool is_fatal_source_error(QString);
-    QString sErrorsListFileName="err.txt";
+    //QString sErrorsListFileName="err.txt";
     ~MainWindow();
+    void init(QString);
 
 private slots:
     void on_mainListWidget_itemDoubleClicked(QListWidgetItem *item);
 
 private:
     Ui::MainWindow *ui;
-    void init();
     void readini();
     void CompensateForEditorVersion();
     QString getConvertedSourceErrorAndWarnElseGetUnmodified(QString);

@@ -29,6 +29,9 @@ build_dir_rel="../build-$package_name-Desktop-$build_config"
 if [ ! -d "$build_dir_rel" ]; then
   mkdir "$build_dir_rel"
 fi
+if [ -f "$build_dir_rel/$package_name" ]; then
+  mv -f "$build_dir_rel/$package_name" "$build_dir_rel/$package_name.old"
+fi
 make
 #doesn't work for some reason:
 #cd $build_dir_rel
@@ -43,7 +46,9 @@ if [ -f "$build_artifact" ]; then
 fi
 if [ -f "$build_dir_rel/$package_name" ]; then
   echo "successfully built $build_dir_rel/$package_name"
-  echo "run install to install $package_name"
+  echo "You can now run:"
+  echo "  sudo ./install"
+  echo "  #to install $package_name"
 else
   echo "failed to build $build_dir_rel/$package_name"
 fi

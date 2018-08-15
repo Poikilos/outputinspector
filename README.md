@@ -2,9 +2,9 @@
 Output Inspector is a parser for parser output that makes errors clickable so you can get back to your software's source code.
 
 
-## Purpose
-The main function of Output Inspector is to tell Kate to go
-to the file and location of warnings/errors such as:
+## Usage
+The main function of Output Inspector is to tell Kate (or Geany) to go
+to the file and location of warnings/errors (by clicking them) such as:
 ```
 foo.js: line 1, col 10, reason
 ```
@@ -13,10 +13,14 @@ or
 foo.cs(1,10): reason
 ```
 
-Your source file should not have any unsaved changes in any other program at the time (it is ok if in Kate, but saving first and using your parser on that version is recommended for accuracy).
+* `outputinspector err.txt &` can be added to the end of your linting or build script, allowing you to immediately go to the correct source file and line containing the error!
+  Your compiler or linter output can be redirected to any file, then the file can be specified as the first parameter of outputinspector (default is err.txt). You can also run outputinspector manually if you have a file containing linter/compiler output.
+* Your source file should not have any unsaved changes in any other program at the time (it is ok if in Kate, but saving first and using your parser on that version is recommended for accuracy).
 Other than jshint output, Output Inspector has only been tested on mcs [mono compiler] output, but may work for any C# compiler and will work for any compiler or other tool using the formatting above.
 The parsing is not fault-tolerant at this time, especially for the first type of formatting.
 Output of jshint is expected unless the second formatting is used by your parser (such as mcs).
+* OPTIONAL: To use Geany, set: `kate=/usr/bin/geany` in '/etc/outputinspector.conf'" (outputinspector knows how to tell Geany which line and column for jumping to line by using args compatible with both Geany and Kate)"
+
 
 
 ## Install
@@ -46,7 +50,7 @@ Output of jshint is expected unless the second formatting is used by your parser
   mcs AssemblyInfo.cs MainForm.cs 2>err.txt
   outputinspector &
   ```
-  (a space then & sign after outputinspector makes it not prevent continued use of console, however this is not recommended or else you may forget its open and 
+  (a space then & sign after outputinspector makes it not prevent continued use of console, however this is not recommended or else you may forget its open and
   If these instructions have been followed, and your compiler errors are in err.txt in the same folder, specified with lines starting with:
   Filename.ext(row,col): error
   Then Output Inspector should work when you double-click on the error.
@@ -56,7 +60,7 @@ Output of jshint is expected unless the second formatting is used by your parser
   outputinspector &
   ```
   If these instructions have been followed, and your compiler errors are in err.txt in the same folder, specified with lines starting with:
-  
+
   Then Output Inspector should work when you double-click on the error.
 
 
@@ -77,22 +81,28 @@ Usually from nodejs-jshint package, jshint is a linting and/or hinting tool for 
          * or any of their subfolders.
      * a filename search for jslint in /usr/lib/python2.7/site-packages yields no binaries or files other than those in the folders above
 
-    
-## Configure
-* Remember to edit /etc/outputinspector.conf specifying the kate binary (i.e. include the line kate=/usr/bin/kate such as for Fedora 25 or kate=/usr/lib/kde4/bin/kate for Ubuntu Hardy or appropriate command).
-* Tab handling:  If you are using mcs 1.2.6 or other compiler that reads tabs as 6 spaces, and you are using Kate 2 with the default tab width of 8 or are using Kate 3, you don't have to change anything.  Otherwise:
-* Set CompilerTabWidth and Kate2TabWidth in /etc/outputinspector.conf -- kate 3.0.0+ is handled automatically, but CompilerTabWidth may have to be set.  If the compiler treats tabs as 1 character, make sure you set CompilerTabWidth=1 -- as of 1.2.6, mcs counts tabs as 6 spaces (outputinspector default).
 
-  
+## Backward Compatibility
+* Remember to edit /etc/outputinspector.conf specifying the kate binary (i.e. include the line `kate=/usr/bin/kate` such as for Fedora 25 or `kate=/usr/lib/kde4/bin/kate` or appropriate command for older linux distro such as Ubuntu Hardy).
+* Tab handling:  If you are using mcs 1.2.6 or other compiler that reads tabs as 6 spaces, and you are using Kate 2 with the default tab width of 8 or are using Kate 3, you don't have to change anything.  Otherwise:
+  * Set CompilerTabWidth and Kate2TabWidth in /etc/outputinspector.conf -- kate 3.0.0+ is handled automatically, but CompilerTabWidth may have to be set.  If the compiler treats tabs as 1 character, make sure you set CompilerTabWidth=1 -- as of 1.2.6, mcs counts tabs as 6 spaces (outputinspector default).
+
+
 ## Changes
-* (2017-11-09) has mechanism to detect and show fatal errors (with an explanation that your tool recorded them before outputinspector started, to avoid any confusion)
-* (2017-11-09) drastically improved install script (detects and warns if can't manipulate existing install in any way, and installs to /usr/local/bin instead of /usr/bin)
+(2018-08-15)
+* Show warning for missing input file or file with only blank lines
+* allow param to specify output (continue to use err.txt as default)
+(2017-11-09)
+* has mechanism to detect and show fatal errors (with an explanation that your tool recorded them before outputinspector started, to avoid any confusion)
+(2017-11-09)
+* drastically improved install script (detects and warns if can't manipulate existing install in any way, and installs to /usr/local/bin instead of /usr/bin)
   * detects and stops going if already /usr/bin/outputinspector
     (should be /usr/local/bin) and gives repair instructions (see install file echo statements for more details)
   * detects newer version (whether Debug or Release)
   * if neither Debug nor Release is present (in Qt Creator default build folders), uses outputinspector binary in working directory if present, otherwise shows error and exits
     * if doesn't find any source binary, gives instructions on how to proceed (also, instructions for recompiling on success now correctly state to use Qt Creator instead of QtDevelop)
-* (2017-11-09) tries to detect and convert jshint output to mcs output:
+(2017-11-09)
+* tries to detect and convert jshint output to mcs output:
   * example output of running 'mcs etc/foo.cs 1>out.txt 2>err.txt  if you have mcs installed (the c# compiler which normally comes with the mono package, or can also be from a .NET Framework SDK or other C# development tool)':
     ```
     etc/foo.cs(10,24): error CS0103: The name `Path' does not exist in the current context
@@ -114,36 +124,40 @@ Usually from nodejs-jshint package, jshint is a linting and/or hinting tool for 
     1 error
     ```
 
-* (2017-03-25) migrated from qt4 to qt5
-    * changes to old code (had MainWindow, listMain, menubar, and statusbar):
-        * changed menubar to menuBar
-        * changed statusbar to statusBar
-        * changed listMain (in old code) to ui->mainListWidget (renamed in new code from listWidget which was present by default for new widget form)
-        * deprecated manually resizing list widget (in favor of sizePolicy Expanding [and default aka MAX_INT maximumSize] for both vertical and horizontal)
-    * changes to new code (had MainWindow, centralWIdget, menuBar, mainToolBar and statusBar all by default for new widget form):
-        * nothing renamed
-        * created a List Widget (QListWidget, and Item-Based Widget) named mainListWidget
-        * right-click mainListWidget in form designer, go to slot, pasted content of QListWidget::itemDoubleClicked from old qt4
+(2017-03-25)
+* migrated from qt4 to qt5
+  * changes to old code (had MainWindow, listMain, menubar, and statusbar):
+    * changed menubar to menuBar
+    * changed statusbar to statusBar
+    * changed listMain (in old code) to ui->mainListWidget (renamed in new code from listWidget which was present by default for new widget form)
+    * deprecated manually resizing list widget (in favor of sizePolicy Expanding [and default aka MAX_INT maximumSize] for both vertical and horizontal)
+  * changes to new code (had MainWindow, centralWIdget, menuBar, mainToolBar and statusBar all by default for new widget form):
+    * nothing renamed
+    * created a List Widget (QListWidget, and Item-Based Widget) named mainListWidget
+    * right-click mainListWidget in form designer, go to slot, pasted content of QListWidget::itemDoubleClicked from old qt4
 
-* (2017-03-25) moved from sourceforge to GitHub
+(2017-03-25)
+* moved from sourceforge to GitHub
 
-* (2008-10-qt4) fixes and improvements
+(2008-10-qt4)
+* fixes and improvements
 (for configurable settings, edit the variable name in /etc/outputinspector.conf)
-    * Opens source files and looks for TODO comments (FindTODOs=yes in conf file)
-    * Allows auto-close if no errors (ExitOnNoErrors=yes in conf file)
-    * Shows count of errors and warnings (and TODOs unless specified -- see above) in status bar
-    * Fixed problem caused by Kate line & row args starting with zero (configurable: by default xEditorOffset=-1 and xEditorOffset-1)
-    * Kate is no longer linked as a child process of outputinspector
-    * Compensates for different tab handling between Kate 3, and mcs, and attempts to work around Kate 2 tab traversal glitches related to the column command line parameter (see README)
-    * Known Issues with this sf.net release:
-        * At least in Kate 3.0.3, "kate -u" becomes ineffective when Kate 2 is open at the same time, so more copies of Kate 3 open.
+  * Opens source files and looks for TODO comments (FindTODOs=yes in conf file)
+  * Allows auto-close if no errors (ExitOnNoErrors=yes in conf file)
+  * Shows count of errors and warnings (and TODOs unless specified -- see above) in status bar
+  * Fixed problem caused by Kate line & row args starting with zero (configurable: by default xEditorOffset=-1 and xEditorOffset-1)
+  * Kate is no longer linked as a child process of outputinspector
+  * Compensates for different tab handling between Kate 3, and mcs, and attempts to work around Kate 2 tab traversal glitches related to the column command line parameter (see README)
+  * Known Issues with this sf.net release:
+    * At least in Kate 3.0.3, "kate -u" becomes ineffective when Kate 2 is open at the same time, so more copies of Kate 3 open.
 
-* (2008-09-30) qt4 (Initial release):
-    * opens err.txt if in the same folder as outputinspector (see README under "Usage")
-    * allows you to double-click on lines of code, then tells kate to navigate to that file and location, as long as the file (or relative path) is in the same folder as outputinspector and err.txt.
-    * kate (at least 2.5.9) does not go to exact code location since -l and -c args start at origin (0,0)
-    * Known issues with this sf.net release:
-        * kate 2.5.x, Kate 3.0.x, and mcs all have different ways of counting tabs, so column numbering is not exact.
+(2008-09-30)
+* qt4 (Initial release):
+  * opens err.txt if in the same folder as outputinspector (see README under "Usage")
+  * allows you to double-click on lines of code, then tells kate to navigate to that file and location, as long as the file (or relative path) is in the same folder as outputinspector and err.txt.
+  * kate (at least 2.5.9) does not go to exact code location since -l and -c args start at origin (0,0)
+  * Known issues with this sf.net release:
+    * kate 2.5.x, Kate 3.0.x, and mcs all have different ways of counting tabs, so column numbering is not exact.
 
 ## Planned Features
 * paste from an online code quality tool
