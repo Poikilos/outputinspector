@@ -1,10 +1,9 @@
 # Output Inspector
-Output Inspector is a parser for parser output that makes errors clickable so you can get back to your software's source code.
+Output Inspector is a "parser for parser output" that makes errors clickable so you can get to the issue in your software's source code instantly.
+After using your compiler/linting tool, you can now double-click an error or warning to jump (using Kate or Geany line,col jump feature) to the file and line of code having the issue (see Usage below).
 
-
-## Usage
-The main function of Output Inspector is to tell Kate (or Geany) to go
-to the file and location of warnings/errors (by clicking them) such as:
+## Formats
+So far, compilers/linters with the following output format is readable as input for outputinspector:
 ```
 foo.js: line 1, col 10, reason
 ```
@@ -13,6 +12,25 @@ or
 foo.cs(1,10): reason
 ```
 
+## Usage
+* make sure kate or geany package is installed (run install script again if wasn't when install script ran--it recreates the config based on detecting kate's location if you enter y for yes)
+* For cs files, you have to run outputinspector from the location of the cs files you are compiling, and your compiler error output has to be redirected to err.txt.
+  example:
+  ```
+  mcs AssemblyInfo.cs MainForm.cs 2>err.txt
+  outputinspector &
+  ```
+  (a space then & sign after outputinspector makes it not prevent continued use of console, however this is not recommended or else you may forget its open and
+  If these instructions have been followed, and your compiler errors are in err.txt in the same folder, specified with lines starting with:
+  Filename.ext(row,col): error
+  Then Output Inspector should work when you double-click on the error.
+* jshint instructions (jshint package helps check js files)
+  ```
+  jshint > err.txt
+  outputinspector &
+  ```
+  If these instructions have been followed, and your compiler errors are in err.txt in the same folder, with lines starting the sourcecode filename as per one of the output formats (see 'Formats' section above),
+  then Output Inspector should work when you double-click on the error.
 * `outputinspector err.txt &` can be added to the end of your linting or build script, allowing you to immediately go to the correct source file and line containing the error!
   Your compiler or linter output can be redirected to any file, then the file can be specified as the first parameter of outputinspector (default is err.txt). You can also run outputinspector manually if you have a file containing linter/compiler output.
 * Your source file should not have any unsaved changes in any other program at the time (it is ok if in Kate, but saving first and using your parser on that version is recommended for accuracy).
@@ -20,7 +38,6 @@ Other than jshint output, Output Inspector has only been tested on mcs [mono com
 The parsing is not fault-tolerant at this time, especially for the first type of formatting.
 Output of jshint is expected unless the second formatting is used by your parser (such as mcs).
 * OPTIONAL: To use Geany, set: `kate=/usr/bin/geany` in '/etc/outputinspector.conf'" (outputinspector knows how to tell Geany which line and column for jumping to line by using args compatible with both Geany and Kate)"
-
 
 
 ## Install
@@ -40,29 +57,6 @@ Output of jshint is expected unless the second formatting is used by your parser
       sudo ./install
       # or if you don't have sudo installed and are root, just `./install`
       ```
-
-
-## Use
-* make sure kate is installed (run install script again if wasn't when install script ran--it recreates the config based on detecting kate's location if you enter y for yes)
-* For cs files, you have to run outputinspector from the location of the cs files you are compiling, and your compiler error output has to be redirected to err.txt.
-  example:
-  ```
-  mcs AssemblyInfo.cs MainForm.cs 2>err.txt
-  outputinspector &
-  ```
-  (a space then & sign after outputinspector makes it not prevent continued use of console, however this is not recommended or else you may forget its open and
-  If these instructions have been followed, and your compiler errors are in err.txt in the same folder, specified with lines starting with:
-  Filename.ext(row,col): error
-  Then Output Inspector should work when you double-click on the error.
-* jshint instructions (jshint package helps check js files)
-  ```
-  jshint > err.txt
-  outputinspector &
-  ```
-  If these instructions have been followed, and your compiler errors are in err.txt in the same folder, specified with lines starting with:
-
-  Then Output Inspector should work when you double-click on the error.
-
 
 ## Overview of jshint
 Usually from nodejs-jshint package, jshint is a linting and/or hinting tool for javascript (especially node.js) which is considered a successor to jslinter. Here is the timeline:
