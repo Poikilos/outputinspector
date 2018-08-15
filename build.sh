@@ -43,6 +43,7 @@ if [ -f "$build_artifact" ]; then
 fi
 if [ -f "$build_dir_rel/$package_name" ]; then
   echo "successfully built $build_dir_rel/$package_name"
+  echo "run install to install $package_name"
 else
   echo "failed to build $build_dir_rel/$package_name"
 fi

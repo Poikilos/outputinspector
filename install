@@ -2,7 +2,19 @@
 BIN_FILE_NAME=outputinspector
 PROJECT_NAME=outputinspector
 CONF_NAME=outputinspector.conf
-BIN_DEST_DIR=/usr/local/bin
+if [ -z "$PREFIX" ]; then
+  PREFIX=/usr/local
+fi
+echo
+echo
+echo
+echo "Installing $PROJECT_NAME..."
+echo
+echo
+echo "Using prefix $PREFIX (export environment variable or use env before running to change)"
+echo "such as:"
+echo "  env PREFIX=/usr ./install"
+BIN_DEST_DIR=$PREFIX/bin
 #remember, project-specific info is also at end of this script (post-install notes)
 BIN_CONFLICT_DIR=/usr/bin
 if [ -f "$BIN_CONFLICT_DIR/$BIN_FILE_NAME" ]; then
@@ -29,9 +41,9 @@ if [ ! -f "$RELEASE_DIR/$BIN_FILE_NAME" ]; then
     else
       echo
       echo "Could not find '$DEBUG_DIR/$BIN_FILE_NAME' nor '$RELEASE_DIR/$BIN_FILE_NAME' so cannot install--$PROJECT_NAME.pro must be first built using Qt Creator 5, install.sh, or the binary must be built by other means and placed in one of those folders or the same folder as this script."
+      echo
+      echo
       exit 2
-      echo
-      echo
     fi
   else
     echo "WARNING: Found '$DEBUG_DIR/$BIN_FILE_NAME' (but not '$RELEASE_DIR/$BIN_FILE_NAME') so installing debug version"
@@ -52,7 +64,7 @@ if [ -f "$RELEASE_DIR/$BIN_FILE_NAME" ]; then
   fi
 fi
 BIN_FILE_PATH=$SOURCE_BIN_DIR/$BIN_FILE_NAME
-#cp -f ./bin/$BIN_FILE_NAME /usr/local/bin/
+#cp -f ./bin/$BIN_FILE_NAME $BIN_DEST_DIR/
 BIN_DEST_FILE_PATH=$BIN_DEST_DIR/$BIN_FILE_NAME
 
 if [ -f "$BIN_DEST_FILE_PATH" ]; then
@@ -69,9 +81,9 @@ if [ -f "$BIN_DEST_DIR/$BIN_FILE_NAME" ]; then
     echo
     echo
     echo "ERROR: install could not remove existing '$BIN_DEST_DIR/$BIN_FILE_NAME' since you don't have root permission (you must run this install script with root permissions)."
+    echo
+    echo
     exit 3
-    echo
-    echo
   fi
 fi
 
@@ -79,7 +91,7 @@ cp -f "$BIN_FILE_PATH" "$BIN_DEST_DIR/"
 if [ ! -f "$BIN_DEST_DIR/$BIN_FILE_NAME" ]; then
   echo
   echo
-  #this error is always accurate since program would have exited already if file were already there before the cp command and couldn't be deleted: 
+  #this error is always accurate since program would have exited already if file were already there before the cp command and couldn't be deleted:
   echo "ERROR: install could not create '$BIN_DEST_DIR/$BIN_FILE_NAME' since you don't have root permission (you must run this install script with root permissions)."
   echo
   echo
@@ -177,8 +189,9 @@ if [ ! -z "$end_error" ]; then
   echo "$end_error"
 else
   #NOTE: this is accurate since would have exited already if couldn't edit
-  echo "Sucessfully installed."
-  echo
+  echo "Successfully installed."
 fi
+echo
+echo
 
 
