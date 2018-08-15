@@ -30,7 +30,7 @@ QStringList stringsVal;
 QStringList stringsErrors;
 QStringList stringsWarnings;
 bool bShowWarningsLast=false;
-int iKateRevisionMajor=0;//i.e. 2.5.9 is 2, kde3 version; and 3.0.3 is 3, the kde4 version
+int iKateRevisionMajor=0;  // i.e. 2.5.9 is 2, kde3 version; and 3.0.3 is 3, the kde4 version
 bool bForceOffset=false;
 bool bCompensateForKateTabDifferences=true;
 
@@ -117,7 +117,10 @@ void MainWindow::init(QString sErrorsListFileName) {
     QString sLine;
     QString sError="Error";
     QString sWarning="Warning";
-    QString sToDo="//TODO";
+    QString sCommentMark="//";
+    //QString sToDo="//TODO";
+    QString toDoString="TODO";
+    //int cutToDoCount=2;
     //ui->mainListWidget is a QListWidget
     //setCentralWidget(ui->mainListWidget);
     //ui->mainListWidget->setSizePolicy(QSizePolicy::)
@@ -141,8 +144,14 @@ void MainWindow::init(QString sErrorsListFileName) {
 
                         if (!bShowWarningsLast) ui->mainListWidget->addItem(new QListWidgetItem(sLine,ui->mainListWidget));
 
-                        if (sLine.indexOf(".py")>-1) sToDo = "#TODO";
-                        else sToDo = "//TODO";
+                        if (sLine.indexOf(".py",0,Qt::CaseInsensitive)>-1) {
+                            //sToDo = "#TODO";
+                            sCommentMark = "#";
+                        }
+                        else {
+                            sCommentMark = "//";
+                            //sToDo = "//TODO";
+                        }
 
                         if ((jshint_enable&&sLine.indexOf(".js")>-1) || sLine.indexOf(sError,0,Qt::CaseInsensitive)>-1) {
                             if (jshint_enable || sLine.indexOf("previous error",0,Qt::CaseInsensitive)<0) iErrors++;
@@ -173,12 +182,17 @@ void MainWindow::init(QString sErrorsListFileName) {
                                         while ( !qtextSource.atEnd() ) {
                                             QString sSourceLine=qtextSource.readLine(0);
                                             iSourceLineFindToDo++;//add first since compiler line numbering starts at 1
-                                            int iColTODOFound=sSourceLine.indexOf(sToDo,0,Qt::CaseInsensitive);
-                                            if (iColTODOFound>-1) {
+                                            //int iColTODOFound=-1; //sSourceLine.indexOf(sToDo,0,Qt::CaseInsensitive);
+                                            int iToDoFound=-1;
+                                            int iCommentFound=sSourceLine.indexOf(sCommentMark,0,Qt::CaseInsensitive);
+                                            if (iCommentFound>-1) {
+                                                iToDoFound=sSourceLine.indexOf(toDoString,iCommentFound+1,Qt::CaseInsensitive);
+                                            }
+                                            if (iToDoFound>-1) {
                                                 QString sNumLine;
                                                 sNumLine.setNum(iSourceLineFindToDo,10);
                                                 QString sNumPos;
-                                                int iCookedStart=iColTODOFound;
+                                                int iCookedStart=iToDoFound; //iColTODOFound;
                                                 for (int iNow=0; iNow<sSourceLine.length(); iNow++) {
                                                     if (sSourceLine.mid(iNow,1)=="\t") iCookedStart+=(iCompilerTabWidth-1);
                                                     else break;
@@ -186,7 +200,7 @@ void MainWindow::init(QString sErrorsListFileName) {
                                                 iCookedStart+=1;//start numbering at 1 to mimic compiler
                                                 iCookedStart+=2;//+2 to start after slashes
                                                 sNumPos.setNum(iCookedStart,10);
-                                                qslistTODOs.append(sFileX+"("+sNumLine+","+sNumPos+") "+sSourceLine.mid(iColTODOFound+2));
+                                                qslistTODOs.append(sFileX+"("+sNumLine+","+sNumPos+") "+sSourceLine.mid(iToDoFound)); //iColTODOFound+2
                                                 iTODOs++;
                                             }
                                         }//end while not at end of source file
