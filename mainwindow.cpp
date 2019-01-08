@@ -458,12 +458,23 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem *item)
 
     int iOpener=sLine.indexOf("(",0,Qt::CaseSensitive);
     int iCloser=sLine.indexOf(")",0,Qt::CaseSensitive);
-    int iComma=sLine.indexOf(",",0,Qt::CaseSensitive);
-    if (iOpener>0 && iComma>iOpener && iCloser>iComma) {
+    int iParamDelim=sLine.indexOf(",",0,Qt::CaseSensitive);
+    QStringList chunks=sLine.split(":");
+    if (chunks.length()>=4) {
+        // check for pycodestyle output
+        // such as "__init__.py:39:20: E116 unexpected indentation (comment)"
+        QRegExp re("\\d*");  // a digit (\d), zero or more times (*)
+        if (re.exactMatch(chunks[1]) && re.exactMatch(chunks[2])) {
+            iOpener=sLine.indexOf(":");
+            iParamDelim=sLine.indexOf(":", iOpener+1);
+            iCloser=sLine.indexOf(":", iParamDelim+1);
+        }
+    }
+    if (iOpener>0 && iParamDelim>iOpener && iCloser>iParamDelim) {
         QString sFile=sLine.mid(0,iOpener);
         QString sFileAbs=sFile.startsWith(sSlash,Qt::CaseInsensitive)?sFile:(sCwd+"/"+sFile);
-        QString sLineTarget=sLine.mid(iOpener+1, iComma-(iOpener+1));
-        QString sColTarget=sLine.mid(iComma+1, iCloser-(iComma+1));
+        QString sLineTarget=sLine.mid(iOpener+1, iParamDelim-(iOpener+1));
+        QString sColTarget=sLine.mid(iParamDelim+1, iCloser-(iParamDelim+1));
         bool bTest=false;
         int iLineTarget=sLineTarget.toInt(&bTest,10);
         int iColTarget=sColTarget.toInt(&bTest,10);
@@ -582,4 +593,13 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem *item)
         //system(sCmd);//stdlib
         //QMessageBox::information(this,"test",sCmd);
     }//end if line is in proper format
+    else {
+        QString msg = "Could not detect line number: ";
+        //iOpener>0 && iParamDelim>iOpener && iCloser>iParamDelim
+        msg += "iOpener: " + QString::number(iOpener);
+        msg += "; iParamDelim: " + QString::number(iParamDelim);
+        msg += "; iCloser: " + QString::number(iCloser);
+        //QMessageBox::information(this,"Output Inspector",msg);
+        qDebug() << msg;
+    }
 }//end MainWindow::on_mainListWidget_itemDoubleClicked

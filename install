@@ -33,6 +33,22 @@ fi
 uhoh="is in"
 DEBUG_DIR="../build-$PROJECT_NAME-Desktop-Debug"
 RELEASE_DIR="../build-$PROJECT_NAME-Desktop-Release"
+if [ -f "outputinspector" ]; then
+  #echo "ERROR: Nothing done for install since there is an ambiguous file named outputinspector here (it should instead be in '$RELEASE_DIR' or '$DEBUG_DIR')"
+  #exit 1
+  echo "WARNING: install found an ambiguous file named outputinspector here (it should instead be in '$RELEASE_DIR' or '$DEBUG_DIR')"
+  sMove="no"
+  echo "Do you want to move it to Releases and try to continue (y/N)? "
+  read sMove
+  if [ "${sMove:0:1}" = "y" ]; then
+    if [ ! -d "$RELEASE_DIR" ]; then
+      mkdir -p "$RELEASE_DIR"
+    fi
+    mv -f outputinspector "$RELEASE_DIR/"
+  else
+    exit 2
+  fi
+fi
 SOURCE_BIN_DIR="$RELEASE_DIR"
 if [ ! -f "$RELEASE_DIR/$BIN_FILE_NAME" ]; then
   SOURCE_BIN_DIR="$DEBUG_DIR"
@@ -105,14 +121,16 @@ sCreate="no"
 sExistNote="changed"
 outputconf="/etc/$CONF_NAME"
 if [ -f $outputconf ]; then
-  echo "Do you want to create a new $outputconf[y/N]?"
+  sCreate="n"
+  # echo "Do you want to create a new $outputconf[y/N]?"
 else
   sExistNote="created"
-  echo "Do you want to create a new $outputconf[Y/n]?"
+  sCreate="y"
+  # echo "Do you want to create a new $outputconf[Y/n]?"
 fi
 
 
-read sCreate
+# read sCreate
 
 if [ "${sCreate:0:1}" = "y" ]; then
 echo

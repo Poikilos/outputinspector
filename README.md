@@ -3,9 +3,13 @@ Output Inspector is a "parser for parser output" that makes errors clickable so 
 After using your compiler/linting tool, you can now double-click an error or warning to jump (using Kate or Geany line,col jump feature) to the file and line of code having the issue (see Usage below).
 
 ## Formats
-So far, compilers/linters with the following output format is readable as input for outputinspector:
+So far, compilers/linters with the following output format is readable as input for outputinspector (see Usage for specific cases):
 ```
 foo.js: line 1, col 10, reason
+```
+or
+```
+foo.py:20:29: reason
 ```
 or
 ```
@@ -14,6 +18,11 @@ foo.cs(1,10): reason
 
 ## Usage
 * make sure kate or geany package is installed (run install script again if wasn't when install script ran--it recreates the config based on detecting kate's location if you enter y for yes)
+* For py file linting: you can use pycodestyle (tested with pycodestyle-3 command--package may be named python3-pycodestyle in your Linux distro):
+```
+pycodestyle-3 > err.txt
+outputinspector &
+```
 * For cs files, you have to run outputinspector from the location of the cs files you are compiling, and your compiler error output has to be redirected to err.txt.
   example:
   ```

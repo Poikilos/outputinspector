@@ -50,3 +50,5 @@ echo
 /10/filedefs/filetypes.README
 /10/keybindings.conf
 /10/templates/templates.README
+/outputinspector
+/moc_predefs.h
