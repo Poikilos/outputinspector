@@ -33,6 +33,11 @@ outputinspector &
   If these instructions have been followed, and your compiler errors are in err.txt in the same folder, specified with lines starting with:
   Filename.ext(row,col): error
   Then Output Inspector should work when you double-click on the error.
+* for nose tests:
+```
+nosetests 1>out.txt 2>err.txt
+outputinspector &
+```
 * jshint instructions (jshint package helps check js files)
   ```
   jshint > err.txt

@@ -38,8 +38,9 @@ if [ -f "outputinspector" ]; then
   #exit 1
   echo "WARNING: install found an ambiguous file named outputinspector here (it should instead be in '$RELEASE_DIR' or '$DEBUG_DIR')"
   sMove="no"
-  echo "Do you want to move it to Releases and try to continue (y/N)? "
-  read sMove
+  #echo "Do you want to move it to Releases and try to continue (y/N)? "
+  #read sMove
+  sMove="yes"
   if [ "${sMove:0:1}" = "y" ]; then
     if [ ! -d "$RELEASE_DIR" ]; then
       mkdir -p "$RELEASE_DIR"
