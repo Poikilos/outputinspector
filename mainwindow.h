@@ -5,6 +5,8 @@
 #include <QListWidgetItem>
 //#include <map>
 
+
+
 namespace Ui {
 class MainWindow;
 }
@@ -17,21 +19,31 @@ public:
     bool bDebugBadHint=true;
     explicit MainWindow(QWidget *parent = 0);
     bool is_fatal_source_error(QString);
-    //QString sErrorsListFileName="err.txt";
+    // QString sErrorsListFileName="err.txt";
     ~MainWindow();
     void init(QString);
-    const QString JUMP_FLAG = "  File ";
     const QString COLLECT_REUSE = "REUSE";
-    const int JumpRole = Qt::UserRole;
-    const int JumpLineRole = Qt::UserRole + 1;
+    const QString STACK_LOWER = "LOWER";
+    const int PARSE_MARKER_FILE = 0;
+    const int PARSE_MARKER_PARAM_A = 1;
+    const int PARSE_MARKER_PARAM_B = 2;
+    const int PARSE_MARKER_END_PARAMS = 3;
+    const int PARSE_COLLECT = 4;
+    const int PARSE_STACK = 5;
+    const int PARSE_PARTS_COUNT = 6;
+    const int ROLE_COLLECTED_FILE = Qt::UserRole;
+    const int ROLE_ROW = Qt::UserRole + 1;
+    const int ROLE_COL = Qt::UserRole + 2;
+    const int ROLE_LOWER = Qt::UserRole + 3;  // further down the call stack, probably not the error you're looking to find
+    const int ROLE_COLLECTED_LINE = Qt::UserRole + 4;
+    const int ROLE_DETAILS = Qt::UserRole + 5;
+    std::list<QString> sInternalFlags;
+    std::list<QString> sSectionBreakFlags;
     std::list<QStringList> enclosures;
-    //QMap<QString, QString>* getLineInfo(QString sLine);
-    std::map<QString, QString>* getOutputLineInfo(QString sLine, const QString actualJump, bool isPrevCallPrevLine);
-    void getOutputLineInfo(std::map<QString, QString>* info, QString sLine, const QString actualJump, bool isPrevCallPrevLine);
-    void addItemFromLine(QString sLine, QString& actualJump, QString& actualJumpLine);
-    bool startsWithJumpFlag(QString sLine);
-    QBrush brushTracebackNotTop = QBrush(Qt::gray);
-    QBrush brushUnusable = QBrush(Qt::lightGray);
+    std::map<QString, QString>* getOutputLineInfo(const QString sLine, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
+    void getOutputLineInfo(std::map<QString, QString>* info, const QString sLineOriginal, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
+    QString getAbsPathOrSame(QString sFile);
+    std::map<QString, QBrush> brushes;
 
 private slots:
     void on_mainListWidget_itemDoubleClicked(QListWidgetItem *item);
