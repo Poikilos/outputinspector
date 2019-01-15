@@ -705,7 +705,7 @@ void MainWindow::getOutputLineInfo(std::map<QString, QString>* info, const QStri
 {
     (*info)["file"] = ""; // same as info->at("file")
     (*info)["row"] = "";
-    (*info)["sLine"] = LINE;
+    (*info)["sLine"] = sLineOriginal;
     (*info)["column"] = "";
     (*info)["language"] = ""; // only if language can be detected from this line
     (*info)["good"] = "false";
