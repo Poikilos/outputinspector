@@ -17,11 +17,6 @@ class MainWindow : public QMainWindow
 
 public:
     bool bDebugBadHint=true;
-    explicit MainWindow(QWidget *parent = 0);
-    bool is_fatal_source_error(QString);
-    // QString sErrorsListFileName="err.txt";
-    ~MainWindow();
-    void init(QString);
     const QString COLLECT_REUSE = "REUSE";
     const QString STACK_LOWER = "LOWER";
     const int PARSE_MARKER_FILE = 0;
@@ -40,17 +35,24 @@ public:
     std::list<QString> sInternalFlags;
     std::list<QString> sSectionBreakFlags;
     std::list<QStringList> enclosures;
+    std::map<QString, QBrush> brushes;
+
+    explicit MainWindow(QWidget *parent = 0);
+    // QString sErrorsListFileName="err.txt";
+    ~MainWindow();
+    void readini();
+    void setValue(QString k, QString v);
+    void init(QString);
+    bool is_fatal_source_error(QString);
     std::map<QString, QString>* getOutputLineInfo(const QString sLine, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
     void getOutputLineInfo(std::map<QString, QString>* info, const QString sLineOriginal, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
     QString getAbsPathOrSame(QString sFile);
-    std::map<QString, QBrush> brushes;
 
 private slots:
     void on_mainListWidget_itemDoubleClicked(QListWidgetItem *item);
 
 private:
     Ui::MainWindow *ui;
-    void readini();
     void CompensateForEditorVersion();
     QString getConvertedSourceErrorAndWarnElseGetUnmodified(QString);
 };

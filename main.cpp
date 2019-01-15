@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include <QApplication>
+#include <QDebug>
 
 int main(int argc, char *argv[])
 {
@@ -7,10 +8,25 @@ int main(int argc, char *argv[])
     MainWindow w;
     QString sErrorsListFileName; //reverts to err.txt if left blank
     QStringList qArgs = QCoreApplication::arguments();
-    if (qArgs.length()>1) {
-        sErrorsListFileName = qArgs[1]; //0 is self
+    w.readini();
+    // start at 1 since qArgs[0] is self:
+    for (int i=1; i<qArgs.length(); i++) {
+        QString qArg = qArgs[i];
+        if (!qArg.startsWith("--")) {
+            sErrorsListFileName = qArg;
+        }
+        else {
+            int signIndex = qArg.indexOf("=");
+            if (signIndex>-1) {
+                int valueIndex = signIndex + 1;
+                QString name = qArg.mid(2, signIndex-2);
+                w.setValue(name, qArg.mid(valueIndex).trimmed());
+                qInfo() << "set " + name + " to '"
+                           + qArg.mid(valueIndex).trimmed() + "'";
+            }
+        }
     }
-    w.init(sErrorsListFileName);
+    w.init(sErrorsListFileName.trimmed());
     w.show();
     //a.setWindowIcon(QIcon("outputinspector-64.png"));
     //a.setWindowIcon(QIcon(ICON));

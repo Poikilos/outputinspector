@@ -2,6 +2,8 @@
 BIN_FILE_NAME=outputinspector
 PROJECT_NAME=outputinspector
 CONF_NAME=outputinspector.conf
+# NOTE: $SRC_BINS_PATH cannot have spaces (usages can't use quotes since * is used)
+SRC_BINS_PATH=./package/bin
 if [ -z "$PREFIX" ]; then
   PREFIX=/usr/local
 fi
@@ -177,6 +179,13 @@ if [ -f "$BIN_DEST_FILE_PATH" ]; then
   chmod a+x "$BIN_DEST_FILE_PATH"
 fi
 
+if [ -d "$SRC_BINS_PATH" ]; then
+  chmod a+x $SRC_BINS_PATH/*
+  cp $SRC_BINS_PATH/* $BIN_DEST_DIR/
+fi
+# else
+#   echo "WARNING: missing '$SRC_BINS_PATH'"
+
 echo
 echo "TROUBLESHOOTING"
 echo "If you have trouble with a release binary, open"
@@ -222,5 +231,3 @@ else
 fi
 echo
 echo
-
-

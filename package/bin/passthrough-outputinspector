@@ -1,0 +1,35 @@
+#!/bin/sh
+
+usage()
+{
+  echo
+  echo "Usage:"
+  echo "$0 <compiler/linter> <full-path-to-source>"
+  echo
+  echo "(currently only works with single-file statements)"
+  echo "Example:"
+  echo "$0 python3 $HOME/git/myproject/run.py"
+  echo
+  echo
+}
+
+if [ -z "$1" ]; then
+  usage
+  exit 1
+fi
+
+if [ -z "$2" ]; then
+  usage
+  exit 2
+fi
+
+if [ -f "$2" ]; then
+  # cd to directory of file (expand 0 then take only what is before slash)
+  echo "${2%/*}"
+  $1 $2 1>out.txt 2>err.txt
+  outputinspector --ExitOnNoErrors=yes
+else
+  echo "WARNING: cannot find source file '$2'"
+  #usage
+  #exit 3
+fi

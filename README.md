@@ -11,6 +11,7 @@ of code having the issue (see Usage below).
   * Detects flags in your output: "Warning"
 * Detects flags in files cited by your output: `TODO` or `FIXME` in inline comments
   * inline comment mark is determined from file extension: py, pyw, sh, c, h, cpp, hpp, js, java, php, bat, command
+* Installs passthrough-outputinspector for use in IDEs (see Usage)
 
 ## Formats
 So far, compilers/linters with the following output format is readable as input
@@ -31,6 +32,13 @@ or\
 newline)
 
 ## Usage
+* For automatic usage on Linux, create a build command in Geany:
+  * "Build," "Set Build Commands"
+  * Set Execute (or an empty box under "Independent commands") to:\
+    `passthrough-outputinspector python3 "%f"`\
+    (if you set the Execute command, the gear button will run
+    passthrough-outputinspector and then the button will turn into a stop button
+    and be able to stop both passthrough-outputinspector and outputinspector)
 * make sure kate or geany package is installed (run install script again if
 wasn't when install script ran--it recreates the config based on detecting
 kate's location if you enter y for yes)
@@ -91,7 +99,11 @@ Output of jshint is expected unless the second formatting is used by your parser
   '/etc/outputinspector.conf'" (outputinspector knows how to tell Geany which
   line and column for jumping to line by using args compatible with both Geany
   and Kate)"
-
+* You can set any of the ini options as command line options (case sensitive).
+  For a list of settings, see "/etc/outputinspector.conf" after install, or the
+  included "etc/outputinspector.example.conf"\
+  example:
+  `outputinspector --ExitOnNoErrors=yes` (or `true` or `on` or `1`)
 
 ## Install
 * Right-click the downloaded zip file, then click Extract Here
