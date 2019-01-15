@@ -21,6 +21,7 @@ QStringList sFiles;
 //this is a comment with no space before or after slashes (for clang-format test)
 bool bDebug = false; //this is a trailing comment with no space before or after slashes (for clang-format test)
 bool bDebugTabs = false;
+bool bDebugParser = false; // enables line-by-line parser output
 QString sDebug = "";
 QStatusBar* statusbarNow;
 // region scripting
@@ -229,7 +230,8 @@ MainWindow::MainWindow(QWidget* parent)
     // qCritical().noquote() << "qCritical() stream is active.";
     // qFatal().noquote() << "qFatal() stream is active.";
     std::list<QStringList>::iterator itList;
-    qInfo().noquote() << "lists:";
+    if (bDebug)
+        qInfo().noquote() << "lists:";
     // this for loop has the brace on the next line (for clang-format test):
     for (itList = enclosures.begin(); itList != enclosures.end(); itList++) {
         // qInfo().noquote() << "  -";
@@ -237,7 +239,8 @@ MainWindow::MainWindow(QWidget* parent)
         //     qInfo().noquote() << "    - " << (*itList)[i];
         // }
         assert(itList->size() >= PARSE_PARTS_COUNT); // qInfo().noquote() << "  items->size(): " << itList->size();
-        qInfo().noquote() << "  items: ['" + (*itList).join("', '") + "']";
+        if (bDebug)
+            qInfo().noquote() << "  items: ['" + (*itList).join("', '") + "']";
     }
 }
 
@@ -271,8 +274,9 @@ void MainWindow::init(QString sErrorsListFileName)
     QString sError = "Error";
     QString sWarning = "Warning";
     QString sCommentMark = "//";
-    // QString sToDo = "//TODO";
-    QString toDoString = "TODO";
+    QStringList sToDoFlags;
+    sToDoFlags.append("TODO");
+    sToDoFlags.append("FIXME");
     // int cutToDoCount = 2;
     // ui->mainListWidget is a QListWidget
     // setCentralWidget(ui->mainListWidget);
@@ -396,7 +400,7 @@ void MainWindow::init(QString sErrorsListFileName)
 
                         if (bFindTODOs) {
                             if (info->at("good") == "true") {
-                                QString sFileX = info->at("file"); // =sLine.mid(0,sLine.indexOf("("));
+                                QString sFileX = getAbsPathOrSame(info->at("file")); // =sLine.mid(0,sLine.indexOf("("));
                                 if (!sFiles.contains(sFileX, Qt::CaseSensitive)) {
                                     sFiles.append(sFileX);
                                     QFile qfileSource(sFileX);
@@ -410,17 +414,20 @@ void MainWindow::init(QString sErrorsListFileName)
                                         while (!qtextSource.atEnd()) {
                                             QString sSourceLine = qtextSource.readLine(0);
                                             iSourceLineFindToDo++; // add first since compiler line numbering starts at 1
-                                            // int iColTODOFound = -1;  // sSourceLine.indexOf(sToDo, 0, Qt::CaseInsensitive);
                                             int iToDoFound = -1;
                                             int iCommentFound = sSourceLine.indexOf(sCommentMark, 0, Qt::CaseInsensitive);
                                             if (iCommentFound > -1) {
-                                                iToDoFound = sSourceLine.indexOf(toDoString, iCommentFound + 1, Qt::CaseInsensitive);
+                                                for (int i=0; i<sToDoFlags.length(); i++) {
+                                                    iToDoFound = sSourceLine.indexOf(sToDoFlags[i], iCommentFound + 1, Qt::CaseInsensitive);
+                                                    if (iToDoFound > -1)
+                                                        break;
+                                                }
                                             }
                                             if (iToDoFound > -1) {
                                                 QString sNumLine;
                                                 sNumLine.setNum(iSourceLineFindToDo, 10);
                                                 QString sNumPos;
-                                                int iCookedStart = iToDoFound; // iColTODOFound;
+                                                int iCookedStart = iToDoFound;
                                                 for (int iNow = 0; iNow < sSourceLine.length(); iNow++) {
                                                     if (sSourceLine.mid(iNow, 1) == "\t")
                                                         iCookedStart += (iCompilerTabWidth - 1);
@@ -440,8 +447,9 @@ void MainWindow::init(QString sErrorsListFileName)
                                                 lwi->setData(ROLE_DETAILS, QVariant("false"));
                                                 if (qcontains_any<QString>(sLineMaster, this->sInternalFlags)) {
                                                     lwi->setForeground(brushes["Internal"]);
-                                                } else
+                                                } else {
                                                     lwi->setForeground(brushes["ToDo"]);
+                                                }
                                                 lwiToDos.append(lwi);
                                                 iTODOs++;
                                             }
@@ -740,12 +748,19 @@ void MainWindow::getOutputLineInfo(std::map<QString, QString>* info, const QStri
             else
                 iFileMarker = 0; // if file path at begining of line
             if (iFileMarker > -1) {
-                qDebug().noquote() << "  has '" + sFileMarker + "' @ " << iFileMarker << ">= START";
+                if (bDebugParser) {
+                    qInfo().noquote() << "  has '" + sFileMarker + "' @ " << iFileMarker
+                                      << ">= START";
+                }
                 iParamAMarker = sLine.indexOf(sParamAMarker, iFileMarker + sFileMarker.length());
                 if (iParamAMarker > -1) {
-                    qDebug().noquote() << "    has pre-ParamA '" + sParamAMarker + "' @" << iParamAMarker << ">="
-                                       << (iFileMarker + sFileMarker.length())
-                                       << "=" << iFileMarker << "+" << sFileMarker.length(); // such as ', line '
+                    if (bDebugParser) {
+                        qInfo().noquote() << "    has pre-ParamA '" + sParamAMarker + "' @"
+                                          << iParamAMarker << ">="
+                                          << (iFileMarker + sFileMarker.length())
+                                          << "=" << iFileMarker << "+"
+                                          << sFileMarker.length(); // such as ', line '
+                    }
                     iParamA = iParamAMarker + sParamAMarker.length();
                     if (sParamBMarker.length() > 0)
                         iParamBMarker = sLine.indexOf(sParamBMarker, iParamA);
@@ -754,8 +769,12 @@ void MainWindow::getOutputLineInfo(std::map<QString, QString>* info, const QStri
                         sParamBMarker = "<forced marker=\"" + sParamBMarker.replace("\"", "\\\"") + "\">";
                     }
                     if (iParamBMarker > -1) {
-                        qDebug().noquote() << "      has pre-ParamB '" + sParamBMarker + "' @" << iParamBMarker << ">="
-                                           << (iParamAMarker + sParamAMarker.length()) << "in '" + sLine + "'";
+                        if (bDebugParser) {
+                            qInfo().noquote() << "      has pre-ParamB '" + sParamBMarker + "' @"
+                                              << iParamBMarker << ">="
+                                              << (iParamAMarker + sParamAMarker.length())
+                                              << "in '" + sLine + "'";
+                        }
                         if (sParamBMarker != (*itList)[PARSE_MARKER_PARAM_B])
                             sParamBMarker = ""; // since may be used to locate next value
                         if (sParamBMarker.length() > 0)
@@ -777,30 +796,36 @@ void MainWindow::getOutputLineInfo(std::map<QString, QString>* info, const QStri
                                 (*info)["master"] = "true";
                             if ((*itList)[PARSE_STACK] == STACK_LOWER)
                                 (*info)["lower"] = "true";
-                            qDebug().noquote() << "        has post-params '" + sEndParamsMarker.replace('\n', '\\n') + "' @"
-                                               << iEndParamsMarker << ">=" << (iParamBMarker + sParamBMarker.length()) << "="
-                                               << iParamBMarker << "+" << sParamBMarker.length() << "in '" + sLine + "'";
+                            if (bDebugParser) {
+                                qInfo().noquote() << "        has post-params '" + sEndParamsMarker.replace('\n', '\\n') + "' @"
+                                                  << iEndParamsMarker << ">=" << (iParamBMarker + sParamBMarker.length()) << "="
+                                                  << iParamBMarker << "+" << sParamBMarker.length() << "in '" + sLine + "'";
+                            }
                             if (sEndParamsMarker != (*itList)[PARSE_MARKER_END_PARAMS]) {
                                 // since could be used for more stuff after 2 params in future versions,
                                 // length should be 0 if not found but forced:
                                 sEndParamsMarker = "";
                             }
                             iFile = iFileMarker + sFileMarker.length();
-                            qInfo().noquote() << "        file '" + sLine.mid(iFile, iParamAMarker - iFile) + "'";
-                            qInfo().noquote() << "        row '" + sLine.mid(iParamA, iParamBMarker - iParamA) + "'";
-                            qInfo().noquote() << "        col '" + sLine.mid(iParamB, iEndParamsMarker - iParamB) + "'";
+                            if (bDebugParser) qInfo().noquote() << "        file '" + sLine.mid(iFile, iParamAMarker - iFile) + "'";
+                            if (bDebugParser) qInfo().noquote() << "        row '" + sLine.mid(iParamA, iParamBMarker - iParamA) + "'";
+                            if (bDebugParser) qInfo().noquote() << "        col '" + sLine.mid(iParamB, iEndParamsMarker - iParamB) + "'";
                             break;
-                        } else
-                            qDebug().noquote() << "        no post-params '" + sEndParamsMarker + "' >="
-                                               << (iParamBMarker + sParamBMarker.length()) << "in '" + sLine + "'";
-                    } else
-                        qDebug().noquote() << "      no pre-ParamB '" + sParamBMarker + "' >="
-                                           << (iParamAMarker + sParamAMarker.length()) << "in '" + sLine + "'";
-                } else
-                    qDebug().noquote() << "    no pre-paramA '" + sParamAMarker + "' >="
-                                       << (iFileMarker + sFileMarker.length());
-            } else
-                qDebug().noquote() << "  no pre-File '" + sFileMarker + "' >= START";
+                        } else if (bDebugParser) {
+                            qInfo().noquote() << "        no post-params '" + sEndParamsMarker + "' >="
+                                              << (iParamBMarker + sParamBMarker.length()) << "in '" + sLine + "'";
+                        }
+                    } else if (bDebugParser) {
+                        qInfo().noquote() << "      no pre-ParamB '" + sParamBMarker + "' >="
+                                          << (iParamAMarker + sParamAMarker.length()) << "in '" + sLine + "'";
+                    }
+                } else if (bDebugParser) {
+                    qInfo().noquote() << "    no pre-paramA '" + sParamAMarker + "' >="
+                                      << (iFileMarker + sFileMarker.length());
+                }
+            } else if (bDebugParser) {
+                qInfo().noquote() << "  no pre-File '" + sFileMarker + "' >= START";
+            }
         }
     }
 
@@ -867,6 +892,8 @@ void MainWindow::getOutputLineInfo(std::map<QString, QString>* info, const QStri
             (*info)["column"] = "";
         if (sFile.endsWith(".py", Qt::CaseSensitive))
             (*info)["language"] = "python";
+        else if (sFile.endsWith(".pyw", Qt::CaseSensitive))
+            (*info)["language"] = "python";
         else if (sFile.endsWith(".cpp", Qt::CaseSensitive))
             (*info)["language"] = "c++";
         else if (sFile.endsWith(".h", Qt::CaseSensitive))
@@ -895,7 +922,8 @@ void MainWindow::getOutputLineInfo(std::map<QString, QString>* info, const QStri
             qDebug() << "INFO: nosetests output was detected, but the line is not first"
                      << "line of a known multi-line error format, so flagging as"
                      << "details (must be a sample line of code or something).";
-            (*info)["good"] = "false"; // TODO: possibly eliminate this for fault tolerance (different styles in same output)
+            (*info)["good"] = "false"; // TODO: possibly eliminate this for fault tolerance
+                                       // (different styles in same output)
             (*info)["details"] = "true";
             (*info)["file"] = "";
         }
@@ -909,7 +937,8 @@ QString MainWindow::getAbsPathOrSame(QString sFile)
     // Don't use QDir::separator(), since this only is detectable on *nix & bsd-like OS:
     QDir cwDir = QDir(sCwd);
     QString setuptoolsTryPkgPath = QDir::cleanPath(sCwd + QDir::separator() + cwDir.dirName());
-    qInfo().noquote() << "setuptoolsTryPkgPath:" << setuptoolsTryPkgPath;
+    if (bDebug)
+        qInfo().noquote() << "setuptoolsTryPkgPath:" << setuptoolsTryPkgPath;
     sFileAbs = sFile.startsWith("/", Qt::CaseInsensitive) ? sFile : (sCwd + "/" + sFile);
     if (!QFile(sFileAbs).exists() && QDir(setuptoolsTryPkgPath).exists())
         sFileAbs = QDir::cleanPath(setuptoolsTryPkgPath + QDir::separator() + sFile);
@@ -928,13 +957,17 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
     QString sFileAbs = sFile;
     QString sErr;
     if (sFile.length() > 0) {
-        qInfo().noquote() << "clicked_file: '" + sFile + "'";
-        qInfo().noquote() << "tooltip: '" + item->toolTip() + "'";
+        if (bDebug) {
+            qInfo().noquote() << "clicked_file: '" + sFile + "'";
+            qInfo().noquote() << "tooltip: '" + item->toolTip() + "'";
+        }
         sFileAbs = getAbsPathOrSame(sFile);
         QString sRowInTarget = (item->data(ROLE_ROW)).toString();
         QString sColInTarget = (item->data(ROLE_COL)).toString();
-        qInfo().noquote() << "sRowInTarget: '" + sRowInTarget + "'";
-        qInfo().noquote() << "sColInTarget: '" + sColInTarget + "'";
+        if (bDebug) {
+            qInfo().noquote() << "sRowInTarget: '" + sRowInTarget + "'";
+            qInfo().noquote() << "sColInTarget: '" + sColInTarget + "'";
+        }
         int iRowTarget = sRowInTarget.toInt(&bTest, 10);
         int iColInTarget = sColInTarget.toInt(&bTest, 10);
 
@@ -1038,18 +1071,22 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
         if (QFile(sFileAbs).exists()) {
             sDebug = sKateCmd;
             QStringList qslistArgs;
-            // NOTE: -u is not needed at least as of kate 16.12.3 which does not create additional instances of kate
+            // NOTE: -u is not needed at least as of kate 16.12.3 which does not create additional
+            // instances of kate
             // qslistArgs.append("-u");
             // sDebug+=" -u";
             // qslistArgs.append("\""+sFileAbs+"\"");
             qslistArgs.append(sFileAbs);
             sDebug += " " + sFileAbs;
-            qslistArgs.append("--line"); // split into separate arg, otherwise geany complains it doesn't understand the arg "--line 1"
+            qslistArgs.append("--line"); // split into separate arg, otherwise geany complains that
+                                         // it doesn't understand the arg "--line 1"
             qslistArgs.append(sRowInTarget);
             sDebug += " --line " + sRowInTarget;
             // qslistArgs.append(sRowInTarget);
-            qslistArgs.append("--column"); //NOTE: -c is column in kate, but alternate config dir in geany, so use --column
-            qslistArgs.append(sColInTarget); //NOTE: -c is column in kate, but alternate config dir in geany, so use --column
+            qslistArgs.append("--column"); // NOTE: -c is column in kate, but alternate config dir
+                                           // in geany, so use --column
+            qslistArgs.append(sColInTarget); // NOTE: -c is column in kate, but alternate config dir
+                                             // in geany, so use --column
             sDebug += " --column " + sColInTarget;
             // qslistArgs.append(sColInTarget);
             // qWarning().noquote() << "qslistArgs: " << qslistArgs;

@@ -5,6 +5,12 @@ After using your compiler/linting tool, you can now double-click an error or
 warning to jump (using Kate or Geany line,col jump feature) to the file and line
 of code having the issue (see Usage below).
 
+## Features
+* Jumps to source line if you double-click error
+* Color codes lines in your output (red: error; orange: warning; yellow: issue in installed library used [if in site-packages]; black: formatting marks; gray: unrecognized information)
+  * Detects flags in your output: "Warning"
+* Detects flags in files cited by your output: `TODO` or `FIXME` in inline comments
+  * inline comment mark is determined from file extension: py, pyw, sh, c, h, cpp, hpp, js, java, php, bat, command
 
 ## Formats
 So far, compilers/linters with the following output format is readable as input
@@ -23,7 +29,6 @@ foo.cs(1,10): reason
 or\
 **nosetests** (no column, with parenthesis or not, terminated with comma or
 newline)
-
 
 ## Usage
 * make sure kate or geany package is installed (run install script again if
