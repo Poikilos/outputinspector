@@ -40,13 +40,13 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     // QString sErrorsListFileName="err.txt";
     ~MainWindow();
-    void readini();
-    void setValue(QString k, QString v);
+    void readConfig();
+    void setConfigValue(QString k, QString v);
     void init(QString);
-    bool is_fatal_source_error(QString);
-    std::map<QString, QString>* getOutputLineInfo(const QString sLine, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
-    void getOutputLineInfo(std::map<QString, QString>* info, const QString sLineOriginal, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
-    QString getAbsPathOrSame(QString sFile);
+    bool isFatalSourceError(QString);
+    std::map<QString, QString>* lineInfo(const QString sLine, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
+    void lineInfo(std::map<QString, QString>* info, const QString sLineOriginal, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
+    QString absPathOrSame(QString sFile);
 
 private slots:
     void on_mainListWidget_itemDoubleClicked(QListWidgetItem *item);
@@ -55,6 +55,7 @@ private:
     Ui::MainWindow *ui;
     void CompensateForEditorVersion();
     QString getConvertedSourceErrorAndWarnElseGetUnmodified(QString);
+    void cacheConfig();
 };
 
 #endif // MAINWINDOW_H

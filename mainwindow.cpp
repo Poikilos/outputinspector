@@ -39,35 +39,34 @@ public:
         QThread::msleep(msecs);
     }
 };
-
-std::map<QString, QString> mapIni;
-bool IniHas(QString key)
+std::map<QString, QString> config;
+bool configHas(QString key)
 {
-    return (mapIni.find(key) != mapIni.end());
+    return (config.find(key) != config.end());
 }
-QString IniString(QString key)
+QString configString(QString key)
 {
     QString sReturn;
-    std::map<QString, QString>::iterator it = mapIni.find(key);
-    if (it != mapIni.end())
+    std::map<QString, QString>::iterator it = config.find(key);
+    if (it != config.end())
         sReturn = it->second; // first is key second is value
     return sReturn;
 }
-bool toBool(QString s)
+bool convertToBool(QString s)
 {
     QString sLower = s.toLower();
     return (sLower == "true") || (sLower == "yes") || (sLower == "on") || (sLower == "1");
 }
-bool IniBool(QString key)
+bool configBool(QString key)
 {
-    return toBool(IniString(key));
+    return convertToBool(configString(key));
 }
-int IniInt(QString key)
+int configInt(QString key)
 {
     QString sReturn;
-    std::map<QString, QString>::iterator it = mapIni.find(key);
+    std::map<QString, QString>::iterator it = config.find(key);
     int iReturn = 0;
-    if (it != mapIni.end()) {
+    if (it != config.end()) {
         sReturn = it->second;
         bool bTest;
         iReturn = sReturn.toInt(&bTest, 10);
@@ -82,12 +81,10 @@ int IniInt(QString key)
     return iReturn;
 }
 // endregion scripting
-// region script vars
-QString sKateCmd;
-bool bFindTODOs = true;
+// region TODO: remove script vars and call configInt() directly
 int xEditorOffset = 0;
 int yEditorOffset = 0;
-// endregion script vars
+// endregion TODO: remove script vars and call configInt() directly
 
 // functor version of contains
 template <class T>
@@ -243,7 +240,7 @@ MainWindow::MainWindow(QWidget* parent)
     }
 }
 
-bool MainWindow::is_fatal_source_error(QString sErrStreamLine)
+bool MainWindow::isFatalSourceError(QString sErrStreamLine)
 {
     return (
         sErrStreamLine.indexOf("Can't open", 0, Qt::CaseInsensitive) > -1 //jshint could not find a source file
@@ -301,7 +298,7 @@ void MainWindow::init(QString sErrorsListFileName)
 
                     if (sLine.trimmed().length() > 0)
                         nonBlankLineCount++;
-                    if (is_fatal_source_error(sLine)) {
+                    if (isFatalSourceError(sLine)) {
                         ui->mainListWidget->addItem(new QListWidgetItem(sLine + " <your compiler (or other tool) recorded this fatal or summary error before outputinspector ran>", ui->mainListWidget));
                     } else if (qcontains_any<QString>(sLine, sSectionBreakFlags)) {
                         actualJump = "";
@@ -317,7 +314,7 @@ void MainWindow::init(QString sErrorsListFileName)
                         if (sLine != sLinePrev)
                             jshint_enable = true;
 
-                        getOutputLineInfo(info, sLine, actualJump, actualJumpLine, true);
+                        lineInfo(info, sLine, actualJump, actualJumpLine, true);
                         if (info->at("master") == "true") {
                             actualJump = info->at("file");
                             actualJumpLine = sLine;
@@ -396,9 +393,9 @@ void MainWindow::init(QString sErrorsListFileName)
                             // if (bShowWarningsLast) sErrors.append(sLine);
                         }
 
-                        if (bFindTODOs) {
+                        if (configBool("FindTODOs")) {
                             if (info->at("good") == "true") {
-                                QString sFileX = getAbsPathOrSame(info->at("file")); // =sLine.mid(0,sLine.indexOf("("));
+                                QString sFileX = absPathOrSame(info->at("file")); // =sLine.mid(0,sLine.indexOf("("));
                                 if (!sFiles.contains(sFileX, Qt::CaseSensitive)) {
                                     sFiles.append(sFileX);
                                     QFile qfileSource(sFileX);
@@ -465,9 +462,9 @@ void MainWindow::init(QString sErrorsListFileName)
                             } // end if found filename ender
                             else if (bDebug)
                                 qDebug() << "[outputinspector] WARNING: filename ender in " + sLine;
-                        } // end if bFindTODOs
+                        } // end if getIniBool("FindTODOs")
                         else
-                            qDebug() << "[outputinspector] WARNING: bFindTODOs off so skipped parsing " + sLine;
+                            qDebug() << "[outputinspector] WARNING: getIniBool(\"FindTODOs\") off so skipped parsing " + sLine;
                     } // end if a regular line (not fatal, not formatting)
                 } // end if length>0 (after trim using 0 option for readLine)
             } // end while not at end of file named sErrorsListFileName
@@ -484,13 +481,13 @@ void MainWindow::init(QString sErrorsListFileName)
                     ui->mainListWidget->addItem(*it);
                 }
             }
-            if (bFindTODOs) {
+            if (configBool("FindTODOs")) {
                 QList<QListWidgetItem*>::iterator it;
                 for (it = lwiToDos.begin(); it != lwiToDos.end(); ++it) {
                     ui->mainListWidget->addItem(*it);
                 }
             }
-            if (!IniBool("ExitOnNoErrors")) {
+            if (!configBool("ExitOnNoErrors")) {
                 if (lineCount == 0) {
                     QListWidgetItem* lwiNew = new QListWidgetItem("#" + sErrorsListFileName + ": WARNING (generated by outputinspector) 0 lines in file");
                     lwiNew->setForeground(brushes["Default"]);
@@ -503,10 +500,10 @@ void MainWindow::init(QString sErrorsListFileName)
             }
             // else hide errors since will exit anyway if no errors
             QString sMsg = "Errors: " + sNumErrors + "; Warnings:" + sNumWarnings;
-            if (bFindTODOs)
+            if (configBool("FindTODOs"))
                 sMsg += "; TODOs:" + sNumTODOs;
             ui->statusBar->showMessage(sMsg, 0);
-            if (IniBool("ExitOnNoErrors")) {
+            if (configBool("ExitOnNoErrors")) {
                 if (iErrors<1) {
                     qInfo() << "Closing since no errors...";
                     QCoreApplication::quit();
@@ -524,77 +521,20 @@ void MainWindow::init(QString sErrorsListFileName)
     delete info;
 } // end init
 
-void MainWindow::readini()
+void MainWindow::readConfig()
 {
     QFile qfileTest("/etc/outputinspector.conf");
     QString sLine;
-    bool bFoundKateCmd = false;
     if (qfileTest.open(QFile::ReadOnly)) { //| QFile::Translate
         QTextStream qtextNow(&qfileTest);
         while (!qtextNow.atEnd()) {
             sLine = qtextNow.readLine(0); //does trim off newline characters
             int iSign = sLine.indexOf("=");
             if ((sLine.length() > 2) && (iSign > 0) && (iSign < (sLine.length() - 1))) {
-                mapIni[sLine.mid(0, iSign).trimmed()] = sLine.mid(iSign + 1, sLine.length() - (iSign + 1)).trimmed();
+                config[sLine.mid(0, iSign).trimmed()] = sLine.mid(iSign + 1, sLine.length() - (iSign + 1)).trimmed();
             }
         }
-        QString sTemp;
-        if (IniHas("kate")) {
-            sKateCmd = IniString("kate");
-            sDebug += "kate:" + sKateCmd + ".  ";
-            bFoundKateCmd = true;
-        } else
-            sDebug += "No kate line found in /etc/outputinspector.conf.  ";
-        if (IniHas("ExitOnNoErrors")) {
-            sTemp = IniBool("ExitOnNoErrors") ? "yes" : "no";
-            sDebug += "ExitOnNoErrors:" + sTemp + ".  ";
-        } else
-            sDebug += "No ExitOnNoErrors line found in /etc/outputinspector.conf.  ";
-        if (IniHas("FindTODOs")) {
-            bFindTODOs = IniBool("FindTODOs");
-            sTemp = bFindTODOs ? "yes" : "no";
-            sDebug += "FindTODOs:" + sTemp + ".  ";
-        } else
-            sDebug += "No FindTODOs line found in /etc/outputinspector.conf.  ";
-        if (IniHas("xEditorOffset")) {
-            xEditorOffset = IniInt("xEditorOffset");
-            sTemp.setNum(xEditorOffset, 10);
-            sDebug += "xEditorOffset:" + sTemp + ".  ";
-            bForceOffset = true;
-        } else
-            sDebug += "No xEditorOffset line found in /etc/outputinspector.conf.  ";
-        if (IniHas("yEditorOffset")) {
-            yEditorOffset = IniInt("yEditorOffset");
-            sTemp.setNum(yEditorOffset, 10);
-            sDebug += "yEditorOffset:" + sTemp + ".  ";
-            bForceOffset = true;
-        } else
-            sDebug += "No yEditorOffset line found in /etc/outputinspector.conf.  ";
-        if (IniHas("Kate2TabWidth")) {
-            iKate2TabWidth = IniInt("Kate2TabWidth");
-            sTemp.setNum(iKate2TabWidth, 10);
-            sDebug += "Kate2TabWidth:" + sTemp + ".  ";
-        } else
-            sDebug += "No Kate2TabWidth line found in /etc/outputinspector.conf.  ";
-        // if (IniHas("Kate3TabWidth")) {
-        //     iKate3TabWidth=IniInt("Kate3TabWidth");
-        //     sTemp.setNum(iKate3TabWidth,10);
-        //     sDebug+="Kate3TabWidth:"+sTemp+".  ";
-        // }
-        // else sDebug+="No Kate3TabWidth line found in /etc/outputinspector.conf.  ";
-        if (IniHas("CompilerTabWidth")) {
-            iCompilerTabWidth = IniInt("CompilerTabWidth");
-            sTemp.setNum(iCompilerTabWidth, 10);
-            sDebug += "CompilerTabWidth:" + sTemp + ".  ";
-        } else
-            sDebug += "No CompilerTabWidth line found in /etc/outputinspector.conf.  ";
-        if (IniHas("ShowWarningsLast")) {
-            bShowWarningsLast = IniBool("ShowWarningsLast");
-            sTemp = bShowWarningsLast ? "yes" : "no";
-            sDebug += "ShowWarningsLast:" + sTemp + ".  ";
-        } else
-            sDebug += "No ShowWarningsLast line found in /etc/outputinspector.conf.  ";
-
+        cacheConfig();
         if (bDebug)
             QMessageBox::information(this, "Output Inspector - Debug", sDebug);
         if (bFormatErr) {
@@ -604,16 +544,16 @@ void MainWindow::readini()
     } else {
         if (bDebug)
             QMessageBox::information(this, "Output Inspector - Configuration", "The configuration file \"/etc/outputinspector.conf\" could not be read.");
-        sKateCmd = "/usr/lib/kde4/bin/kate";
+        setConfigValue("kate", "/usr/lib/kde4/bin/kate");
     }
-    if (!bFoundKateCmd && !bDebug) {
+    if (!config.count("kate") && !bDebug) {
         QMessageBox::information(this, "Output Inspector - Configuration", "/etc/outputinspector.conf has no line reading \"kate=/usr/bin/kate\" so reverting to /usr/lib/kde4/bin/kate (in order to try to detect path and prevent this error, try running the following terminal command from inside the outputinspector directory: sudo ./install)");
     }
 }
 
-void MainWindow::setValue(QString k, QString v)
+void MainWindow::setConfigValue(QString k, QString v)
 {
-    mapIni[k] = v;
+    config[k] = v;
 } // end readini
 void MainWindow::CompensateForEditorVersion()
 {
@@ -622,13 +562,12 @@ void MainWindow::CompensateForEditorVersion()
     QString sFileTemp = "/tmp/outputinspector.using.kate.version.tmp";
     sVersionArgs.append("--version");
     sVersionArgs.append(" > " + sFileTemp);
-    // QProcess::execute(sKateCmd, sVersionArgs);
-    system((char*)QString(sKateCmd + " --version > " + sFileTemp).toLocal8Bit().data());
+    // QProcess::execute(IniString("kate"), sVersionArgs);
+    system((char*)QString(configString("kate") + " --version > " + sFileTemp).toLocal8Bit().data());
     OutputInspectorSleepThread::msleep(125);
 
     QFile qfileTmp(sFileTemp);
     QString sLine;
-    // bool bFoundKateCmd=false;
     if (qfileTmp.open(QFile::ReadOnly)) { // | QFile::Translate
         // detect Kate version using output of Kate command above
         QTextStream qtextNow(&qfileTmp);
@@ -711,16 +650,74 @@ QString MainWindow::getConvertedSourceErrorAndWarnElseGetUnmodified(QString sLin
         }
     }
     return sLine;
+}
+
+void MainWindow::cacheConfig()
+{
+    QString sTemp;
+    if (configHas("kate")) {
+        sDebug += "kate:" + configString("kate") + ".  ";
+    } else
+        sDebug += "No kate line found in /etc/outputinspector.conf.  ";
+    if (configHas("ExitOnNoErrors")) {
+        sTemp = configBool("ExitOnNoErrors") ? "yes" : "no";
+        sDebug += "ExitOnNoErrors:" + sTemp + ".  ";
+    } else
+        sDebug += "No ExitOnNoErrors line found in /etc/outputinspector.conf.  ";
+    if (configHas("FindTODOs")) {
+        sTemp = configBool("FindTODOs") ? "yes" : "no";
+        sDebug += "FindTODOs:" + sTemp + ".  ";
+    } else
+        sDebug += "No FindTODOs line found in /etc/outputinspector.conf.  ";
+    if (configHas("xEditorOffset")) {
+        xEditorOffset = configInt("xEditorOffset");
+        sTemp.setNum(xEditorOffset, 10);
+        sDebug += "xEditorOffset:" + sTemp + ".  ";
+        bForceOffset = true;
+    } else
+        sDebug += "No xEditorOffset line found in /etc/outputinspector.conf.  ";
+    if (configHas("yEditorOffset")) {
+        yEditorOffset = configInt("yEditorOffset");
+        sTemp.setNum(yEditorOffset, 10);
+        sDebug += "yEditorOffset:" + sTemp + ".  ";
+        bForceOffset = true;
+    } else
+        sDebug += "No yEditorOffset line found in /etc/outputinspector.conf.  ";
+    if (configHas("Kate2TabWidth")) {
+        iKate2TabWidth = configInt("Kate2TabWidth");
+        sTemp.setNum(iKate2TabWidth, 10);
+        sDebug += "Kate2TabWidth:" + sTemp + ".  ";
+    } else
+        sDebug += "No Kate2TabWidth line found in /etc/outputinspector.conf.  ";
+    // if (configHas("Kate3TabWidth")) {
+    //     iKate3TabWidth=configInt("Kate3TabWidth");
+    //     sTemp.setNum(iKate3TabWidth,10);
+    //     sDebug+="Kate3TabWidth:"+sTemp+".  ";
+    // }
+    // else sDebug+="No Kate3TabWidth line found in /etc/outputinspector.conf.  ";
+    if (configHas("CompilerTabWidth")) {
+        iCompilerTabWidth = configInt("CompilerTabWidth");
+        sTemp.setNum(iCompilerTabWidth, 10);
+        sDebug += "CompilerTabWidth:" + sTemp + ".  ";
+    } else
+        sDebug += "No CompilerTabWidth line found in /etc/outputinspector.conf.  ";
+    if (configHas("ShowWarningsLast")) {
+        bShowWarningsLast = configBool("ShowWarningsLast");
+        sTemp = bShowWarningsLast ? "yes" : "no";
+        sDebug += "ShowWarningsLast:" + sTemp + ".  ";
+    } else
+        sDebug += "No ShowWarningsLast line found in /etc/outputinspector.conf.  ";
+
 } // end getConvertedSourceErrorAndWarnElseGetUnmodified
 
-std::map<QString, QString>* MainWindow::getOutputLineInfo(const QString sLine, QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine)
+std::map<QString, QString>* MainWindow::lineInfo(const QString sLine, QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine)
 {
     std::map<QString, QString>* info = new std::map<QString, QString>();
-    getOutputLineInfo(info, sLine, actualJump, actualJumpLine, isPrevCallPrevLine);
+    lineInfo(info, sLine, actualJump, actualJumpLine, isPrevCallPrevLine);
     return info;
 }
 
-void MainWindow::getOutputLineInfo(std::map<QString, QString>* info, const QString sLineOriginal, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine)
+void MainWindow::lineInfo(std::map<QString, QString>* info, const QString sLineOriginal, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine)
 {
     (*info)["file"] = ""; // same as info->at("file")
     (*info)["row"] = "";
@@ -941,7 +938,7 @@ void MainWindow::getOutputLineInfo(std::map<QString, QString>* info, const QStri
     }
 }
 
-QString MainWindow::getAbsPathOrSame(QString sFile)
+QString MainWindow::absPathOrSame(QString sFile)
 {
     QString sFileAbs;
     QString sCwd = QDir::currentPath(); // current() returns a QDir object
@@ -972,7 +969,7 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
             qInfo().noquote() << "clicked_file: '" + sFile + "'";
             qInfo().noquote() << "tooltip: '" + item->toolTip() + "'";
         }
-        sFileAbs = getAbsPathOrSame(sFile);
+        sFileAbs = absPathOrSame(sFile);
         QString sRowInTarget = (item->data(ROLE_ROW)).toString();
         QString sColInTarget = (item->data(ROLE_COL)).toString();
         if (bDebug) {
@@ -982,13 +979,13 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
         int iRowTarget = sRowInTarget.toInt(&bTest, 10);
         int iColInTarget = sColInTarget.toInt(&bTest, 10);
 
+        cacheConfig(); // TODO: deprecate this (mostly used to set xEditorOffset & yEditorOffset--make them local)
         // region only for Kate <= 2
         iRowTarget += yEditorOffset;
         sRowInTarget.setNum(iRowTarget, 10);
         iColInTarget += xEditorOffset;
         sColInTarget.setNum(iColInTarget, 10);
         // endregion only for Kate <= 2
-
         if (bCompensateForKateTabDifferences) {
             QFile qfileSource(sFileAbs);
             QString sLine;
@@ -1077,10 +1074,10 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
             }
         } // end if bCompensateForKateTabDifferences
         // QString sArgs="-u "+sFileAbs+" -l "+sRowInTarget+" -c "+sColInTarget;
-        // QProcess qprocNow(sKateCmd+sArgs);
+        // QProcess qprocNow(configString("kate")+sArgs);
         // qprocNow
         if (QFile(sFileAbs).exists()) {
-            sDebug = sKateCmd;
+            sDebug = configString("kate");
             QStringList qslistArgs;
             // NOTE: -u is not needed at least as of kate 16.12.3 which does not create additional
             // instances of kate
@@ -1101,9 +1098,10 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
             sDebug += " --column " + sColInTarget;
             // qslistArgs.append(sColInTarget);
             // qWarning().noquote() << "qslistArgs: " << qslistArgs;
-            QProcess::startDetached(sKateCmd, qslistArgs);
-            if (!QFile::exists(sKateCmd)) {
-                QMessageBox::information(this, "Output Inspector - Configuration", sKateCmd + " cannot be accessed.  Try setting the value of kate in /etc/outputinspector.conf");
+            QProcess::startDetached(configString("kate"), qslistArgs);
+            if (!QFile::exists(configString("kate"))) {
+                // ok to run anyway for fault tolerance, since may be in system path
+                QMessageBox::information(this, "Output Inspector - Configuration", configString("kate") + " cannot be accessed.  Try setting the value of kate in /etc/outputinspector.conf");
             }
             // if (bDebug)
             statusbarNow->showMessage(sDebug, 0);
@@ -1120,7 +1118,7 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
             qWarning().noquote() << "  actualJump: " + item->data(this->ROLE_COLLECTED_FILE).toString();
             qWarning().noquote() << "  actualJumpLine: " + item->data(this->ROLE_COLLECTED_LINE).toString();
             qWarning().noquote() << "  info:";
-            std::map<QString, QString>* info = getOutputLineInfo(sLine, actualJump, actualJumpLine, false);
+            std::map<QString, QString>* info = lineInfo(sLine, actualJump, actualJumpLine, false);
             // for (auto const& it : (*info)) {  // >=C++11 only (use dot notation not -> below if using this)
             std::map<QString, QString>::iterator it;
             for (it = info->begin(); it != info->end(); it++) {

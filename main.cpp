@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
     MainWindow w;
     QString sErrorsListFileName; //reverts to err.txt if left blank
     QStringList qArgs = QCoreApplication::arguments();
-    w.readini();
+    w.readConfig();
     // start at 1 since qArgs[0] is self:
     for (int i=1; i<qArgs.length(); i++) {
         QString qArg = qArgs[i];
@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
             if (signIndex>-1) {
                 int valueIndex = signIndex + 1;
                 QString name = qArg.mid(2, signIndex-2);
-                w.setValue(name, qArg.mid(valueIndex).trimmed());
+                w.setConfigValue(name, qArg.mid(valueIndex).trimmed());
                 qInfo() << "set " + name + " to '"
                            + qArg.mid(valueIndex).trimmed() + "'";
             }
