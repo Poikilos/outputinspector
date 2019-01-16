@@ -86,7 +86,9 @@ int xEditorOffset = 0;
 int yEditorOffset = 0;
 // endregion TODO: remove script vars and call configInt() directly
 
-// functor version of contains
+// Functor for Contains such as for multi-needle searches
+// (see [single variable] initializer list in constructor for how haystack is
+// obtained)
 template <class T>
 class ContainsF {
     T haystack;
@@ -102,10 +104,11 @@ public:
     }
 };
 
+// version which uses functor
 template <class T>
 bool containsAnyF(T haystack, std::list<T>& needles)
 {
-    return count_if(needles.begin(), needles.end(), ContainsF<T>(haystack)) > 0;
+    return count_if(needles.begin(), needles.end(), ContainsF<T>(haystack)) > 0; // FIXME: not tested
 }
 
 template <class T>
@@ -225,11 +228,10 @@ MainWindow::MainWindow(QWidget* parent)
     // qWarning().noquote() << "qWarning() stream is active.";
     // qCritical().noquote() << "qCritical() stream is active.";
     // qFatal().noquote() << "qFatal() stream is active.";
-    std::list<QStringList>::iterator itList;
     if (bDebug)
         qInfo().noquote() << "lists:";
     // this for loop has the brace on the next line (for clang-format test):
-    for (itList = enclosures.begin(); itList != enclosures.end(); itList++) {
+    for (auto itList = enclosures.begin(); itList != enclosures.end(); itList++) {
         // qInfo().noquote() << "  -";
         // for (int i=0; i<(*itList).length(); i++) {
         //     qInfo().noquote() << "    - " << (*itList)[i];
@@ -476,14 +478,12 @@ void MainWindow::init(QString sErrorsListFileName)
             QString sNumTODOs;
             sNumTODOs.setNum(iTODOs, 10);
             if (lwiWarnings.length() > 0) {
-                QList<QListWidgetItem*>::iterator it;
-                for (it = lwiWarnings.begin(); it != lwiWarnings.end(); ++it) {
+                for (auto it = lwiWarnings.begin(); it != lwiWarnings.end(); ++it) {
                     ui->mainListWidget->addItem(*it);
                 }
             }
             if (configBool("FindTODOs")) {
-                QList<QListWidgetItem*>::iterator it;
-                for (it = lwiToDos.begin(); it != lwiToDos.end(); ++it) {
+                for (auto it = lwiToDos.begin(); it != lwiToDos.end(); ++it) {
                     ui->mainListWidget->addItem(*it);
                 }
             }
@@ -744,8 +744,7 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString sLineO
     int iParamB = -1;
     int iEndParamsMarker = -1;
 
-    std::list<QStringList>::iterator itList;
-    for (itList = enclosures.begin(); itList != enclosures.end(); itList++) {
+    for (auto itList = enclosures.begin(); itList != enclosures.end(); itList++) {
         if ((((*itList)[PARSE_MARKER_FILE]).length() == 0) || sLine.startsWith((*itList)[PARSE_MARKER_FILE])) {
             sFileMarker = (*itList)[PARSE_MARKER_FILE];
             sParamAMarker = (*itList)[PARSE_MARKER_PARAM_A];
@@ -1120,8 +1119,7 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
             qWarning().noquote() << "  info:";
             std::map<QString, QString>* info = lineInfo(sLine, actualJump, actualJumpLine, false);
             // for (auto const& it : (*info)) {  // >=C++11 only (use dot notation not -> below if using this)
-            std::map<QString, QString>::iterator it;
-            for (it = info->begin(); it != info->end(); it++) {
+            for (auto it = info->begin(); it != info->end(); it++) {
                 qWarning().noquote() << "    " << it->first // key
                         + ": '" + it->second + "'"; //value
             }

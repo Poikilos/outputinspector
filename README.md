@@ -201,7 +201,9 @@ see CHANGELOG.md
 * allow param for compiler output text file name (instead of only err.txt in
   current directory)
 * allow param for directory containing source files to which error output refers
-
+* Change iterators to packed range-based equivalent `for (auto it&& : vec)`
+  (but not exactly that way, which makes element of ptr list no longer ptr as
+  a side effect).
 
 ## Developer Notes
 
