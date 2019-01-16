@@ -26,7 +26,7 @@ fi
 if [ -f "$2" ]; then
   # cd to directory of file (expand 0 then take only what is before slash)
   echo "${2%/*}"
-  $1 $2 1>out.txt 2>err.txt
+  $1 $2 2>err.txt
   outputinspector --ExitOnNoErrors=yes
 else
   echo "WARNING: cannot find source file '$2'"

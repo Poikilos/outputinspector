@@ -506,7 +506,12 @@ void MainWindow::init(QString sErrorsListFileName)
             if (configBool("ExitOnNoErrors")) {
                 if (iErrors<1) {
                     qInfo() << "Closing since no errors...";
-                    QCoreApplication::quit();
+                    // QCoreApplication::quit(); // doesn't work
+                    // aptr->exit(); // doesn't work (QApplication*)
+                    // aptr->quit(); // doesn't work
+                    // aptr->closeAllWindows(); // doesn't work
+                    // if the event loop is not running, this function (QCoreApplication::exit()) does nothing
+                    exit(EXIT_FAILURE);
                 }
             }
         } else {
