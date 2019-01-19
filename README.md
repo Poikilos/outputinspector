@@ -39,6 +39,9 @@ newline)
     (if you set the Execute command, the gear button will run
     passthrough-outputinspector and then the button will turn into a stop button
     and be able to stop both passthrough-outputinspector and outputinspector)
+    * You can send up to 7 additional params as passthrough-outputinspector
+      checks for that many. Example:\
+    `passthrough-outputinspector python3 "%f" --ExitOnNoErrors=no`
 * make sure kate or geany package is installed (run install script again if
 wasn't when install script ran--it recreates the config based on detecting
 kate's location if you enter y for yes)
