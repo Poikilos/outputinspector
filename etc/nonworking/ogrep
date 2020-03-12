@@ -1,0 +1,52 @@
+#!/bin/bash
+TMP_OUT=/tmp/oigrep.txt
+echo "* writing $TMP_OUT"
+more_params="-n"
+new_params=""
+pattern=" "
+# special_param=""
+# Preserve params containing spaces (See
+# <https://superuser.com/questions/403263/
+#  how-to-pass-bash-script-arguments-to-a-subshell>)
+
+COUNT=$#
+for ((INDEX=0; INDEX<COUNT; ++INDEX))
+do
+    #ARG="$(printf "%q" "$1")"
+    #ARGS[INDEX]="$(printf "%q" "$ARG")"
+    ARG="$1"
+    ARGS[INDEX]="$ARG"
+    shift
+done
+
+#INDEX=0
+#declare -a ARGS
+#for var in "$@"
+#do
+#    if [ "@$var" == "@-n" ]; then
+#        more_params=""
+#    fi
+#    new_var=$var
+    # if [[ $new_var =~ $pattern ]]; then
+        # special_param="'$new_var'"
+        # echo "* replacing space in $new_var..."
+        # from=" "
+        # to='\ '
+        # new_var="\"${new_var//$from/$to}\""
+        # new_var="${new_var//$from/$to}"
+        # # ^ // is replace all (/ is replace first)
+        # echo "  * became $new_var"
+    # fi
+#    ARGS[INDEX]="$new_var"
+    # new_params="$new_params $new_var"
+#    ++INDEX
+#done
+# ^ This only gets one var for some reason. See further up instead.
+
+# grep $@ $more_params > $TMP_OUT
+# ^ fails if a param in $@ has spaces
+echo "* params: ${ARGS[*]} $more_params"
+grep ${ARGS[*]} $more_params > $TMP_OUT
+# ^ still fails
+
+outputinspector $TMP_OUT

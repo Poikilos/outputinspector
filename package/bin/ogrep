@@ -1,13 +1,31 @@
-#!/bin/bash
-TMP_OUT=/tmp/oigrep.txt
-echo "* writing $TMP_OUT"
-more_params="-n"
-for var in "$@"
-do
-    if [ "@$var" == "@-n" ]; then
-        more_params=""
-    fi
-done
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import sys
+import os
+import tempfile
+import subprocess
 
-grep $@ $more_params > $TMP_OUT
-outputinspector $TMP_OUT
+
+# See <https://stackoverflow.com/questions/4856583/
+#   how-do-i-pipe-a-subprocess-call-to-a-text-file>
+
+tmp_path = tempfile.mktemp(prefix="ogrep")
+always_use = ["-n"]  # add line number to grep output
+args = []
+
+for i in range(1, len(sys.argv)):
+    args.append(sys.argv[i])
+
+for arg in always_use:
+    if arg not in args:
+        args.append(arg)
+
+with open(tmp_path, 'w') as outs:
+    subprocess.call(["grep"] + args, stdout=outs)
+    # For a cross-platform way to find the executable, see
+    # (unused) <https://gist.github.com/techtonik/4368898>
+
+subprocess.call(["outputinspector", tmp_path])
+
+if os.path.isfile(tmp_path):
+    os.remove(tmp_path)
