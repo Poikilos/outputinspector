@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [git] - 2020-03-12
+### Added
+- Handle Minetest Lua tracebacks (such as from debug.txt or stderr)
+  (requires fix below)
+
+### Fixed
+- Handle `PARSE_MARKER_FILE` value not at the start of a line.
+
+
 ## [git] - 2020-03-11
 ### Added
 - Allow simpler syntax while avoiding false positives by only allowing

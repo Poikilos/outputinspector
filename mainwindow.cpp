@@ -198,6 +198,18 @@ MainWindow::MainWindow(QWidget* parent)
         enclosures.push_back(sNoseUpperTracebackMarkers);
     }
     {
+        QStringList sMinetestLuaTracebackMarkers;
+        for (int i = 0; i < PARSE_PARTS_COUNT; i++)
+            sMinetestLuaTracebackMarkers.append("");
+        sMinetestLuaTracebackMarkers[PARSE_MARKER_FILE] = "ERROR[Main]:";
+        sMinetestLuaTracebackMarkers[PARSE_MARKER_PARAM_A] = ":";
+        sMinetestLuaTracebackMarkers[PARSE_MARKER_PARAM_B] = "";
+        sMinetestLuaTracebackMarkers[PARSE_MARKER_END_PARAMS] = ":";
+        sMinetestLuaTracebackMarkers[PARSE_COLLECT] = COLLECT_REUSE;
+        sMinetestLuaTracebackMarkers[PARSE_STACK] = "";
+        enclosures.push_back(sMinetestLuaTracebackMarkers);
+    }
+    {
         // TODO: (?) This comment said, "default must iterate LAST (in back)"
         //   BUT Grep syntax is simpler, so must come after it.
         QStringList sDefaultMarkers;
@@ -798,8 +810,12 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString sLineO
         qInfo().noquote() << "`" + sLineOriginal + "`:";
     }
     for (auto itList = enclosures.begin(); itList != enclosures.end(); itList++) {
-        if ((((*itList)[PARSE_MARKER_FILE]).length() == 0) || sLine.startsWith((*itList)[PARSE_MARKER_FILE])) {
+        if ((((*itList)[PARSE_MARKER_FILE]).length() == 0) || sLine.contains((*itList)[PARSE_MARKER_FILE])) {
             sFileMarker = (*itList)[PARSE_MARKER_FILE];
+            if (bDebugParser) {
+                if (sFileMarker.length() > 0)
+                    qInfo().noquote() << "  looking for sFileMarker '" + sFileMarker + "'";
+                }
             sParamAMarker = (*itList)[PARSE_MARKER_PARAM_A];
             sParamBMarker = (*itList)[PARSE_MARKER_PARAM_B]; // coordinate delimiter (blank if no column)
             sEndParamsMarker = (*itList)[PARSE_MARKER_END_PARAMS]; // what is after last coord ("\n" if line ends)
