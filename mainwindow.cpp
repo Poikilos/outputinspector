@@ -21,7 +21,11 @@ QStringList sFiles;
 //this is a comment with no space before or after slashes (for clang-format test)
 bool bDebug = false; //this is a trailing comment with no space before or after slashes (for clang-format test)
 bool bDebugTabs = false;
+#ifdef QT_DEBUG
+bool bDebugParser = true; // enables line-by-line parser output
+#else
 bool bDebugParser = false; // enables line-by-line parser output
+#endif
 QString sDebug = "";
 QStatusBar* statusbarNow;
 // region scripting
@@ -194,7 +198,8 @@ MainWindow::MainWindow(QWidget* parent)
         enclosures.push_back(sNoseUpperTracebackMarkers);
     }
     {
-        // default must iterate LAST (in back):
+        // TODO: (?) This comment said, "default must iterate LAST (in back)"
+        //   BUT Grep syntax is simpler, so must come after it.
         QStringList sDefaultMarkers;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             sDefaultMarkers.append("");
@@ -206,7 +211,46 @@ MainWindow::MainWindow(QWidget* parent)
         sDefaultMarkers[PARSE_STACK] = "";
         enclosures.push_back(sDefaultMarkers);
     }
-
+    {
+        QStringList sPyCodeStyleMarkers;
+        // -n option for grep shows line # like:
+        // <filename>:<number>:
+        for (int i = 0; i < PARSE_PARTS_COUNT; i++)
+            sPyCodeStyleMarkers.append("");
+        sPyCodeStyleMarkers[PARSE_MARKER_FILE] = "";
+        sPyCodeStyleMarkers[PARSE_MARKER_PARAM_A] = ":";
+        sPyCodeStyleMarkers[PARSE_MARKER_PARAM_B] = ":";
+        sPyCodeStyleMarkers[PARSE_MARKER_END_PARAMS] = ":";
+        sPyCodeStyleMarkers[PARSE_COLLECT] = "";
+        sPyCodeStyleMarkers[PARSE_STACK] = "";
+        enclosures.push_back(sPyCodeStyleMarkers);
+    }
+    {
+        QStringList sGrepWithLineMarkers;
+        // -n option for grep shows line # like:
+        // <filename>:<number>:
+        for (int i = 0; i < PARSE_PARTS_COUNT; i++)
+            sGrepWithLineMarkers.append("");
+        sGrepWithLineMarkers[PARSE_MARKER_FILE] = "";
+        sGrepWithLineMarkers[PARSE_MARKER_PARAM_A] = ":";
+        sGrepWithLineMarkers[PARSE_MARKER_PARAM_B] = "";
+        sGrepWithLineMarkers[PARSE_MARKER_END_PARAMS] = ":";
+        sGrepWithLineMarkers[PARSE_COLLECT] = "";
+        sGrepWithLineMarkers[PARSE_STACK] = "";
+        enclosures.push_back(sGrepWithLineMarkers);
+    }
+    {
+        QStringList sGrepPlainMarkers;
+        for (int i = 0; i < PARSE_PARTS_COUNT; i++)
+            sGrepPlainMarkers.append("");
+        sGrepPlainMarkers[PARSE_MARKER_FILE] = "";
+        sGrepPlainMarkers[PARSE_MARKER_PARAM_A] = "";
+        sGrepPlainMarkers[PARSE_MARKER_PARAM_B] = "";
+        sGrepPlainMarkers[PARSE_MARKER_END_PARAMS] = ":";
+        sGrepPlainMarkers[PARSE_COLLECT] = "";
+        sGrepPlainMarkers[PARSE_STACK] = "";
+        enclosures.push_back(sGrepPlainMarkers);
+    }
     brushes["TracebackNotTop"] = QBrush(QColor::fromRgb(128, 60, 0));
     brushes["Unusable"] = QBrush(Qt::lightGray);
     brushes["Internal"] = QBrush(QColor::fromRgb(192, 192, 100));
@@ -736,7 +780,6 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString sLineO
     QString sLine = sLineOriginal;
     sLine = getConvertedSourceErrorAndWarnElseGetUnmodified(sLine);
 
-    QStringList chunks = sLine.split(":");
     QString sFileMarker;
     QString sParamAMarker;
     QString sParamBMarker;
@@ -748,7 +791,12 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString sLineO
     int iParamBMarker = -1;
     int iParamB = -1;
     int iEndParamsMarker = -1;
-
+    QRegExp nonDigitRE("\\D");
+    QRegExp nOrZRE("\\d*"); // a digit (\d), zero or more times (*)
+    QRegExp numOrMoreRE("\\d+"); // a digit (\d), 1 or more times (+)
+    if (bDebugParser) {
+        qInfo().noquote() << "`" + sLineOriginal + "`:";
+    }
     for (auto itList = enclosures.begin(); itList != enclosures.end(); itList++) {
         if ((((*itList)[PARSE_MARKER_FILE]).length() == 0) || sLine.startsWith((*itList)[PARSE_MARKER_FILE])) {
             sFileMarker = (*itList)[PARSE_MARKER_FILE];
@@ -764,40 +812,67 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString sLineO
                     qInfo().noquote() << "  has '" + sFileMarker + "' @ " << iFileMarker
                                       << ">= START";
                 }
-                iParamAMarker = sLine.indexOf(sParamAMarker, iFileMarker + sFileMarker.length());
+
+                if (sParamAMarker.length() > 0) {
+                    iParamAMarker = sLine.indexOf(
+                        sParamAMarker, iFileMarker + sFileMarker.length()
+                    );
+                    if (iParamAMarker >=0) {
+                        if (!sLine.mid(iParamAMarker+sParamAMarker.length(), 1).contains(numOrMoreRE)) {
+                            // Don't allow the opener if the next character is
+                            // not a digit.
+                            iParamAMarker = -1;
+                        }
+                    }
+                } else if (sEndParamsMarker.length() > 0) {
+                    iParamAMarker = sLine.indexOf(sEndParamsMarker);
+                    if (iParamAMarker < 0) {
+                        iParamAMarker = sLine.length();
+                    }
+                } else {
+                    iParamAMarker = sLine.length();
+                    // sParamAMarker = "<forced marker=\"" + sParamAMarker.replace("\"", "\\\"") + "\">";
+                }
                 if (iParamAMarker > -1) {
                     if (bDebugParser) {
                         qInfo().noquote() << "    has pre-ParamA '" + sParamAMarker + "' @"
-                                          << iParamAMarker << ">="
-                                          << (iFileMarker + sFileMarker.length())
-                                          << "=" << iFileMarker << "+"
-                                          << sFileMarker.length(); // such as ', line '
+                                          << iParamAMarker << " (after " << sFileMarker.length() << "-long file marker at "
+                                          << iFileMarker
+                                          << " ending at " << (iFileMarker + sFileMarker.length())
+                                          << ")"; // such as ', line '
                     }
                     iParamA = iParamAMarker + sParamAMarker.length();
-                    if (sParamBMarker.length() > 0)
+                    if (sParamBMarker.length() > 0) {
+                        // There should be no B if there is no A, so failing
+                        // in that case is OK.
                         iParamBMarker = sLine.indexOf(sParamBMarker, iParamA);
+                    }
                     else {
-                        iParamBMarker = sLine.length();
-                        sParamBMarker = "<forced marker=\"" + sParamBMarker.replace("\"", "\\\"") + "\">";
+                        iParamBMarker = iParamA;
+                        // sParamBMarker = "<forced marker=\"" + sParamBMarker.replace("\"", "\\\"") + "\">";
                     }
                     if (iParamBMarker > -1) {
                         if (bDebugParser) {
-                            qInfo().noquote() << "      has pre-ParamB '" + sParamBMarker + "' @"
-                                              << iParamBMarker << ">="
-                                              << (iParamAMarker + sParamAMarker.length())
-                                              << "in '" + sLine + "'";
+                            qInfo().noquote() << "      has pre-ParamB marker '" + sParamBMarker + "' @"
+                                              << iParamBMarker << " at or after ParamA marker ending at"
+                                              << (iParamAMarker + sParamAMarker.length());
                         }
-                        if (sParamBMarker != (*itList)[PARSE_MARKER_PARAM_B])
-                            sParamBMarker = ""; // since may be used to locate next value
+                        // if (sParamBMarker != (*itList)[PARSE_MARKER_PARAM_B])
+                        //    sParamBMarker = ""; // since may be used to locate next value
                         if (sParamBMarker.length() > 0)
                             iParamB = iParamBMarker + sParamBMarker.length();
                         else
-                            iParamB = iParamA;
-                        if (sEndParamsMarker != "\n")
+                            iParamB = iParamBMarker;
+                        if (sEndParamsMarker.length() == 0) {
+                            iEndParamsMarker = iParamB;
+                            if (bDebugParser) {
+                                qInfo().noquote() << "  using iParamB for iEndParamsMarker: " << iParamB;
+                            }
+                        } else if (sEndParamsMarker != "\n") {
                             iEndParamsMarker = sLine.indexOf(sEndParamsMarker, iParamB);
-                        else {
+                        } else {
                             iEndParamsMarker = sLine.length();
-                            sEndParamsMarker = "<forced marker=\"" + sEndParamsMarker.replace("\"", "\\\"").replace("\n", "\\n") + "\">";
+                            // sEndParamsMarker = "<forced marker=\"" + sEndParamsMarker.replace("\"", "\\\"").replace("\n", "\\n") + "\">";
                         }
                         if (iEndParamsMarker > -1) {
                             if (sParamBMarker.length() == 0) {
@@ -809,7 +884,7 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString sLineO
                             if ((*itList)[PARSE_STACK] == STACK_LOWER)
                                 (*info)["lower"] = "true";
                             if (bDebugParser) {
-                                qInfo().noquote() << "        has post-params '" + sEndParamsMarker.replace('\n', '\\n') + "' @"
+                                qInfo().noquote() << "        has post-params '" + sEndParamsMarker.replace('\n', '\\n') + "' ending@"
                                                   << iEndParamsMarker << ">=" << (iParamBMarker + sParamBMarker.length()) << "="
                                                   << iParamBMarker << "+" << sParamBMarker.length() << "in '" + sLine + "'";
                             }
@@ -818,10 +893,7 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString sLineO
                                 // length should be 0 if not found but forced:
                                 sEndParamsMarker = "";
                             }
-                            iFile = iFileMarker + sFileMarker.length();
-                            if (bDebugParser) qInfo().noquote() << "        file '" + sLine.mid(iFile, iParamAMarker - iFile) + "'";
-                            if (bDebugParser) qInfo().noquote() << "        row '" + sLine.mid(iParamA, iParamBMarker - iParamA) + "'";
-                            if (bDebugParser) qInfo().noquote() << "        col '" + sLine.mid(iParamB, iEndParamsMarker - iParamB) + "'";
+                            iFile = iFileMarker + sFileMarker.length();                            
                             break;
                         } else if (bDebugParser) {
                             qInfo().noquote() << "        no post-params '" + sEndParamsMarker + "' >="
@@ -841,46 +913,6 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString sLineO
         }
     }
 
-
-    if (iEndParamsMarker < 0) {
-        // then check for other output formats where starts with file path
-        if (chunks.length() >= 4) {
-            // check for pycodestyle output
-            // such as "__init__.py:39:20: E116 unexpected indentation (comment)"
-            QRegExp re("\\d*"); // a digit (\d), zero or more times (*)
-            if (re.exactMatch(chunks[1]) && re.exactMatch(chunks[2])) {
-                QString sTryParamAMarker = ":";
-                QString sTryParamBMarker = ":";
-                QString sTryEndParamsMarker = ":";
-                int iTryParamAMarker = -1;
-                int iTryParamBMarker = -1;
-                int iTryEndParamsMarker = -1;
-                iTryParamAMarker = sLine.indexOf(sTryParamAMarker);
-                if (iTryParamAMarker > -1)
-                    iTryParamBMarker = sLine.indexOf(sTryParamBMarker, iTryParamAMarker + sTryParamAMarker.length());
-                if (iTryParamBMarker > -1)
-                    iTryEndParamsMarker = sLine.indexOf(sTryEndParamsMarker, iTryParamBMarker + sTryParamBMarker.length());
-                if (iTryEndParamsMarker > -1) {
-                    sFileMarker = "";
-                    iFileMarker = 0;
-                    sParamAMarker = sTryParamAMarker;
-                    sParamBMarker = sTryParamBMarker;
-                    sEndParamsMarker = sTryEndParamsMarker;
-                    iParamAMarker = iTryParamAMarker;
-                    iParamBMarker = iTryParamBMarker;
-                    iEndParamsMarker = iTryEndParamsMarker;
-                    iFile = iFileMarker + sFileMarker.length();
-                    iParamA = iParamAMarker + sParamAMarker.length();
-                    iParamB = iParamBMarker + sParamBMarker.length();
-                }
-            }
-            // for (auto itChunks = chunks.begin(); itChunks != chunks.end(); itChunks++) {
-                // qInfo().noquote() << *itChunks;
-            // }
-        }
-    }
-
-
     // qInfo().noquote() << "iFileMarker: " << iFileMarker;
     // qInfo().noquote() << "iParamAMarker: " << iParamAMarker;
     // qInfo().noquote() << "iParamBMarker: " << iParamBMarker;
@@ -889,8 +921,7 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString sLineO
     // qInfo().noquote() << "sParamAMarker: " << sParamAMarker;
     // qInfo().noquote() << "sParamBMarker: " << sParamBMarker;
     // qInfo().noquote() << "sEndParamsMarker: " << sEndParamsMarker;
-
-    if (iEndParamsMarker > -1) {
+    if (iEndParamsMarker >= 0) {
         // Even if closer is not present,
         // iEndParamsMarker is set to length() IF applicable to this enclosure
 
@@ -907,6 +938,14 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString sLineO
             (*info)["column"] = sLine.mid(iParamB, iEndParamsMarker - iParamB);
         else
             (*info)["column"] = "";
+        if (bDebugParser) qInfo().noquote() << "        file '" + sLine.mid(iFile, iParamAMarker - iFile) + "'";
+        // if (bDebugParser) qInfo().noquote() << "        row '" + sLine.mid(iParamA, iParamBMarker - iParamA) + "'";
+        if (bDebugParser) qInfo().noquote() << "        row '" + (*info)["row"] + "'";
+        if (bDebugParser) qInfo().noquote() << "          length " << iParamBMarker << "-" << iParamA;
+        //if (bDebugParser) qInfo().noquote() << "        col '" + sLine.mid(iParamB, iEndParamsMarker - iParamB) + "'";
+        if (bDebugParser) qInfo().noquote() << "        col '" + (*info)["column"] + "'";
+        if (bDebugParser) qInfo().noquote() << "          length " << iEndParamsMarker << "-" << iParamB;
+
         if (sFile.endsWith(".py", Qt::CaseSensitive))
             (*info)["language"] = "python";
         else if (sFile.endsWith(".pyw", Qt::CaseSensitive))
@@ -1136,7 +1175,9 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
             QMessageBox::information(this, "Output Inspector", sErr);
             // QMessageBox::information(this,"Output Inspector","'"+sFileAbs+"' cannot be accessed (try a different line, or if this line's path looks right, try running from the location where it exists instead of '"+QDir::currentPath()+"')");
             // or pasting the entire line to 'Issues' link on web-based git repository
-        } else
+        } else {
             qInfo().noquote() << "No file was detected in line: '" + sLine + "'";
+            qInfo().noquote() << "ERROR: '" + sErr + "'";
+        }
     }
 } // end MainWindow::on_mainListWidget_itemDoubleClicked

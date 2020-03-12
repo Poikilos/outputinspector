@@ -1,10 +1,22 @@
 # Changelog
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+
+## [git] - 2020-03-11
+### Added
+- Allow simpler syntax while avoiding false positives by only allowing
+  the param opener when it is followed by a digit.
+  - Detect grep output syntax.
+  - Detect nose test output syntax without hard-coded `split(":")`.
 
 
 ## [git] - 2019-12-27
 ### Changed
 - Fix pycodestyle support.
 - Improve changelog formatting and grammar.
+
 
 ## [git] - 2019-01-11
 ### Changed

@@ -1,0 +1,13 @@
+#!/bin/bash
+TMP_OUT=/tmp/oigrep.txt
+echo "* writing $TMP_OUT"
+more_params="-n"
+for var in "$@"
+do
+    if [ "@$var" == "@-n" ]; then
+        more_params=""
+    fi
+done
+
+grep $@ $more_params > $TMP_OUT
+outputinspector $TMP_OUT
