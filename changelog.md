@@ -6,8 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [1.3.0] - 2020-03-13
 ### Changed
-- Move known issues to the issue tracker ("allow param for directory" is
-  now a part of issue #5)
+- Move old known issues from readme.md to the issue tracker.
+  - The "allow param for directory" issue is now a part of issue #5
+  - Any not added to the issue tracker were already resolved.
 
 
 ## [1.3.0] - 2020-03-13
@@ -15,7 +16,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Accept standard input such as by piping from another program!
 
 ### Changed
-- Instead of dialog boxes regarding missing input, show lines in the
+- If any standard input is waiting, change dialog behavior. Instead of
+  showing dialog boxes that interrupt init (in the case of a missing
+  input file), show lines in the window.
 
 
 ## [1.3.0] - 2020-03-13
