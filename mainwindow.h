@@ -3,7 +3,7 @@
 
 #include <QMainWindow>
 #include <QListWidgetItem>
-//#include <map>
+// #include <map>
 
 
 
@@ -17,19 +17,45 @@ class MainWindow : public QMainWindow
 
 public:
     bool bDebugBadHint=true;
-    const QString COLLECT_REUSE = "REUSE";
-    const QString STACK_LOWER = "LOWER";
-    const int PARSE_MARKER_FILE = 0;
-    const int PARSE_MARKER_PARAM_A = 1;
-    const int PARSE_MARKER_PARAM_B = 2;
-    const int PARSE_MARKER_END_PARAMS = 3;
-    const int PARSE_COLLECT = 4;
-    const int PARSE_STACK = 5;
+    const QString COLLECT_REUSE = "REUSE"; /**< The target in the analyzed
+                                                output should be also used as
+                                                the jump location for the
+                                                following lines. */
+    const QString STACK_LOWER = "LOWER"; /**< The code reference is further
+                                              down in the call stack, so it is
+                                              probably not pointing to the
+                                              relevant code. */
+    const int PARSE_MARKER_FILE = 0; /**< Markers[PARSE_MARKER_FILE]
+                                          is the opener for the file path
+                                          (blank if the file path starts
+                                          at the begginning of the line). */
+    const int PARSE_MARKER_PARAM_A = 1; /**< Markers[PARSE_MARKER_PARAM_A]
+                                             is the first coordinate marker
+                                             (blank if none, such as grep--
+                                             -n is automatically added if you
+                                             use the included ogrep script). */
+    const int PARSE_MARKER_PARAM_B = 2; /**< Markers[PARSE_MARKER_PARAM_B]
+                                             is the second coordinate
+                                             delimiter (blank if no column). */
+    const int PARSE_MARKER_END_PARAMS = 3; /**< Markers[PARSE_MARKER_END_PARAMS]
+                                                ParamsEnder (what is after last
+                                                coord). */
+    const int PARSE_COLLECT = 4; /**< Markers[PARSE_COLLECT]
+                                      determines the mode
+                                      for connecting lines. For possible values
+                                      and their behaviors, see the documentation
+                                      for COLLECT_REUSE (or future COLLECT_*
+                                      constants). */
+    const int PARSE_STACK = 5; /**< Markers[PARSE_STACK]
+                                    flags a pattern as being for a callstack,
+                                    such as to connect it to a previous error
+                                    (see documentation for STACK_LOWER or for
+                                    any later-added STACK_* constants). */
     const int PARSE_PARTS_COUNT = 6;
     const int ROLE_COLLECTED_FILE = Qt::UserRole;
     const int ROLE_ROW = Qt::UserRole + 1;
     const int ROLE_COL = Qt::UserRole + 2;
-    const int ROLE_LOWER = Qt::UserRole + 3;  // further down the call stack, probably not the error you're looking to find
+    const int ROLE_LOWER = Qt::UserRole + 3;
     const int ROLE_COLLECTED_LINE = Qt::UserRole + 4;
     const int ROLE_DETAILS = Qt::UserRole + 5;
     std::list<QString> sInternalFlags;
