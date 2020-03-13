@@ -6,6 +6,18 @@ warning to jump (using Kate or Geany line,col jump feature) to the file and line
 of code having the issue (see Usage below).
 
 
+## Install
+### Web Install
+#### Linux
+Set a RELEASE to a different release tag you want:
+```
+RELEASE=1.3.0
+mkdir -p ~/.local/bin
+wget -O ~/.local/bin/outputinspector https://github.com/poikilos/outputinspector/releases/download/$RELEASE/outputinspector
+wget -O ~/.local/bin/ogrep https://github.com/poikilos/outputinspector/raw/master/package/bin/ogrep
+```
+
+
 ## Features
 * Jumps to source line if you double-click error
 * Color codes lines in your output (red: error; orange: warning; yellow: issue in installed library used [if in site-packages]; black: formatting marks; gray: unrecognized information)
@@ -104,38 +116,8 @@ Output of jshint is expected unless the second formatting is used by your parser
   example:
   `outputinspector --ExitOnNoErrors=yes` (or `true` or `on` or `1`)
 
-## Install
-### Release Web Install
-Set a RELEASE to a different release tag you want:
-```
-RELEASE=1.2.0
-mkdir -p ~/.local/bin
-wget -O ~/.local/bin/outputinspector https://github.com/poikilos/outputinspector/releases/download/$RELEASE/outputinspector
-wget -O ~/.local/bin/ogrep https://github.com/poikilos/outputinspector/raw/master/package/bin/ogrep
-```
 
-### Compiling
-* Right-click the downloaded zip file, then click Extract Here
-* open in QT Creator 5
-* then push the F7 key.  When it is finished compiling, exit.
-* open a terminal
-    * cd to the directory where you extracted outputinspector such as:
-      ```
-      # If you want to install to /usr/local,
-      # then do `su root` before attempting install below (or use
-      # sudo ./install.sh instead).
-      # If you are not named root, the default PREFIX is ~/.local
-      # (you can also set the PREFIX environment variable manually).
-      cd outputinspector
-      # or
-      cd outputinspector-master
-      ```
-      ```
-      ./install.sh
-      ```
-
-
-## Overview of jshint
+#### Overview of jshint
 Usually from nodejs-jshint package, jshint is a linting and/or hinting tool for
 javascript (especially node.js) which is considered a successor to jslinter.
 Here is the timeline:
@@ -209,14 +191,32 @@ see CHANGELOG.md
 * Doesn't add to error count for lines that contain string "previous error"
 * application icon doesn't work (see comments in main.cpp for setting via the
   QApplication object named 'a')
-* allow param for compiler output text file name (instead of only err.txt in
-  current directory)
 * allow param for directory containing source files to which error output refers
 * Change iterators to packed range-based equivalent `for (auto it&& : vec)`
   (but not exactly that way, which makes element of ptr list no longer ptr as
   a side effect).
 
+
 ## Developer Notes
+### Compiling
+* Right-click the downloaded zip file, then click Extract Here
+* open in QT Creator 5
+* then push the F7 key.  When it is finished compiling, exit.
+* open a terminal
+    * cd to the directory where you extracted outputinspector such as:
+      ```
+      # If you want to install to /usr/local,
+      # then do `su root` before attempting install below (or use
+      # sudo ./install.sh instead).
+      # If you are not named root, the default PREFIX is ~/.local
+      # (you can also set the PREFIX environment variable manually).
+      cd outputinspector
+      # or
+      cd outputinspector-master
+      ```
+      ```
+      ./install.sh
+      ```
 
 ### coding style
 cd to project dir, then
