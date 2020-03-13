@@ -22,7 +22,8 @@ using if all you want is fast code navigation during debugging.
 ## Install
 ### Web Install
 #### Linux
-Set a RELEASE to a different release tag you want:
+Usually, you should replace RELEASE with the latest version from the
+[Releases](https://github.com/poikilos/outputinspector/releases) page):
 ```
 RELEASE=1.3.0
 mkdir -p ~/.local/bin
@@ -39,16 +40,16 @@ wget -O ~/.local/bin/passthrough-outputinspector https://github.com/poikilos/out
   formatting marks; gray: unrecognized information)
   * Detect flags in your output such as `Warning` or `Error`.
 * Detect flags in files cited by your output: `TODO` or `FIXME` (in
-  inline comments). An inline comment mark is determined from file
-  extension: `py`, `pyw`, `sh`, `c`, `h`, `cpp`, `hpp`, `js`, `java`,
-  `php`, `bat`, `command`.
+  inline comments). Predicing inline comment marks is possible when
+  the file uses one of the following extensions: `py`, `pyw`, `sh`, `c`,
+  `h`, `cpp`, `hpp`, `js`, `java`, `php`, `bat`, `command`.
 * Install passthrough-outputinspector for use in IDEs (see Usage).
 
 
 ## Usage
 Before first use, make sure kate or geany package is installed (run
 install script again if wasn't when install script ran--it recreates
-the config based on detecting kate's location if you enter y for yes).
+the config based on detecting kate's location if you enter `y` for yes).
 
 ### Piping
 You can pipe output from another program to get near-realtime (depending
