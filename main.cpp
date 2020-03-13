@@ -1,9 +1,14 @@
 #include "mainwindow.h"
 #include <QApplication>
 #include <QDebug>
+#include <iostream>
 
 int main(int argc, char *argv[])
 {
+    std::cin.sync_with_stdio(false); /**< Stop in_avail from always being 0
+                                          (See <https://stackoverflow.com/
+                                            questions/17474252/
+        why-does-in-avail-output-zero-even-if-the-stream-has-some-char) */
     QApplication a(argc, argv);
     MainWindow w;
     QString sErrorsListFileName; //reverts to err.txt if left blank

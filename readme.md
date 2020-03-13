@@ -5,6 +5,7 @@ After using your compiler/linting tool, you can now double-click an error or
 warning to jump (using Kate or Geany line,col jump feature) to the file and line
 of code having the issue (see Usage below).
 
+
 ## Features
 * Jumps to source line if you double-click error
 * Color codes lines in your output (red: error; orange: warning; yellow: issue in installed library used [if in site-packages]; black: formatting marks; gray: unrecognized information)
@@ -13,38 +14,33 @@ of code having the issue (see Usage below).
   * inline comment mark is determined from file extension: py, pyw, sh, c, h, cpp, hpp, js, java, php, bat, command
 * Installs passthrough-outputinspector for use in IDEs (see Usage)
 
-## Formats
-So far, compilers/linters with the following output format is readable as input
-for outputinspector (see Usage for specific cases):
-```
-foo.js: line 1, col 10, reason
-```
-or
-```
-foo.py:20:29: reason
-```
-or
-```
-foo.cs(1,10): reason
-```
-or\
-**nosetests** (no column, with parenthesis or not, terminated with comma or
-newline)
 
 ## Usage
-* For automatic usage on Linux, create a build command in Geany:
-  * "Build," "Set Build Commands"
-  * Set Execute (or an empty box under "Independent commands") to:\
-    `passthrough-outputinspector python3 "%f"`\
-    (if you set the Execute command, the gear button will run
-    passthrough-outputinspector and then the button will turn into a stop button
-    and be able to stop both passthrough-outputinspector and outputinspector)
-    * You can send up to 7 additional params as passthrough-outputinspector
-      checks for that many. Example:\
+Before first use, make sure kate or geany package is installed (run
+install script again if wasn't when install script ran--it recreates
+the config based on detecting kate's location if you enter y for yes).
+
+### Piping
+You can pipe output from another program to get near-realtime (depending
+on your OS's implementation of piping) results without using files.
+
+To get error output, run: `... 2>&1 >/dev/null | outputinspector`;
+otherwise, simply run: `... | outputinspector`
+(where "..." is your program).
+
+### GUI-based use
+For automatic usage on Linux, create a build command in Geany:
+* "Build," "Set Build Commands"
+* Set Execute (or an empty box under "Independent commands") to:\
+  `passthrough-outputinspector python3 "%f"`\
+  (if you set the Execute command, the gear button will run
+  passthrough-outputinspector and then the button will turn into a stop button
+  and be able to stop both passthrough-outputinspector and outputinspector)
+  * You can send up to 7 additional params as passthrough-outputinspector
+    checks for that many. Example:\
     `passthrough-outputinspector python3 "%f" --ExitOnNoErrors=no`
-* make sure kate or geany package is installed (run install script again if
-wasn't when install script ran--it recreates the config based on detecting
-kate's location if you enter y for yes)
+
+### Specific Uses
 * For py file linting: you can use pycodestyle (tested with pycodestyle-3
 command--package may be named python3-pycodestyle in your Linux distro):
 ```

@@ -9,7 +9,7 @@
 #include <QString>
 #include <QTextStream>
 #include <QThread>
-
+#include <iostream>
 int iErrors = 0;
 int iWarnings = 0;
 int iTODOs = 0;
@@ -336,6 +336,7 @@ bool MainWindow::isFatalSourceError(QString sErrStreamLine)
 
 MainWindow::~MainWindow()
 {
+    delete this->inTimer;
     delete ui;
 }
 void MainWindow::init(QString errorsListFileName)
@@ -402,15 +403,28 @@ void MainWindow::init(QString errorsListFileName)
                 }
             }
         } else {
-            QString my_path = QCoreApplication::applicationFilePath();
-            QMessageBox::information(this, "Output Inspector - Help", my_path + ": Output Inspector cannot read the output file due to permissions or other read error (tried \"./" + errorsListFileName + "\").");
+            if (std::cin.rdbuf()->in_avail() < 1) {
+                QString my_path = QCoreApplication::applicationFilePath();
+                QString title = "Output Inspector - Help";
+                QString msg = my_path + ": Output Inspector cannot read the output file due to permissions or other read error (tried \"./" + errorsListFileName + "\").";
+                QMessageBox::information(this, title, msg);
+                // this->addLine(title + ":" + msg, true);
+            }
         }
     } // end if could open file named errorsListFileName
     else {
-        QString my_path = QCoreApplication::applicationFilePath();
-        QMessageBox::information(this, "Output Inspector - Help", my_path + ": Output Inspector cannot find the output file to process (tried \"./" + errorsListFileName + "\").");
+        if (std::cin.rdbuf()->in_avail() < 1) {
+            QString my_path = QCoreApplication::applicationFilePath();
+            QString title = "Output Inspector - Help";
+            QString msg = my_path + ": Output Inspector cannot find the output file to process (tried \"./" + errorsListFileName + "\").";
+            QMessageBox::information(this, title, msg);
+            // this->addLine(title + ":" + msg, true);
+        }
     }
-
+    this->inTimer = new QTimer(this);
+    this->inTimer->setInterval(500);  // milliseconds
+    connect(this->inTimer, SIGNAL(timeout()), this, SLOT(readInput()));
+    this->inTimer->start();
 } // end init
 
 /**
@@ -1234,4 +1248,32 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
             qInfo().noquote() << "ERROR: '" + sErr + "'";
         }
     }
+}
+
+void MainWindow::readInput()
+{
+    int limit = 50;
+    int count = 0;
+    std::string line = " ";
+    while (count < limit && !line.empty()) {
+        std::streamsize size = std::cin.rdbuf()->in_avail();
+        if (size < 1) {
+            // qInfo().noquote() << "OutputInspector: There is no input: got " << size;
+            // Prevent waiting forever for a line.
+            break;
+        }
+        std::getline(std::cin, line);
+        if (!std::cin.eof()) {
+            // qInfo().noquote() << "OutputInspector: input is '" << line.c_str() << "'.";
+            // this->addLine(QString("OutputInspector: input is: ") + QString::fromStdString(line), true);
+            this->addLine(QString::fromStdString(line), true);
+        }
+        else {
+            // qInfo().noquote() << "OutputInspector: input has ended.";
+            // this->addLine("# OutputInspector: input has ended.", true);
+            break;
+        }
+        count++;
+    }
+
 } // end MainWindow::on_mainListWidget_itemDoubleClicked

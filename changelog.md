@@ -3,11 +3,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+
+## [git] - 2020-03-13
+### Added
+- Accept standard input such as by piping from another program!
+
+### Changed
+- Instead of dialog boxes regarding missing input, show lines in the
+
+
 ## [git] - 2020-03-13
 ### Added
 - Run the script as a user not named "root" to install to use the
   prefix ~/.local (if the `PREFIX` environment variable is not
   specified)
+
 
 ## [1.2.0] - 2020-03-12
 ### Added

@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QListWidgetItem>
+#include <QTimer>
 // #include <map>
 
 
@@ -77,6 +78,7 @@ public:
 
 private slots:
     void on_mainListWidget_itemDoubleClicked(QListWidgetItem *item);
+    void readInput();
 
 private:
     Ui::MainWindow *ui;
@@ -104,6 +106,8 @@ private:
     QString m_ActualJumpColumn;
 
     void pushWarnings(); /**< Push warnings to the GUI. */
+
+    QTimer* inTimer; /**< Read standard input lines regularly **/
 };
 
 #endif // MAINWINDOW_H
