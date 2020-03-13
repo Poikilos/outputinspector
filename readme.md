@@ -109,21 +109,33 @@ Output of jshint is expected unless the second formatting is used by your parser
   `outputinspector --ExitOnNoErrors=yes` (or `true` or `on` or `1`)
 
 ## Install
+### Release Web Install
+Set a RELEASE to a different release tag you want:
+```
+RELEASE=1.2.0
+mkdir -p ~/.local/bin
+wget -O ~/.local/bin/outputinspector https://github.com/poikilos/outputinspector/releases/download/$RELEASE/outputinspector
+wget -O ~/.local/bin/ogrep https://github.com/poikilos/outputinspector/raw/master/package/bin/ogrep
+```
+
+### Compiling
 * Right-click the downloaded zip file, then click Extract Here
 * open in QT Creator 5
 * then push the F7 key.  When it is finished compiling, exit.
 * open a terminal
     * cd to the directory where you extracted outputinspector such as:
       ```
-      # if you don't have sudo installed or are not a sudoer,
-      # `su root` before attempting install below
+      # If you want to install to /usr/local,
+      # then do `su root` before attempting install below (or use
+      # sudo ./install.sh instead).
+      # If you are not named root, the default PREFIX is ~/.local
+      # (you can also set the PREFIX environment variable manually).
       cd outputinspector
       # or
       cd outputinspector-master
       ```
       ```
-      sudo ./install
-      # or if you don't have sudo installed and are root, just `./install`
+      ./install.sh
       ```
 
 

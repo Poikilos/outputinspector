@@ -4,9 +4,6 @@ PROJECT_NAME=outputinspector
 CONF_NAME=outputinspector.conf
 # NOTE: $SRC_BINS_PATH cannot have spaces (usages can't use quotes since * is used)
 SRC_BINS_PATH=./package/bin
-if [ -z "$PREFIX" ]; then
-  PREFIX=/usr/local
-fi
 echo
 echo
 echo
@@ -15,6 +12,16 @@ echo
 echo
 echo "looking for instances to terminate..."
 killall $BIN_FILE_NAME
+
+if [ -z "$PREFIX" ]; then
+    if [ "@$USER" == "@root" ]; then
+        PREFIX=/usr/local
+    else
+        PREFIX=~/.local
+        mkdir -p ~/.local/bin
+    fi
+fi
+
 echo "Using prefix $PREFIX (export environment variable or use env before running to change)"
 echo "such as:"
 echo "  env PREFIX=/usr ./install"
