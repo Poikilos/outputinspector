@@ -1,9 +1,22 @@
 # Output Inspector
-Output Inspector is a "parser for parser output" that makes errors clickable so
-you can get to the issue in your software's source code instantly.
-After using your compiler/linting tool, you can now double-click an error or
-warning to jump (using Kate or Geany line,col jump feature) to the file and line
-of code having the issue (see Usage below).
+
+Output Inspector makes errors clickable so you can get to the issue in
+your software's source code instantly. Get the popular feature included
+in many IDEs independently of an IDE. Output Inspector will even look
+for TODOs in comments for various source code files cited by the log!
+Output Inspector parses your parser output.
+
+On Linux, you can examine output in near-realtime (or non-realtime on
+Windows) using pipes instead of a log file. You can use the included
+"passthrough-outputinspector" script to automatically run
+outputinspector in Geany when you press the execute button. You can
+even use the included `ogrep` instead of grep then double click on a
+result to go to the line in the matching file! One of many
+possibilities is redirecting the output of many style checker commands
+to one file, then seeing the code for your entire project just like in
+a popular IDE. This becomes possible for any scenario now, so you do
+not have to work with an IDE you don't like for some language you are
+using if all you want is fast code navigation during debugging.
 
 
 ## Install
@@ -15,16 +28,21 @@ RELEASE=1.3.0
 mkdir -p ~/.local/bin
 wget -O ~/.local/bin/outputinspector https://github.com/poikilos/outputinspector/releases/download/$RELEASE/outputinspector
 wget -O ~/.local/bin/ogrep https://github.com/poikilos/outputinspector/raw/master/package/bin/ogrep
+wget -O ~/.local/bin/passthrough-outputinspector https://github.com/poikilos/outputinspector/raw/master/package/bin/passthrough-outputinspector
 ```
 
 
-## Features
-* Jumps to source line if you double-click error
-* Color codes lines in your output (red: error; orange: warning; yellow: issue in installed library used [if in site-packages]; black: formatting marks; gray: unrecognized information)
-  * Detects flags in your output: "Warning"
-* Detects flags in files cited by your output: `TODO` or `FIXME` in inline comments
-  * inline comment mark is determined from file extension: py, pyw, sh, c, h, cpp, hpp, js, java, php, bat, command
-* Installs passthrough-outputinspector for use in IDEs (see Usage)
+## Primary Features
+* Double-click an error to go to where the error occurs in your code.
+* Color code lines in your output (red: error; orange: warning; yellow:
+  issue in installed library used [if in site-packages]; black:
+  formatting marks; gray: unrecognized information)
+  * Detect flags in your output such as `Warning` or `Error`.
+* Detect flags in files cited by your output: `TODO` or `FIXME` (in
+  inline comments). An inline comment mark is determined from file
+  extension: `py`, `pyw`, `sh`, `c`, `h`, `cpp`, `hpp`, `js`, `java`,
+  `php`, `bat`, `command`.
+* Install passthrough-outputinspector for use in IDEs (see Usage).
 
 
 ## Usage
@@ -62,7 +80,7 @@ outputinspector &
 * For cs files, you have to run outputinspector from the location of the cs
   files you are compiling, and your compiler error output has to be redirected
   to err.txt.\
-  example:
+  Example:
   ```
   mcs AssemblyInfo.cs MainForm.cs 2>err.txt
   outputinspector &
@@ -90,20 +108,23 @@ outputinspector &
   one of the output formats (see 'Formats' section above),
   then Output Inspector should work when you double-click on the error.
 * `outputinspector err.txt &` can be added to the end of your linting or build
-  script, allowing you to immediately go to the correct source file and line
-  containing the error!\
-  Your compiler or linter output can be redirected to any file, then the file
-  can be specified as the first parameter of outputinspector (default is
-  err.txt). You can also run outputinspector manually if you have a file
-  containing linter/compiler output.
+  script, allowing you to immediately go to the correct source file and
+  line containing the error! Your compiler or linter output can be
+  redirected to any file, then the file can be specified as the first
+  parameter of outputinspector (default is err.txt). You can also run
+  outputinspector manually if you have a file containing
+  linter/compiler output.
 * Your source file should not have any unsaved changes in any other program at
   the time (it is ok if in Kate, but saving first and using your parser on that
   version is recommended for accuracy).
+
 Other than jshint output, Output Inspector has only been tested on `mcs` (mono
 compiler) output, but may work for any C# compiler and will work for any
-compiler or other tool using the formatting above.\
+compiler or other tool using the formatting above.
+
 The parsing is not fault-tolerant at this time, especially for the first type of
-formatting.\
+formatting.
+
 Output of jshint is expected unless the second formatting is used by your parser
 (such as `mcs`).
 * OPTIONAL: To use Geany, set: `kate=/usr/bin/geany` in
@@ -113,14 +134,14 @@ Output of jshint is expected unless the second formatting is used by your parser
 * You can set any of the ini options as command line options (case sensitive).
   For a list of settings, see "/etc/outputinspector.conf" after install, or the
   included "etc/outputinspector.example.conf"\
-  example:
+  example:\
   `outputinspector --ExitOnNoErrors=yes` (or `true` or `on` or `1`)
 
 
 #### Overview of jshint
-Usually from nodejs-jshint package, jshint is a linting and/or hinting tool for
-javascript (especially node.js) which is considered a successor to jslinter.
-Here is the timeline:
+Usually from the nodejs-jshint package, jshint is a linting and/or
+hinting tool for javascript (especially node.js) which is considered a
+successor to jslinter. Here is the timeline:
 * Kate-plugins project (original source of jslinter and other plugins) is no
   longer maintained since merged with Kate.
 * Kate removed jslinter, and some say the kde team got complaints that jslinter
@@ -146,37 +167,17 @@ Here is the timeline:
   command above:
   * there are no binaries from the Kate-plugins project, only python and
     python-related files, in:
-    * /usr/lib/python2.7/site-packages/
-      * /usr/lib/python2.7/site-packages/kate_plugins/
-      * /usr/lib/python2.7/site-packages/Kate_plugins-0.2.3-py2.7.egg-info
-      * /usr/lib/python2.7/site-packages/pyjslint-0.3.3-py2.7.egg-info/
-        * or any of their subfolders.
-    * a filename search for jslint in /usr/lib/python2.7/site-packages yields no
-      binaries or files other than those in the folders above
-
-
-## Backward Compatibility
-* Remember to edit /etc/outputinspector.conf specifying the kate binary (i.e.
-  include the line `kate=/usr/bin/kate` such as for Fedora 25 or
-  `kate=/usr/lib/kde4/bin/kate` or appropriate command for older linux distro
-  such as Ubuntu Hardy).
-* Tab handling:  If you are using `mcs` 1.2.6 or other compiler that reads tabs
-  as 6 spaces, and you are using Kate 2 with the default tab width of 8 or are
-  using Kate 3, you don't have to change anything.  Otherwise:
-  * Set CompilerTabWidth and Kate2TabWidth in /etc/outputinspector.conf -- kate
-    3.0.0+ is handled automatically, but CompilerTabWidth may have to be set.
-    If the compiler treats tabs as 1 character, make sure you set
-    `CompilerTabWidth=1` -- as of 1.2.6, `mcs` counts tabs as 6 spaces
-    (outputinspector default).
+    * `/usr/lib/python2.7/site-packages/`
+      * `/usr/lib/python2.7/site-packages/kate_plugins/`
+      * `/usr/lib/python2.7/site-packages/Kate_plugins-0.2.3-py2.7.egg-info`
+      * `/usr/lib/python2.7/site-packages/pyjslint-0.3.3-py2.7.egg-info/`
+      * or any of their subfolders.
+    * A filename search for jslint in `/usr/lib/python2.7/site-packages`
+      yields no binaries or files other than those in the folders above.
 
 
 ## Changes
-see CHANGELOG.md
-
-
-## Planned Features
-* paste (such as from an online code quality tool)
-* allow reading from standard input
+See [changelog.md](changelog.md).
 
 
 ## Developer Notes
@@ -222,3 +223,17 @@ dnf -y install meld
 ~~`qdevelop outputinspector.pro`~~
 ~~* Install:~~
 ~~    Requires: qt4 libqt4 libqt4-gui libqt4-core~~
+
+### Backward Compatibility
+* Remember to edit /etc/outputinspector.conf specifying the kate binary (i.e.
+  include the line `kate=/usr/bin/kate` such as for Fedora 25 or
+  `kate=/usr/lib/kde4/bin/kate` or appropriate command for older linux distro
+  such as Ubuntu Hardy).
+* Tab handling:  If you are using `mcs` 1.2.6 or other compiler that reads tabs
+  as 6 spaces, and you are using Kate 2 with the default tab width of 8 or are
+  using Kate 3, you don't have to change anything.  Otherwise:
+  * Set CompilerTabWidth and Kate2TabWidth in /etc/outputinspector.conf -- kate
+    3.0.0+ is handled automatically, but CompilerTabWidth may have to be set.
+    If the compiler treats tabs as 1 character, make sure you set
+    `CompilerTabWidth=1` -- as of 1.2.6, `mcs` counts tabs as 6 spaces
+    (outputinspector default).
