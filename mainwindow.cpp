@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include <QDebug>
+#include <QDebug> // Provide standard qt output streams.
 #include <QDir>
 #include <QFile>
 #include <QMessageBox>
@@ -9,32 +9,10 @@
 #include <QString>
 #include <QTextStream>
 #include <QThread>
-#include <iostream>
-int iErrors = 0;
-int iWarnings = 0;
-int iTODOs = 0;
-int iKate2TabWidth = 8;
-// int iKate3TabWidth = 8;
-int iCompilerTabWidth = 6;
-QStringList sFiles;
-//this is a very long comment (for clang-format test) Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque maximus risus lectus, nec egestas tellus aliquam id. Praesent suscipit, dui in tincidunt venenatis, mi purus convallis tellus, vel pellentesque magna nulla sit amet mauris.
-//this is a comment with no space before or after slashes (for clang-format test)
-bool bDebug = false; //this is a trailing comment with no space before or after slashes (for clang-format test)
-bool bDebugTabs = false;
-#ifdef QT_DEBUG
-bool bDebugParser = true; // enables line-by-line parser output
-#else
-bool bDebugParser = false; // enables line-by-line parser output
-#endif
-QString sDebug = "";
-QStatusBar* statusbarNow;
-// region scripting
-bool bFormatErr = false;
-QString sFormatErrs;
-bool bShowWarningsLast = false; //TODO: implement this
-int iKateRevisionMajor = 0; // i.e. 2.5.9 is 2, kde3 version; and 3.0.3 is 3, the kde4 version
-bool bForceOffset = false;
-bool bCompensateForKateTabDifferences = true;
+#include <QStandardPaths>
+#include <iostream>//this is a trailing comment with no space before or after slashes (for clang-format test)
+
+#include "settings.h"
 
 class OutputInspectorSleepThread : public QThread {
 public:
@@ -43,56 +21,14 @@ public:
         QThread::msleep(msecs);
     }
 };
-std::map<QString, QString> config;
-bool configHas(QString key)
-{
-    return (config.find(key) != config.end());
-}
-QString configString(QString key)
-{
-    QString sReturn;
-    std::map<QString, QString>::iterator it = config.find(key);
-    if (it != config.end())
-        sReturn = it->second; // first is key second is value
-    return sReturn;
-}
-bool convertToBool(QString s)
-{
-    QString sLower = s.toLower();
-    return (sLower == "true") || (sLower == "yes") || (sLower == "on") || (sLower == "1");
-}
-bool configBool(QString key)
-{
-    return convertToBool(configString(key));
-}
-int configInt(QString key)
-{
-    QString sReturn;
-    std::map<QString, QString>::iterator it = config.find(key);
-    int iReturn = 0;
-    if (it != config.end()) {
-        sReturn = it->second;
-        bool bTest;
-        iReturn = sReturn.toInt(&bTest, 10);
-        if (!bTest) {
-            if (sFormatErrs == "")
-                sFormatErrs = sReturn;
-            else
-                sFormatErrs = ", " + sReturn;
-            bFormatErr = true;
-        }
-    }
-    return iReturn;
-}
-// endregion scripting
-// region TODO: remove script vars and call configInt() directly
-int xEditorOffset = 0;
-int yEditorOffset = 0;
-// endregion TODO: remove script vars and call configInt() directly
 
-// Functor for Contains such as for multi-needle searches
-// (see [single variable] initializer list in constructor for how haystack is
-// obtained)
+// endregion scripting
+
+/**
+ * This is a Functor for "Contains," such as for multi-needle searches
+ * (see [single variable] initializer list in constructor for how haystack is
+ * obtained)
+ */
 template <class T>
 class ContainsF {
     T haystack;
@@ -108,11 +44,14 @@ public:
     }
 };
 
-// version which uses functor
+/**
+ * This version uses the functor to allow using count_if with a
+ * param that is determined later (by the functor using the param).
+ */
 template <class T>
 bool containsAnyF(T haystack, std::list<T>& needles)
 {
-    return count_if(needles.begin(), needles.end(), ContainsF<T>(haystack)) > 0; // FIXME: not tested
+    return count_if(needles.begin(), needles.end(), ContainsF<T>(haystack)) > 0; // FIXME: Test containsAnyF
 }
 
 template <class T>
@@ -121,11 +60,14 @@ bool contains(T haystack, T needle)
     return haystack.contains(needle);
 }
 
+/*
 template <class T>
 bool contains_any(T haystack, std::list<T>& needles, Qt::CaseSensitivity cs = Qt::CaseSensitive)
 {
+    // TODO: use unused parameter cs.
     return count_if(needles.begin(), needles.end(), bind(contains, haystack, std::placeholders::_1)) > 0;
 }
+*/
 
 template <class T>
 bool qcontains(T haystack, T needle, Qt::CaseSensitivity cs = Qt::CaseSensitive)
@@ -144,150 +86,197 @@ MainWindow::MainWindow(QWidget* parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    // QDir configDir = QStandardPaths::StandardLocation(QStandardPaths::ConfigLocation());
+    // QStandardPaths::StandardLocation(QStandardPaths::HomeLocation)
+    // ^ same as QDir::homePath()
+    // See <https://stackoverflow.com/questions/32525196/
+    //   how-to-get-a-settings-storage-path-in-a-cross-platform-way-in-qt>
+    auto path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (path.isEmpty()) qFatal("Cannot determine settings storage location");
+    QDir d{path};
+    if (!d.exists()) {
+        d.mkpath(d.absolutePath());
+    }
+    QString filePath = QDir::cleanPath(d.absolutePath() + QDir::separator() + "settings.txt");
+    QFile f{filePath};
+    /// TODO: fill this in or remove it (and the comments).
+    if (d.exists()) {
+        if (!f.exists()) {
+            // if (f.open(QIODevice::WriteOnly | QIODevice::Truncate))
+            //     f.write("Hello, World");
+        }
+        else {
+
+        }
+    }
+    this->config = new Settings(filePath);
+    // if (QFile("/etc/outputinspector.conf").exists()) {
+    //     this->config = new Settings("/etc/outputinspector.conf");
+    // }
+    // else if (QFile("/etc/outputinspector.conf").exists()) {
+    //     this->config = new Settings("/etc/outputinspector.conf");
+    // }
+    this->config->setIfMissing("Kate2TabWidth", 8);
+    this->config->setIfMissing("CompilerTabWidth", 6);
+    this->config->setIfMissing("ShowWarningsLast", false);
+    /// TODO: Implement ShowWarningsLast (but ignore it and behave as if it were
+    /// false if there is anything in stdin).
+    this->config->setIfMissing("FindTODOs", true);
+    if (this->config->contains("kate")) {
+        this->config->setIfMissing("editor", this->config->getString("kate"));
+        this->config->remove("kate");
+    }
+    this->config->setIfMissing("editor", "/usr/bin/geany");
+
     // init(errorsListFileName);
     // formats with "\n" at end must be AFTER other single-param formats that have
-    // same PARSE_MARKER_FILE and PARSE_PARAM_A, because "\n" is forced
-    // (which would leave extra stuff at the end if there are more markings)
-    statusbarNow = ui->statusBar;
+    // same TOKEN_FILE and PARSE_PARAM_A, because "\n" is forced
+    // (which would leave extra stuff at the end if there are more tokenings)
     {
-        QStringList sNoseErrorMarkers;
+        QStringList def; /**< Nose Error */
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            sNoseErrorMarkers.append("");
-        sNoseErrorMarkers[PARSE_MARKER_FILE] = "  File ";
-        sNoseErrorMarkers[PARSE_MARKER_PARAM_A] = ", line ";
-        sNoseErrorMarkers[PARSE_MARKER_PARAM_B] = ")";
-        sNoseErrorMarkers[PARSE_MARKER_END_PARAMS] = "";
-        sNoseErrorMarkers[PARSE_COLLECT] = "";
-        sNoseErrorMarkers[PARSE_STACK] = "";
-        enclosures.push_back(sNoseErrorMarkers);
+            def.append("");
+        def[TOKEN_FILE] = "  File ";
+        def[TOKEN_PARAM_A] = ", line ";
+        def[TOKEN_PARAM_B] = ")";
+        def[TOKEN_END_PARAMS] = "";
+        def[PARSE_COLLECT] = "";
+        def[PARSE_STACK] = "";
+        enclosures.push_back(def);
     }
     {
-        QStringList sNoseLowerTracebackMarkers;
+        QStringList def; /**< Nose Lower Traceback */
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            sNoseLowerTracebackMarkers.append("");
-        sNoseLowerTracebackMarkers[PARSE_MARKER_FILE] = "  File ";
-        sNoseLowerTracebackMarkers[PARSE_MARKER_PARAM_A] = ", line ";
-        sNoseLowerTracebackMarkers[PARSE_MARKER_PARAM_B] = "";
-        sNoseLowerTracebackMarkers[PARSE_MARKER_END_PARAMS] = ",";
-        sNoseLowerTracebackMarkers[PARSE_COLLECT] = COLLECT_REUSE;
-        sNoseLowerTracebackMarkers[PARSE_STACK] = STACK_LOWER;
-        enclosures.push_back(sNoseLowerTracebackMarkers);
+            def.append("");
+        def[TOKEN_FILE] = "  File ";
+        def[TOKEN_PARAM_A] = ", line ";
+        def[TOKEN_PARAM_B] = "";
+        def[TOKEN_END_PARAMS] = ",";
+        def[PARSE_COLLECT] = COLLECT_REUSE;
+        def[PARSE_STACK] = STACK_LOWER;
+        enclosures.push_back(def);
     }
     {
-        QStringList sNoseSyntaxErrorMarkers;
+        QStringList def; /**< Nose Syntax Error */
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            sNoseSyntaxErrorMarkers.append("");
-        sNoseSyntaxErrorMarkers[PARSE_MARKER_FILE] = "ERROR: Failure: SyntaxError (invalid syntax ("; // 0: file marker
-        sNoseSyntaxErrorMarkers[PARSE_MARKER_PARAM_A] = ", line "; // 1: ParamA marker
-        sNoseSyntaxErrorMarkers[PARSE_MARKER_PARAM_B] = ""; // 2: ParamB marker (coordinate delimiter; blank if no column)
-        sNoseSyntaxErrorMarkers[PARSE_MARKER_END_PARAMS] = ")"; // 3: ParamsEnder (what is after last coord)
-        sNoseSyntaxErrorMarkers[PARSE_COLLECT] = ""; // 4: COLLECT (mode for when line in analyzed output should be also used as jump for following lines)
-        sNoseSyntaxErrorMarkers[PARSE_STACK] = ""; // 5: set as LOWER or not (lower in stack, so probably not the error you're looking for)
-        enclosures.push_back(sNoseSyntaxErrorMarkers);
+            def.append("");
+        def[TOKEN_FILE] = "ERROR: Failure: SyntaxError (invalid syntax (";
+        def[TOKEN_PARAM_A] = ", line ";
+        def[TOKEN_PARAM_B] = "";
+        def[TOKEN_END_PARAMS] = ")";
+        def[PARSE_COLLECT] = "";
+        def[PARSE_STACK] = "";
+        enclosures.push_back(def);
     }
     {
-        QStringList sNoseUpperTracebackMarkers;
+        QStringList def; /**< Nose Upper Traceback */
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            sNoseUpperTracebackMarkers.append("");
-        sNoseUpperTracebackMarkers[PARSE_MARKER_FILE] = "  File ";
-        sNoseUpperTracebackMarkers[PARSE_MARKER_PARAM_A] = ", line ";
-        sNoseUpperTracebackMarkers[PARSE_MARKER_PARAM_B] = "";
-        sNoseUpperTracebackMarkers[PARSE_MARKER_END_PARAMS] = "\n";
-        sNoseUpperTracebackMarkers[PARSE_COLLECT] = COLLECT_REUSE;
-        sNoseUpperTracebackMarkers[PARSE_STACK] = "";
-        enclosures.push_back(sNoseUpperTracebackMarkers);
+            def.append("");
+        def[TOKEN_FILE] = "  File ";
+        def[TOKEN_PARAM_A] = ", line ";
+        def[TOKEN_PARAM_B] = "";
+        def[TOKEN_END_PARAMS] = "\n";
+        def[PARSE_COLLECT] = COLLECT_REUSE;
+        def[PARSE_STACK] = "";
+        enclosures.push_back(def);
     }
     {
-        QStringList sMinetestLuaTracebackMarkers;
+        QStringList def; /**< Minetest Lua Traceback */
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            sMinetestLuaTracebackMarkers.append("");
-        sMinetestLuaTracebackMarkers[PARSE_MARKER_FILE] = "ERROR[Main]:";
-        sMinetestLuaTracebackMarkers[PARSE_MARKER_PARAM_A] = ":";
-        sMinetestLuaTracebackMarkers[PARSE_MARKER_PARAM_B] = "";
-        sMinetestLuaTracebackMarkers[PARSE_MARKER_END_PARAMS] = ":";
-        // sMinetestLuaTracebackMarkers[PARSE_COLLECT] = COLLECT_REUSE;
-        sMinetestLuaTracebackMarkers[PARSE_STACK] = "";
-        enclosures.push_back(sMinetestLuaTracebackMarkers);
+            def.append("");
+        def[TOKEN_FILE] = "ERROR[Main]:";
+        def[TOKEN_PARAM_A] = ":";
+        def[TOKEN_PARAM_B] = "";
+        def[TOKEN_END_PARAMS] = ":";
+        // def[PARSE_COLLECT] = COLLECT_REUSE;
+        def[PARSE_STACK] = "";
+        enclosures.push_back(def);
     }
     {
-        QStringList sMinetestAccessWarningMarkers;
+        QStringList def; /**< Minetest Access Warning */
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            sMinetestAccessWarningMarkers.append("");
-        // TODO: change to "WARNING\[Server\].* accessed at " (requires: implement regex)
-        sMinetestAccessWarningMarkers[PARSE_MARKER_FILE] = " accessed at ";
-        sMinetestAccessWarningMarkers[PARSE_MARKER_PARAM_A] = ":";
-        sMinetestAccessWarningMarkers[PARSE_MARKER_PARAM_B] = "";
-        sMinetestAccessWarningMarkers[PARSE_MARKER_END_PARAMS] = "\n";
-        // sMinetestAccessWarningMarkers[PARSE_COLLECT] = COLLECT_REUSE;
-        sMinetestAccessWarningMarkers[PARSE_STACK] = "";
-        enclosures.push_back(sMinetestAccessWarningMarkers);
+            def.append("");
+        // TODO: change to "WARNING\[Server\].* accessed at " (requires:
+        // implementing regex)
+        def[TOKEN_FILE] = " accessed at ";
+        def[TOKEN_PARAM_A] = ":";
+        def[TOKEN_PARAM_B] = "";
+        def[TOKEN_END_PARAMS] = "\n";
+        // def[PARSE_COLLECT] = COLLECT_REUSE;
+        def[PARSE_STACK] = "";
+        enclosures.push_back(def);
     }
     {
-        QStringList sMinetestWarningInsideFunctionMarkers;
+        QStringList def; /**< Minetest Warning in function */
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            sMinetestWarningInsideFunctionMarkers.append("");
-        // TODO: change to "WARNING\[Server\].* accessed at " (requires: implement regex)
-        sMinetestWarningInsideFunctionMarkers[PARSE_MARKER_FILE] = " inside a function at ";
-        sMinetestWarningInsideFunctionMarkers[PARSE_MARKER_PARAM_A] = ":";
-        sMinetestWarningInsideFunctionMarkers[PARSE_MARKER_PARAM_B] = "";
-        sMinetestWarningInsideFunctionMarkers[PARSE_MARKER_END_PARAMS] = ".";
-        //sMinetestWarningInsideFunctionMarkers[PARSE_COLLECT] = COLLECT_REUSE;
-        sMinetestWarningInsideFunctionMarkers[PARSE_STACK] = "";
-        enclosures.push_back(sMinetestWarningInsideFunctionMarkers);
+            def.append("");
+        /// TODO: change to "WARNING\[Server\].* accessed at " (requires:
+        // implementing regex)
+        def[TOKEN_FILE] = " inside a function at ";
+        def[TOKEN_PARAM_A] = ":";
+        def[TOKEN_PARAM_B] = "";
+        def[TOKEN_END_PARAMS] = ".";
+        // def[PARSE_COLLECT] = COLLECT_REUSE;
+        def[PARSE_STACK] = "";
+        enclosures.push_back(def);
     }
     {
-        // TODO: (?) This comment said, "default must iterate LAST (in back)"
-        //   BUT Grep syntax is simpler, so must come after it.
-        QStringList sDefaultMarkers;
+        QStringList def; /**< This is a fallback definition that applies
+                              to various parsers.
+                              Simpler definitions must be attempted in
+                              order from most to least complex to avoid
+                              false positives (Now there are even
+                              simpler ones after this one). */
+
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            sDefaultMarkers.append("");
-        sDefaultMarkers[PARSE_MARKER_FILE] = "";
-        sDefaultMarkers[PARSE_MARKER_PARAM_A] = "(";
-        sDefaultMarkers[PARSE_MARKER_PARAM_B] = ",";
-        sDefaultMarkers[PARSE_MARKER_END_PARAMS] = ")";
-        sDefaultMarkers[PARSE_COLLECT] = "";
-        sDefaultMarkers[PARSE_STACK] = "";
-        enclosures.push_back(sDefaultMarkers);
+            def.append("");
+        def[TOKEN_FILE] = "";
+        def[TOKEN_PARAM_A] = "(";
+        def[TOKEN_PARAM_B] = ",";
+        def[TOKEN_END_PARAMS] = ")";
+        def[PARSE_COLLECT] = "";
+        def[PARSE_STACK] = "";
+        enclosures.push_back(def);
     }
     {
-        QStringList sPyCodeStyleMarkers;
+        QStringList def;
         // -n option for grep shows line # like:
         // <filename>:<number>:
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            sPyCodeStyleMarkers.append("");
-        sPyCodeStyleMarkers[PARSE_MARKER_FILE] = "";
-        sPyCodeStyleMarkers[PARSE_MARKER_PARAM_A] = ":";
-        sPyCodeStyleMarkers[PARSE_MARKER_PARAM_B] = ":";
-        sPyCodeStyleMarkers[PARSE_MARKER_END_PARAMS] = ":";
-        sPyCodeStyleMarkers[PARSE_COLLECT] = "";
-        sPyCodeStyleMarkers[PARSE_STACK] = "";
-        enclosures.push_back(sPyCodeStyleMarkers);
+            def.append("");
+        def[TOKEN_FILE] = "";
+        def[TOKEN_PARAM_A] = ":";
+        def[TOKEN_PARAM_B] = ":";
+        def[TOKEN_END_PARAMS] = ":";
+        def[PARSE_COLLECT] = "";
+        def[PARSE_STACK] = "";
+        enclosures.push_back(def);
     }
     {
-        QStringList sGrepWithLineMarkers;
+        QStringList def;
         // -n option for grep shows line # like:
         // <filename>:<number>:
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            sGrepWithLineMarkers.append("");
-        sGrepWithLineMarkers[PARSE_MARKER_FILE] = "";
-        sGrepWithLineMarkers[PARSE_MARKER_PARAM_A] = ":";
-        sGrepWithLineMarkers[PARSE_MARKER_PARAM_B] = "";
-        sGrepWithLineMarkers[PARSE_MARKER_END_PARAMS] = ":";
-        sGrepWithLineMarkers[PARSE_COLLECT] = "";
-        sGrepWithLineMarkers[PARSE_STACK] = "";
-        enclosures.push_back(sGrepWithLineMarkers);
+            def.append("");
+        def[TOKEN_FILE] = "";
+        def[TOKEN_PARAM_A] = ":";
+        def[TOKEN_PARAM_B] = "";
+        def[TOKEN_END_PARAMS] = ":";
+        def[PARSE_COLLECT] = "";
+        def[PARSE_STACK] = "";
+        enclosures.push_back(def);
     }
     {
-        QStringList sGrepPlainMarkers;
+        QStringList def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            sGrepPlainMarkers.append("");
-        sGrepPlainMarkers[PARSE_MARKER_FILE] = "";
-        sGrepPlainMarkers[PARSE_MARKER_PARAM_A] = "";
-        sGrepPlainMarkers[PARSE_MARKER_PARAM_B] = "";
-        sGrepPlainMarkers[PARSE_MARKER_END_PARAMS] = ":";
-        sGrepPlainMarkers[PARSE_COLLECT] = "";
-        sGrepPlainMarkers[PARSE_STACK] = "";
-        enclosures.push_back(sGrepPlainMarkers);
+            def.append("");
+        def[TOKEN_FILE] = "";
+        def[TOKEN_PARAM_A] = "";
+        def[TOKEN_PARAM_B] = "";
+        def[TOKEN_END_PARAMS] = ":";
+        def[PARSE_COLLECT] = "";
+        def[PARSE_STACK] = "";
+        enclosures.push_back(def);
     }
     brushes["TracebackNotTop"] = QBrush(QColor::fromRgb(128, 60, 0));
     brushes["Unusable"] = QBrush(Qt::lightGray);
@@ -310,7 +299,7 @@ MainWindow::MainWindow(QWidget* parent)
     // qWarning().noquote() << "qWarning() stream is active.";
     // qCritical().noquote() << "qCritical() stream is active.";
     // qFatal().noquote() << "qFatal() stream is active.";
-    if (bDebug)
+    if (this->m_Verbose)
         qInfo().noquote() << "lists:";
     // this for loop has the brace on the next line (for clang-format test):
     for (auto itList = enclosures.begin(); itList != enclosures.end(); itList++) {
@@ -319,18 +308,23 @@ MainWindow::MainWindow(QWidget* parent)
         //     qInfo().noquote() << "    - " << (*itList)[i];
         // }
         assert(itList->size() >= PARSE_PARTS_COUNT); // qInfo().noquote() << "  items->size(): " << itList->size();
-        if (bDebug)
+        if (this->m_Verbose)
             qInfo().noquote() << "  items: ['" + (*itList).join("', '") + "']";
     }
 }
 
-bool MainWindow::isFatalSourceError(QString sErrStreamLine)
+/**
+ * @brief Check whether your parser reports that your code has a fatal error.
+ * @param line stderr output from your parser
+ * @return
+ */
+bool MainWindow::isFatalSourceError(QString line)
 {
     return (
-        sErrStreamLine.indexOf("Can't open", 0, Qt::CaseInsensitive) > -1 //jshint could not find a source file
-        || sErrStreamLine.indexOf("Too many errors", 0, Qt::CaseInsensitive) > -1 //jshint already showed the error for this line, but can't display more errors
-        || sErrStreamLine.indexOf("could not be found", 0, Qt::CaseInsensitive) > -1 //mcs could not find a source file
-        || sErrStreamLine.indexOf("compilation failed", 0, Qt::CaseInsensitive) > -1 //mcs could not compile the sources
+        line.indexOf("Can't open", 0, Qt::CaseInsensitive) > -1 //jshint could not find a source file
+        || line.indexOf("Too many errors", 0, Qt::CaseInsensitive) > -1 //jshint already showed the error for this line, but can't display more errors
+        || line.indexOf("could not be found", 0, Qt::CaseInsensitive) > -1 //mcs could not find a source file
+        || line.indexOf("compilation failed", 0, Qt::CaseInsensitive) > -1 //mcs could not compile the sources
     );
 }
 
@@ -341,7 +335,7 @@ MainWindow::~MainWindow()
 }
 void MainWindow::init(QString errorsListFileName)
 {
-    if (!bForceOffset)
+    if (!(this->config->contains("xEditorOffset") || this->config->contains("yEditorOffset")))
         CompensateForEditorVersion();
     if (errorsListFileName.length() == 0) {
         errorsListFileName = "err.txt";
@@ -370,12 +364,12 @@ void MainWindow::init(QString errorsListFileName)
             QString sNumTODOs;
             sNumTODOs.setNum(iTODOs, 10);
             pushWarnings();
-            if (configBool("FindTODOs")) {
+            if (this->config->getBool("FindTODOs")) {
                 for (auto it = this->lwiToDos.begin(); it != this->lwiToDos.end(); ++it) {
                     ui->mainListWidget->addItem(*it);
                 }
             }
-            if (!configBool("ExitOnNoErrors")) {
+            if (!this->config->getBool("ExitOnNoErrors")) {
                 if (this->m_LineCount == 0) {
                     QListWidgetItem* lwiNew = new QListWidgetItem("#" + errorsListFileName + ": INFO (generated by outputinspector) 0 lines in file");
                     lwiNew->setForeground(brushes["Default"]);
@@ -388,10 +382,10 @@ void MainWindow::init(QString errorsListFileName)
             }
             // else hide errors since will exit anyway if no errors
             QString sMsg = "Errors: " + sNumErrors + "; Warnings:" + sNumWarnings;
-            if (configBool("FindTODOs"))
+            if (this->config->getBool("FindTODOs"))
                 sMsg += "; TODOs:" + sNumTODOs;
             ui->statusBar->showMessage(sMsg, 0);
-            if (configBool("ExitOnNoErrors")) {
+            if (this->config->getBool("ExitOnNoErrors")) {
                 if (iErrors<1) {
                     qInfo() << "Closing since no errors...";
                     // QCoreApplication::quit(); // doesn't work
@@ -433,47 +427,46 @@ void MainWindow::init(QString errorsListFileName)
  * to a previous line.
  *
  * @brief Add a line.
- * @param sLine a line from standard output or error from a program
+ * @param line a line from standard output or error from a program
  * @param enablePush Push the line to the GUI right away (This is best for
  *        when reading information from standard input).
  */
-void MainWindow::addLine(QString sLine, bool enablePush)
+void MainWindow::addLine(QString line, bool enablePush)
 {
     this->m_LineCount++;
-    QString originalLine = sLine;
-    this->m_MasterLine = sLine;
+    QString originalLine = line;
+    this->m_MasterLine = line;
     // TODO: debug performance of new and delete
     std::map<QString, QString>* info = new std::map<QString, QString>;
-    if (sLine.length() > 0) {
-
-        if (sLine.trimmed().length() > 0)
+    if (line.length() > 0) {
+        if (line.trimmed().length() > 0)
             this->m_NonBlankLineCount++;
-        if (isFatalSourceError(sLine)) {
-            ui->mainListWidget->addItem(new QListWidgetItem(sLine + " <your compiler (or other tool) recorded this fatal or summary error before outputinspector ran>", ui->mainListWidget));
-        } else if (qcontains_any<QString>(sLine, sSectionBreakFlags)) {
+        if (isFatalSourceError(line)) {
+            ui->mainListWidget->addItem(new QListWidgetItem(line + " <your compiler (or other tool) recorded this fatal or summary error before outputinspector ran>", ui->mainListWidget));
+        } else if (qcontains_any<QString>(line, sSectionBreakFlags)) {
             this->m_ActualJump = "";
             this->m_ActualJumpLine = "";
             this->m_ActualJumpRow = "";
             this->m_ActualJumpColumn = "";
-            QListWidgetItem* lwi = new QListWidgetItem(sLine);
+            QListWidgetItem* lwi = new QListWidgetItem(line);
             lwi->setForeground(brushes["Regular"]);
             ui->mainListWidget->addItem(lwi);
         } else {
-            sLine = getConvertedSourceErrorAndWarnElseGetUnmodified(sLine);
+            line = getConvertedSourceErrorAndWarnElseGetUnmodified(line);
             bool jshint_enable = false;
-            if (sLine != originalLine)
+            if (line != originalLine)
                 jshint_enable = true;
 
-            lineInfo(info, sLine, this->m_ActualJump, this->m_ActualJumpLine, true);
+            lineInfo(info, line, this->m_ActualJump, this->m_ActualJumpLine, true);
             if (info->at("master") == "true") {
                 this->m_ActualJump = info->at("file");
-                this->m_ActualJumpLine = sLine;
+                this->m_ActualJumpLine = line;
                 this->m_ActualJumpRow = info->at("row");
                 this->m_ActualJumpColumn = info->at("column");
                 this->m_IsJumpLower = (info->at("lower") == "true");
                 qDebug().noquote() << "(master) set actualJump to '" + this->m_ActualJump + "'";
             } else {
-                qDebug().noquote() << "(not master) line: '" + sLine + "'";
+                qDebug().noquote() << "(not master) line: '" + line + "'";
             }
             bool isWarning = false;
             QString sColorPrefix = "Error";
@@ -485,7 +478,7 @@ void MainWindow::addLine(QString sLine, bool enablePush)
                 sColorPrefix = "Warning";
             }
             // do not specify ui->mainListWidget on new, otherwise will be added automatically
-            QListWidgetItem* lwi = new QListWidgetItem(sLine);
+            QListWidgetItem* lwi = new QListWidgetItem(line);
             if (this->m_ActualJumpRow.length() > 0) {
                 lwi->setData(ROLE_ROW, QVariant(this->m_ActualJumpRow));
                 lwi->setData(ROLE_COL, QVariant(this->m_ActualJumpColumn));
@@ -512,7 +505,7 @@ void MainWindow::addLine(QString sLine, bool enablePush)
                 lwi->setForeground(brushes["Internal"]);
             }
             lwi->setData(ROLE_COLLECTED_LINE, QVariant(this->m_MasterLine));
-            lwi->setData(ROLE_DETAILS, QVariant(sLine != this->m_MasterLine));
+            lwi->setData(ROLE_DETAILS, QVariant(line != this->m_MasterLine));
             lwi->setData(ROLE_LOWER, QVariant(info->at("lower")));
             if (info->at("good") == "true") {
                 if (isWarning)
@@ -520,7 +513,7 @@ void MainWindow::addLine(QString sLine, bool enablePush)
                 else
                     iErrors++;
             }
-            if (bShowWarningsLast && isWarning)
+            if (this->config->getBool("ShowWarningsLast") && isWarning)
                 this->lwiWarnings.append(lwi);
             else
                 ui->mainListWidget->addItem(lwi);
@@ -529,27 +522,27 @@ void MainWindow::addLine(QString sLine, bool enablePush)
 
             if (sTargetLanguage.length() > 0) {
                 if (sTargetLanguage == "python" || sTargetLanguage == "sh") {
-                    this->m_CommentMark = "#";
+                    this->m_CommentToken = "#";
                 } else if (sTargetLanguage == "c++" || sTargetLanguage == "c" || sTargetLanguage == "php"
                     || sTargetLanguage == "js" || sTargetLanguage == "java") {
-                    this->m_CommentMark = "//";
+                    this->m_CommentToken = "//";
                 } else if (sTargetLanguage == "bat") {
-                    this->m_CommentMark = "rem ";
+                    this->m_CommentToken = "rem ";
                 }
             }
 
-            if ((jshint_enable && (*info)["file"].endsWith(".js")) || sLine.indexOf(this->m_Error, 0, Qt::CaseInsensitive) > -1) {
-                // TODO?: if (jshint_enable || sLine.indexOf("previous error",0,Qt::CaseInsensitive)<0) iErrors++;
-                // if (bShowWarningsLast) this->m_Errors.append(sLine);
+            if ((jshint_enable && (*info)["file"].endsWith(".js")) || line.indexOf(this->m_Error, 0, Qt::CaseInsensitive) > -1) {
+                // TODO?: if (jshint_enable || line.indexOf("previous error",0,Qt::CaseInsensitive)<0) iErrors++;
+                // if (this->config->getBool("ShowWarningsLast")) this->m_Errors.append(line);
             }
 
-            if (configBool("FindTODOs")) {
+            if (this->config->getBool("FindTODOs")) {
                 if (info->at("good") == "true") {
-                    QString sFileX = absPathOrSame(info->at("file")); // =sLine.mid(0,sLine.indexOf("("));
-                    if (!sFiles.contains(sFileX, Qt::CaseSensitive)) {
-                        sFiles.append(sFileX);
+                    QString sFileX = absPathOrSame(info->at("file")); // =line.mid(0,line.indexOf("("));
+                    if (!this->m_Files.contains(sFileX, Qt::CaseSensitive)) {
+                        this->m_Files.append(sFileX);
                         QFile qfileSource(sFileX);
-                        if (bDebug)
+                        if (this->m_Verbose)
                             qDebug() << "outputinspector trying to open '" + sFileX + "'...";
                         // if (!qfileSource.open(QFile::ReadOnly)) {
                         // }
@@ -560,7 +553,7 @@ void MainWindow::addLine(QString sLine, bool enablePush)
                                 QString sSourceLine = qtextSource.readLine(0);
                                 iSourceLineFindToDo++; // add first since compiler line numbering starts at 1
                                 int iToDoFound = -1;
-                                int iCommentFound = sSourceLine.indexOf(this->m_CommentMark, 0, Qt::CaseInsensitive);
+                                int iCommentFound = sSourceLine.indexOf(this->m_CommentToken, 0, Qt::CaseInsensitive);
                                 if (iCommentFound > -1) {
                                     for (int i=0; i<this->m_ToDoFlags.length(); i++) {
                                         iToDoFound = sSourceLine.indexOf(this->m_ToDoFlags[i], iCommentFound + 1, Qt::CaseInsensitive);
@@ -575,7 +568,7 @@ void MainWindow::addLine(QString sLine, bool enablePush)
                                     int iCookedStart = iToDoFound;
                                     for (int iNow = 0; iNow < sSourceLine.length(); iNow++) {
                                         if (sSourceLine.mid(iNow, 1) == "\t")
-                                            iCookedStart += (iCompilerTabWidth - 1);
+                                            iCookedStart += (this->config->getInt("CompilerTabWidth") - 1);
                                         else
                                             break;
                                     }
@@ -599,9 +592,9 @@ void MainWindow::addLine(QString sLine, bool enablePush)
                                     iTODOs++;
                                 }
                             } // end while not at end of source file
-                            if (bDebug)
+                            if (this->m_Verbose)
                                 qDebug() << "outputinspector finished reading sourcecode";
-                            if (bDebug)
+                            if (this->m_Verbose)
                                 qDebug() << "(processed " << iSourceLineFindToDo << " line(s))";
                             qfileSource.close();
                         } // end if could open sourcecode
@@ -610,207 +603,114 @@ void MainWindow::addLine(QString sLine, bool enablePush)
                         }
                     } // end if list does not already contain this file
                 } // end if found filename ender
-                else if (bDebug)
-                    qDebug() << "[outputinspector] WARNING: filename ender in " + sLine;
+                else if (this->m_Verbose)
+                    qDebug() << "[outputinspector] WARNING: filename ender in " + line;
             } // end if getIniBool("FindTODOs")
             else
-                qDebug() << "[outputinspector] WARNING: getIniBool(\"FindTODOs\") off so skipped parsing " + sLine;
+                qDebug() << "[outputinspector] WARNING: getIniBool(\"FindTODOs\") off so skipped parsing " + line;
         } // end if a regular line (not fatal, not formatting)
     } // end if length>0 (after trim using 0 option for readLine)
     if (enablePush) {
         this->pushWarnings();
     }
     delete info;
-} // end readini
-
-void MainWindow::readConfig()
-{
-    QFile qfileTest("/etc/outputinspector.conf");
-    QString sLine;
-    if (qfileTest.open(QFile::ReadOnly)) { //| QFile::Translate
-        QTextStream qtextNow(&qfileTest);
-        while (!qtextNow.atEnd()) {
-            sLine = qtextNow.readLine(0); //does trim off newline characters
-            int iSign = sLine.indexOf("=");
-            if ((sLine.length() > 2) && (iSign > 0) && (iSign < (sLine.length() - 1))) {
-                config[sLine.mid(0, iSign).trimmed()] = sLine.mid(iSign + 1, sLine.length() - (iSign + 1)).trimmed();
-            }
-        }
-        cacheConfig();
-        if (bDebug)
-            QMessageBox::information(this, "Output Inspector - Debug", sDebug);
-        if (bFormatErr) {
-            QMessageBox::information(this, "Output Inspector - Configuration", "There were errors in the following: " + sFormatErrs + ".  The configuration file \"/etc/outputinspector.conf\" must not contain spaces or special characters.");
-        }
-        qfileTest.close();
-    } else {
-        if (bDebug)
-            QMessageBox::information(this, "Output Inspector - Configuration", "The configuration file \"/etc/outputinspector.conf\" could not be read.");
-        setConfigValue("kate", "/usr/lib/kde4/bin/kate");
-    }
-    if (!config.count("kate") && !bDebug) {
-        QMessageBox::information(this, "Output Inspector - Configuration", "/etc/outputinspector.conf has no line reading \"kate=/usr/bin/kate\" so reverting to /usr/lib/kde4/bin/kate (in order to try to detect path and prevent this error, try running the following terminal command from inside the outputinspector directory: sudo ./install)");
-    }
-}
-
-void MainWindow::setConfigValue(QString k, QString v)
-{
-    config[k] = v;
 }
 
 void MainWindow::CompensateForEditorVersion()
 {
-    bool bFound = false;
+    bool isFound = false;
     QStringList sVersionArgs;
     QString sFileTemp = "/tmp/outputinspector.using.kate.version.tmp";
     sVersionArgs.append("--version");
     sVersionArgs.append(" > " + sFileTemp);
-    // QProcess::execute(IniString("kate"), sVersionArgs);
-    system((char*)QString(configString("kate") + " --version > " + sFileTemp).toLocal8Bit().data());
+    // QProcess::execute(IniString("editor"), sVersionArgs);
+    system((char*)QString(this->config->getString("editor") + " --version > " + sFileTemp).toLocal8Bit().data());
     OutputInspectorSleepThread::msleep(125);
 
     QFile qfileTmp(sFileTemp);
-    QString sLine;
+    QString line;
     if (qfileTmp.open(QFile::ReadOnly)) { // | QFile::Translate
         // detect Kate version using output of Kate command above
         QTextStream qtextNow(&qfileTmp);
         QString sKateOpener = "Kate: ";
         while (!qtextNow.atEnd()) {
-            sLine = qtextNow.readLine(0); // does trim off newline characters
-            if (bDebug)
-                QMessageBox::information(this, "Output Inspector - Finding Kate version...", sLine);
-            if (sLine.startsWith(sKateOpener, Qt::CaseInsensitive)) {
-                int iDot = sLine.indexOf(".", 0);
+            line = qtextNow.readLine(0); // does trim off newline characters
+            if (this->m_Verbose)
+                QMessageBox::information(this, "Output Inspector - Finding Kate version...", line);
+            if (line.startsWith(sKateOpener, Qt::CaseInsensitive)) {
+                int iDot = line.indexOf(".", 0);
                 if (iDot > -1) {
-                    bool bTest;
-                    bFound = true;
-                    iKateRevisionMajor = QString(sLine.mid(6, iDot - 6)).toInt(&bTest, 10);
+                    bool ok;
+                    isFound = true;
+                    this->m_KateMajorVer = QString(line.mid(6, iDot - 6)).toInt(&ok, 10);
                 }
             }
         }
         qfileTmp.close();
     } // end if could open temp file
     QString sRevisionMajor;
-    sRevisionMajor.setNum(iKateRevisionMajor, 10);
-    if (bDebug)
-        QMessageBox::information(this, "Output Inspector - Kate Version", bFound ? ("Detected Kate " + sRevisionMajor) : "Could not detect Kate version.");
-    if (iKateRevisionMajor > 2) {
-        xEditorOffset = 0;
-        yEditorOffset = 0;
+    sRevisionMajor.setNum(this->m_KateMajorVer, 10);
+    if (this->m_Verbose)
+        QMessageBox::information(this, "Output Inspector - Kate Version", isFound ? ("Detected Kate " + sRevisionMajor) : "Could not detect Kate version.");
+    if (this->m_KateMajorVer > 2) {
+        this->config->setValue("xEditorOffset", 0);
+        this->config->setValue("yEditorOffset", 0);
     } else {
-        xEditorOffset = 0;
-        yEditorOffset = 0;
-        // NOTE: no longer needed
-        // xEditorOffset=-1;
-        // yEditorOffset=-1;
+        this->config->setValue("xEditorOffset", 0);
+        this->config->setValue("yEditorOffset", 0);
+        // NOTE: The values are no longer necessary.
+        // this->config->setValue("xEditorOffset", -1);
+        // this->config->setValue("yEditorOffset", -1);
     }
-} // end CompensateForEditorVersion
+}
 
 // converts jshint output such as:
 // functions.js: line 32, col 26, Use '!==' to compare with 'null'.
 // to mcs format which is a result of:
 // etc/foo.cs(10,24): error CS0103: The name `Path' does not exist in the current context
-QString MainWindow::getConvertedSourceErrorAndWarnElseGetUnmodified(QString sLine)
+QString MainWindow::getConvertedSourceErrorAndWarnElseGetUnmodified(QString line)
 {
     QString jshint_filename_ender = ": line ";
-    int src_jshint_filename_ender_i = sLine.indexOf(jshint_filename_ender);
+    int src_jshint_filename_ender_i = line.indexOf(jshint_filename_ender);
     // on purpose for readability:
     // * string operations are done separately and as soon as required info becomes available
     // * offset is used even on the second indexOf (even thougth first search term theoretically does not ever contain the second one)
     if (src_jshint_filename_ender_i > -1) {
-        QString src_filename_s = sLine.mid(0, src_jshint_filename_ender_i);
+        QString src_filename_s = line.mid(0, src_jshint_filename_ender_i);
         int src_row_i = src_jshint_filename_ender_i + jshint_filename_ender.length();
         QString src_line_ender = ", col ";
-        int src_line_ender_i = sLine.indexOf(src_line_ender, src_row_i + 1);
+        int src_line_ender_i = line.indexOf(src_line_ender, src_row_i + 1);
         if (src_line_ender_i > -1) {
             int src_row_len = src_line_ender_i - src_row_i;
-            QString src_line_s = sLine.mid(src_row_i, src_row_len);
+            QString src_line_s = line.mid(src_row_i, src_row_len);
             int src_col_i = src_line_ender_i + src_line_ender.length();
             QString col_closer = ", ";
-            int src_col_ender_i = sLine.indexOf(col_closer, src_col_i + 1);
+            int src_col_ender_i = line.indexOf(col_closer, src_col_i + 1);
             if (src_col_ender_i > -1) {
                 int src_col_len = src_col_ender_i - src_col_i;
-                QString src_col_s = sLine.mid(src_col_i, src_col_len);
+                QString src_col_s = line.mid(src_col_i, src_col_len);
                 int src_comment_i = src_col_ender_i + col_closer.length();
-                QString src_comment_s = sLine.mid(src_comment_i);
-                sLine = src_filename_s + "(" + src_line_s + "," + src_col_s + "): " + src_comment_s;
-                // if (bDebugBadHint) {
-                //     QMessageBox::information(this,"Output Inspector - Parsing Notice","error format was converted to "+sLine);
-                //     bDebugBadHint=false;
+                QString src_comment_s = line.mid(src_comment_i);
+                line = src_filename_s + "(" + src_line_s + "," + src_col_s + "): " + src_comment_s;
+                // if (this->m_DebugBadHints) {
+                //     QMessageBox::information(this,"Output Inspector - Parsing Notice","error format was converted to "+line);
+                //     this->m_DebugBadHints=false;
                 // }
-            } else if (bDebugBadHint) {
+            } else if (this->m_DebugBadHints) {
                 QMessageBox::information(this, "Output Inspector - Parsing Error", "jshint parsing error: missing '" + col_closer + "' after column number after '" + src_line_ender + "' after '" + jshint_filename_ender + "'");
-                bDebugBadHint = false;
+                this->m_DebugBadHints = false;
             }
-        } else if (bDebugBadHint) {
+        } else if (this->m_DebugBadHints) {
             QMessageBox::information(this, "Output Inspector - Parsing Error", "jshint parsing error: missing '" + src_line_ender + "' after '" + jshint_filename_ender + "'");
-            bDebugBadHint = false;
+            this->m_DebugBadHints = false;
         }
-    } else if (bDebugBadHint) {
-        if (bDebug) {
+    } else if (this->m_DebugBadHints) {
+        if (this->m_Verbose) {
             QMessageBox::information(this, "Output Inspector - Parsing Notice", "Detected mcs error format"); //debug only
-            bDebugBadHint = false;
+            this->m_DebugBadHints = false;
         }
     }
-    return sLine;
-}
-
-void MainWindow::cacheConfig()
-{
-    QString sTemp;
-    if (configHas("kate")) {
-        sDebug += "kate:" + configString("kate") + ".  ";
-    } else
-        sDebug += "No kate line found in /etc/outputinspector.conf.  ";
-    if (configHas("ExitOnNoErrors")) {
-        sTemp = configBool("ExitOnNoErrors") ? "yes" : "no";
-        sDebug += "ExitOnNoErrors:" + sTemp + ".  ";
-    } else
-        sDebug += "No ExitOnNoErrors line found in /etc/outputinspector.conf.  ";
-    if (configHas("FindTODOs")) {
-        sTemp = configBool("FindTODOs") ? "yes" : "no";
-        sDebug += "FindTODOs:" + sTemp + ".  ";
-    } else
-        sDebug += "No FindTODOs line found in /etc/outputinspector.conf.  ";
-    if (configHas("xEditorOffset")) {
-        xEditorOffset = configInt("xEditorOffset");
-        sTemp.setNum(xEditorOffset, 10);
-        sDebug += "xEditorOffset:" + sTemp + ".  ";
-        bForceOffset = true;
-    } else
-        sDebug += "No xEditorOffset line found in /etc/outputinspector.conf.  ";
-    if (configHas("yEditorOffset")) {
-        yEditorOffset = configInt("yEditorOffset");
-        sTemp.setNum(yEditorOffset, 10);
-        sDebug += "yEditorOffset:" + sTemp + ".  ";
-        bForceOffset = true;
-    } else
-        sDebug += "No yEditorOffset line found in /etc/outputinspector.conf.  ";
-    if (configHas("Kate2TabWidth")) {
-        iKate2TabWidth = configInt("Kate2TabWidth");
-        sTemp.setNum(iKate2TabWidth, 10);
-        sDebug += "Kate2TabWidth:" + sTemp + ".  ";
-    } else
-        sDebug += "No Kate2TabWidth line found in /etc/outputinspector.conf.  ";
-    // if (configHas("Kate3TabWidth")) {
-    //     iKate3TabWidth=configInt("Kate3TabWidth");
-    //     sTemp.setNum(iKate3TabWidth,10);
-    //     sDebug+="Kate3TabWidth:"+sTemp+".  ";
-    // }
-    // else sDebug+="No Kate3TabWidth line found in /etc/outputinspector.conf.  ";
-    if (configHas("CompilerTabWidth")) {
-        iCompilerTabWidth = configInt("CompilerTabWidth");
-        sTemp.setNum(iCompilerTabWidth, 10);
-        sDebug += "CompilerTabWidth:" + sTemp + ".  ";
-    } else
-        sDebug += "No CompilerTabWidth line found in /etc/outputinspector.conf.  ";
-    if (configHas("ShowWarningsLast")) {
-        bShowWarningsLast = configBool("ShowWarningsLast");
-        sTemp = bShowWarningsLast ? "yes" : "no";
-        sDebug += "ShowWarningsLast:" + sTemp + ".  ";
-    } else
-        sDebug += "No ShowWarningsLast line found in /etc/outputinspector.conf.  ";
-
+    return line;
 }
 
 void MainWindow::pushWarnings()
@@ -823,10 +723,10 @@ void MainWindow::pushWarnings()
     }
 } // end getConvertedSourceErrorAndWarnElseGetUnmodified
 
-std::map<QString, QString>* MainWindow::lineInfo(const QString sLine, QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine)
+std::map<QString, QString>* MainWindow::lineInfo(const QString line, QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine)
 {
     std::map<QString, QString>* info = new std::map<QString, QString>();
-    lineInfo(info, sLine, actualJump, actualJumpLine, isPrevCallPrevLine);
+    lineInfo(info, line, actualJump, actualJumpLine, isPrevCallPrevLine);
     return info;
 }
 
@@ -834,213 +734,213 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString origin
 {
     (*info)["file"] = ""; // same as info->at("file")
     (*info)["row"] = "";
-    (*info)["sLine"] = originalLine;
+    (*info)["line"] = originalLine;
     (*info)["column"] = "";
     (*info)["language"] = ""; // only if language can be detected from this line
     (*info)["good"] = "false";
     (*info)["lower"] = "false";
     (*info)["master"] = "false";
     (*info)["color"] = "Default";
-    QString sLine = originalLine;
-    sLine = getConvertedSourceErrorAndWarnElseGetUnmodified(sLine);
+    QString line = originalLine;
+    line = getConvertedSourceErrorAndWarnElseGetUnmodified(line);
 
-    QString sFileMarker;
-    QString sParamAMarker;
-    QString sParamBMarker;
-    QString sEndParamsMarker;
-    int iFileMarker = -1;
-    int iFile = -1;
-    int iParamAMarker = -1;
-    int iParamA = -1;
-    int iParamBMarker = -1;
-    int iParamB = -1;
-    int iEndParamsMarker = -1;
+    QString fileToken;
+    QString paramAToken;
+    QString paramBToken;
+    QString endParamsToken;
+    int fileTokenI = -1;
+    int fileI = -1;
+    int paramATokenI = -1;
+    int paramAI = -1;
+    int paramBTokenI = -1;
+    int paramBI = -1;
+    int endParamsTokenI = -1;
     QRegExp nonDigitRE("\\D");
     QRegExp nOrZRE("\\d*"); // a digit (\d), zero or more times (*)
     QRegExp numOrMoreRE("\\d+"); // a digit (\d), 1 or more times (+)
-    if (bDebugParser) {
+    if (this->m_VerboseParsing) {
         qInfo().noquote() << "`" + originalLine + "`:";
     }
     for (auto itList = enclosures.begin(); itList != enclosures.end(); itList++) {
-        if ((((*itList)[PARSE_MARKER_FILE]).length() == 0) || sLine.contains((*itList)[PARSE_MARKER_FILE])) {
-            sFileMarker = (*itList)[PARSE_MARKER_FILE];
-            if (bDebugParser) {
-                if (sFileMarker.length() > 0)
-                    qInfo().noquote() << "  looking for sFileMarker '" + sFileMarker + "'";
+        if ((((*itList)[TOKEN_FILE]).length() == 0) || line.contains((*itList)[TOKEN_FILE])) {
+            fileToken = (*itList)[TOKEN_FILE];
+            if (this->m_VerboseParsing) {
+                if (fileToken.length() > 0)
+                    qInfo().noquote() << "  looking for fileToken '" + fileToken + "'";
                 }
-            sParamAMarker = (*itList)[PARSE_MARKER_PARAM_A];
-            sParamBMarker = (*itList)[PARSE_MARKER_PARAM_B]; // coordinate delimiter (blank if no column)
-            sEndParamsMarker = (*itList)[PARSE_MARKER_END_PARAMS]; // what is after last coord ("\n" if line ends)
-            if (sFileMarker.length() != 0)
-                iFileMarker = sLine.indexOf(sFileMarker);
+            paramAToken = (*itList)[TOKEN_PARAM_A];
+            paramBToken = (*itList)[TOKEN_PARAM_B]; // coordinate delimiter (blank if no column)
+            endParamsToken = (*itList)[TOKEN_END_PARAMS]; // what is after last coord ("\n" if line ends)
+            if (fileToken.length() != 0)
+                fileTokenI = line.indexOf(fileToken);
             else
-                iFileMarker = 0; // if file path at begining of line
-            if (iFileMarker > -1) {
-                if (bDebugParser) {
-                    qInfo().noquote() << "  has '" + sFileMarker + "' @ " << iFileMarker
+                fileTokenI = 0; // if file path at begining of line
+            if (fileTokenI > -1) {
+                if (this->m_VerboseParsing) {
+                    qInfo().noquote() << "  has '" + fileToken + "' @ " << fileTokenI
                                       << ">= START";
                 }
 
-                if (sParamAMarker.length() > 0) {
-                    iParamAMarker = sLine.indexOf(
-                        sParamAMarker, iFileMarker + sFileMarker.length()
+                if (paramAToken.length() > 0) {
+                    paramATokenI = line.indexOf(
+                        paramAToken, fileTokenI + fileToken.length()
                     );
-                    if (iParamAMarker >=0) {
-                        if (!sLine.mid(iParamAMarker+sParamAMarker.length(), 1).contains(numOrMoreRE)) {
+                    if (paramATokenI >=0) {
+                        if (!line.mid(paramATokenI+paramAToken.length(), 1).contains(numOrMoreRE)) {
                             // Don't allow the opener if the next character is
                             // not a digit.
-                            iParamAMarker = -1;
+                            paramATokenI = -1;
                         }
                     }
-                } else if (sEndParamsMarker.length() > 0) {
-                    iParamAMarker = sLine.indexOf(sEndParamsMarker);
-                    if (iParamAMarker < 0) {
-                        iParamAMarker = sLine.length();
+                } else if (endParamsToken.length() > 0) {
+                    paramATokenI = line.indexOf(endParamsToken);
+                    if (paramATokenI < 0) {
+                        paramATokenI = line.length();
                     }
                 } else {
-                    iParamAMarker = sLine.length();
-                    // sParamAMarker = "<forced marker=\"" + sParamAMarker.replace("\"", "\\\"") + "\">";
+                    paramATokenI = line.length();
+                    // paramAToken = "<forced token=\"" + paramAToken.replace("\"", "\\\"") + "\">";
                 }
-                if (iParamAMarker > -1) {
-                    if (bDebugParser) {
-                        qInfo().noquote() << "    has pre-ParamA '" + sParamAMarker + "' @"
-                                          << iParamAMarker << " (after " << sFileMarker.length() << "-long file marker at "
-                                          << iFileMarker
-                                          << " ending at " << (iFileMarker + sFileMarker.length())
+                if (paramATokenI > -1) {
+                    if (this->m_VerboseParsing) {
+                        qInfo().noquote() << "    has pre-ParamA '" + paramAToken + "' @"
+                                          << paramATokenI << " (after " << fileToken.length() << "-long file token at "
+                                          << fileTokenI
+                                          << " ending at " << (fileTokenI + fileToken.length())
                                           << ")"; // such as ', line '
                     }
-                    iParamA = iParamAMarker + sParamAMarker.length();
-                    if (sParamBMarker.length() > 0) {
+                    paramAI = paramATokenI + paramAToken.length();
+                    if (paramBToken.length() > 0) {
                         // There should be no B if there is no A, so failing
                         // in that case is OK.
-                        iParamBMarker = sLine.indexOf(sParamBMarker, iParamA);
+                        paramBTokenI = line.indexOf(paramBToken, paramAI);
                     }
                     else {
-                        iParamBMarker = iParamA;
-                        // sParamBMarker = "<forced marker=\"" + sParamBMarker.replace("\"", "\\\"") + "\">";
+                        paramBTokenI = paramAI;
+                        // paramBToken = "<forced token=\"" + paramBToken.replace("\"", "\\\"") + "\">";
                     }
-                    if (iParamBMarker > -1) {
-                        if (bDebugParser) {
-                            qInfo().noquote() << "      has pre-ParamB marker '" + sParamBMarker + "' @"
-                                              << iParamBMarker << " at or after ParamA marker ending at"
-                                              << (iParamAMarker + sParamAMarker.length());
+                    if (paramBTokenI > -1) {
+                        if (this->m_VerboseParsing) {
+                            qInfo().noquote() << "      has pre-ParamB token '" + paramBToken + "' @"
+                                              << paramBTokenI << " at or after ParamA token ending at"
+                                              << (paramATokenI + paramAToken.length());
                         }
-                        // if (sParamBMarker != (*itList)[PARSE_MARKER_PARAM_B])
-                        //    sParamBMarker = ""; // since may be used to locate next value
-                        if (sParamBMarker.length() > 0)
-                            iParamB = iParamBMarker + sParamBMarker.length();
+                        // if (paramBToken != (*itList)[TOKEN_PARAM_B])
+                        //    paramBToken = ""; // since may be used to locate next value
+                        if (paramBToken.length() > 0)
+                            paramBI = paramBTokenI + paramBToken.length();
                         else
-                            iParamB = iParamBMarker;
-                        if (sEndParamsMarker.length() == 0) {
-                            iEndParamsMarker = iParamB;
-                            if (bDebugParser) {
-                                qInfo().noquote() << "  using iParamB for iEndParamsMarker: " << iParamB;
+                            paramBI = paramBTokenI;
+                        if (endParamsToken.length() == 0) {
+                            endParamsTokenI = paramBI;
+                            if (this->m_VerboseParsing) {
+                                qInfo().noquote() << "  using paramBI for endParamsTokenI: " << paramBI;
                             }
-                        } else if (sEndParamsMarker != "\n") {
-                            iEndParamsMarker = sLine.indexOf(sEndParamsMarker, iParamB);
+                        } else if (endParamsToken != "\n") {
+                            endParamsTokenI = line.indexOf(endParamsToken, paramBI);
                         } else {
-                            iEndParamsMarker = sLine.length();
-                            // sEndParamsMarker = "<forced marker=\"" + sEndParamsMarker.replace("\"", "\\\"").replace("\n", "\\n") + "\">";
+                            endParamsTokenI = line.length();
+                            // endParamsToken = "<forced token=\"" + endParamsToken.replace("\"", "\\\"").replace("\n", "\\n") + "\">";
                         }
-                        if (iEndParamsMarker > -1) {
-                            if (sParamBMarker.length() == 0) {
-                                iParamBMarker = iEndParamsMarker; // so iParamA can be calculated correctly if ends at iEndParamsMarker
-                                iParamB = iEndParamsMarker;
+                        if (endParamsTokenI > -1) {
+                            if (paramBToken.length() == 0) {
+                                paramBTokenI = endParamsTokenI; // so paramAI can be calculated correctly if ends at endParamsTokenI
+                                paramBI = endParamsTokenI;
                             }
                             if ((*itList)[PARSE_COLLECT] == COLLECT_REUSE)
                                 (*info)["master"] = "true";
                             if ((*itList)[PARSE_STACK] == STACK_LOWER)
                                 (*info)["lower"] = "true";
-                            if (bDebugParser) {
-                                qInfo().noquote() << "        has post-params '" + sEndParamsMarker.replace('\n', '\\n') + "' ending@"
-                                                  << iEndParamsMarker << ">=" << (iParamBMarker + sParamBMarker.length()) << "="
-                                                  << iParamBMarker << "+" << sParamBMarker.length() << "in '" + sLine + "'";
+                            if (this->m_VerboseParsing) {
+                                qInfo().noquote() << "        has post-params '" + endParamsToken.replace('\n', '\\n') + "' ending@"
+                                                  << endParamsTokenI << ">=" << (paramBTokenI + paramBToken.length()) << "="
+                                                  << paramBTokenI << "+" << paramBToken.length() << "in '" + line + "'";
                             }
-                            if (sEndParamsMarker != (*itList)[PARSE_MARKER_END_PARAMS]) {
+                            if (endParamsToken != (*itList)[TOKEN_END_PARAMS]) {
                                 // since could be used for more stuff after 2 params in future versions,
                                 // length should be 0 if not found but forced:
-                                sEndParamsMarker = "";
+                                endParamsToken = "";
                             }
-                            iFile = iFileMarker + sFileMarker.length();                            
+                            fileI = fileTokenI + fileToken.length();
                             break;
-                        } else if (bDebugParser) {
-                            qInfo().noquote() << "        no post-params '" + sEndParamsMarker + "' >="
-                                              << (iParamBMarker + sParamBMarker.length()) << "in '" + sLine + "'";
+                        } else if (this->m_VerboseParsing) {
+                            qInfo().noquote() << "        no post-params '" + endParamsToken + "' >="
+                                              << (paramBTokenI + paramBToken.length()) << "in '" + line + "'";
                         }
-                    } else if (bDebugParser) {
-                        qInfo().noquote() << "      no pre-ParamB '" + sParamBMarker + "' >="
-                                          << (iParamAMarker + sParamAMarker.length()) << "in '" + sLine + "'";
+                    } else if (this->m_VerboseParsing) {
+                        qInfo().noquote() << "      no pre-ParamB '" + paramBToken + "' >="
+                                          << (paramATokenI + paramAToken.length()) << "in '" + line + "'";
                     }
-                } else if (bDebugParser) {
-                    qInfo().noquote() << "    no pre-paramA '" + sParamAMarker + "' >="
-                                      << (iFileMarker + sFileMarker.length());
+                } else if (this->m_VerboseParsing) {
+                    qInfo().noquote() << "    no pre-paramA '" + paramAToken + "' >="
+                                      << (fileTokenI + fileToken.length());
                 }
-            } else if (bDebugParser) {
-                qInfo().noquote() << "  no pre-File '" + sFileMarker + "' >= START";
+            } else if (this->m_VerboseParsing) {
+                qInfo().noquote() << "  no pre-File '" + fileToken + "' >= START";
             }
         }
     }
 
-    // qInfo().noquote() << "iFileMarker: " << iFileMarker;
-    // qInfo().noquote() << "iParamAMarker: " << iParamAMarker;
-    // qInfo().noquote() << "iParamBMarker: " << iParamBMarker;
-    // qInfo().noquote() << "iEndParamsMarker: " << iEndParamsMarker;
-    // qInfo().noquote() << "sFileMarker: " << sFileMarker;
-    // qInfo().noquote() << "sParamAMarker: " << sParamAMarker;
-    // qInfo().noquote() << "sParamBMarker: " << sParamBMarker;
-    // qInfo().noquote() << "sEndParamsMarker: " << sEndParamsMarker;
-    if (iEndParamsMarker >= 0) {
+    // qInfo().noquote() << "fileTokenI: " << fileTokenI;
+    // qInfo().noquote() << "paramATokenI: " << paramATokenI;
+    // qInfo().noquote() << "paramBTokenI: " << paramBTokenI;
+    // qInfo().noquote() << "endParamsTokenI: " << endParamsTokenI;
+    // qInfo().noquote() << "fileToken: " << fileToken;
+    // qInfo().noquote() << "paramAToken: " << paramAToken;
+    // qInfo().noquote() << "paramBToken: " << paramBToken;
+    // qInfo().noquote() << "endParamsToken: " << endParamsToken;
+    if (endParamsTokenI >= 0) {
         // Even if closer is not present,
-        // iEndParamsMarker is set to length() IF applicable to this enclosure
+        // endParamsTokenI is set to length() IF applicable to this enclosure
 
-        QString sFile = sLine.mid(iFile, iParamAMarker - iFile);
-        sFile = sFile.trimmed();
-        if (sFile.length() >= 2) {
-            if ((sFile.startsWith('"') && sFile.endsWith('"')) || (sFile.startsWith('\'') && sFile.endsWith('\''))) {
-                sFile = sFile.mid(1, sFile.length() - 2);
+        QString filePath = line.mid(fileI, paramATokenI - fileI);
+        filePath = filePath.trimmed();
+        if (filePath.length() >= 2) {
+            if ((filePath.startsWith('"') && filePath.endsWith('"')) || (filePath.startsWith('\'') && filePath.endsWith('\''))) {
+                filePath = filePath.mid(1, filePath.length() - 2);
             }
         }
-        (*info)["file"] = sFile;
-        (*info)["row"] = sLine.mid(iParamA, iParamBMarker - iParamA);
-        if (sParamBMarker.length() > 0)
-            (*info)["column"] = sLine.mid(iParamB, iEndParamsMarker - iParamB);
+        (*info)["file"] = filePath;
+        (*info)["row"] = line.mid(paramAI, paramBTokenI - paramAI);
+        if (paramBToken.length() > 0)
+            (*info)["column"] = line.mid(paramBI, endParamsTokenI - paramBI);
         else
             (*info)["column"] = "";
-        if (bDebugParser) qInfo().noquote() << "        file '" + sLine.mid(iFile, iParamAMarker - iFile) + "'";
-        // if (bDebugParser) qInfo().noquote() << "        row '" + sLine.mid(iParamA, iParamBMarker - iParamA) + "'";
-        if (bDebugParser) qInfo().noquote() << "        row '" + (*info)["row"] + "'";
-        if (bDebugParser) qInfo().noquote() << "          length " << iParamBMarker << "-" << iParamA;
-        //if (bDebugParser) qInfo().noquote() << "        col '" + sLine.mid(iParamB, iEndParamsMarker - iParamB) + "'";
-        if (bDebugParser) qInfo().noquote() << "        col '" + (*info)["column"] + "'";
-        if (bDebugParser) qInfo().noquote() << "          length " << iEndParamsMarker << "-" << iParamB;
+        if (this->m_VerboseParsing) qInfo().noquote() << "        file '" + line.mid(fileI, paramATokenI - fileI) + "'";
+        // if (this->m_VerboseParsing) qInfo().noquote() << "        row '" + line.mid(paramAI, paramBTokenI - paramAI) + "'";
+        if (this->m_VerboseParsing) qInfo().noquote() << "        row '" + (*info)["row"] + "'";
+        if (this->m_VerboseParsing) qInfo().noquote() << "          length " << paramBTokenI << "-" << paramAI;
+        //if (this->m_VerboseParsing) qInfo().noquote() << "        col '" + line.mid(paramBI, endParamsTokenI - paramBI) + "'";
+        if (this->m_VerboseParsing) qInfo().noquote() << "        col '" + (*info)["column"] + "'";
+        if (this->m_VerboseParsing) qInfo().noquote() << "          length " << endParamsTokenI << "-" << paramBI;
 
-        if (sFile.endsWith(".py", Qt::CaseSensitive))
+        if (filePath.endsWith(".py", Qt::CaseSensitive))
             (*info)["language"] = "python";
-        else if (sFile.endsWith(".pyw", Qt::CaseSensitive))
+        else if (filePath.endsWith(".pyw", Qt::CaseSensitive))
             (*info)["language"] = "python";
-        else if (sFile.endsWith(".cpp", Qt::CaseSensitive))
+        else if (filePath.endsWith(".cpp", Qt::CaseSensitive))
             (*info)["language"] = "c++";
-        else if (sFile.endsWith(".h", Qt::CaseSensitive))
+        else if (filePath.endsWith(".h", Qt::CaseSensitive))
             (*info)["language"] = "c++";
-        else if (sFile.endsWith(".hpp", Qt::CaseSensitive))
+        else if (filePath.endsWith(".hpp", Qt::CaseSensitive))
             (*info)["language"] = "c++";
-        else if (sFile.endsWith(".c", Qt::CaseSensitive))
+        else if (filePath.endsWith(".c", Qt::CaseSensitive))
             (*info)["language"] = "c";
-        else if (sFile.endsWith(".js", Qt::CaseSensitive))
+        else if (filePath.endsWith(".js", Qt::CaseSensitive))
             (*info)["language"] = "js";
-        else if (sFile.endsWith(".java", Qt::CaseSensitive))
+        else if (filePath.endsWith(".java", Qt::CaseSensitive))
             (*info)["language"] = "java";
-        else if (sFile.endsWith(".bat", Qt::CaseSensitive))
+        else if (filePath.endsWith(".bat", Qt::CaseSensitive))
             (*info)["language"] = "bat";
-        else if (sFile.endsWith(".sh", Qt::CaseSensitive))
+        else if (filePath.endsWith(".sh", Qt::CaseSensitive))
             (*info)["language"] = "sh";
-        else if (sFile.endsWith(".command", Qt::CaseSensitive))
+        else if (filePath.endsWith(".command", Qt::CaseSensitive))
             (*info)["language"] = "sh";
-        else if (sFile.endsWith(".php", Qt::CaseSensitive))
+        else if (filePath.endsWith(".php", Qt::CaseSensitive))
             (*info)["language"] = "php";
-        qDebug().noquote() << "  detected file: '" + sFile + "'";
+        qDebug().noquote() << "  detected file: '" + filePath + "'";
     }
-    (*info)["good"] = (iEndParamsMarker > -1) ? "true" : "false";
+    (*info)["good"] = (endParamsTokenI > -1) ? "true" : "false";
     if ((*info)["good"] == "true") {
         if (actualJump.length() > 0 && (*info)["master"] == "false") {
             qDebug() << "INFO: nosetests output was detected, but the line is not first"
@@ -1054,198 +954,206 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString origin
     }
 }
 
-QString MainWindow::absPathOrSame(QString sFile)
+QString MainWindow::absPathOrSame(QString filePath)
 {
-    QString sFileAbs;
+    QString absFilePath;
     QString sCwd = QDir::currentPath(); // current() returns a QDir object
     // Don't use QDir::separator(), since this only is detectable on *nix & bsd-like OS:
     QDir cwDir = QDir(sCwd);
     QString setuptoolsTryPkgPath = QDir::cleanPath(sCwd + QDir::separator() + cwDir.dirName());
-    if (bDebug)
+    if (this->m_Verbose)
         qInfo().noquote() << "setuptoolsTryPkgPath:" << setuptoolsTryPkgPath;
-    sFileAbs = sFile.startsWith("/", Qt::CaseInsensitive) ? sFile : (sCwd + "/" + sFile);
-    if (!QFile(sFileAbs).exists() && QDir(setuptoolsTryPkgPath).exists())
-        sFileAbs = QDir::cleanPath(setuptoolsTryPkgPath + QDir::separator() + sFile);
-    return sFileAbs;
+    absFilePath = filePath.startsWith("/", Qt::CaseInsensitive) ? filePath : (sCwd + "/" + filePath);
+    if (!QFile(absFilePath).exists() && QDir(setuptoolsTryPkgPath).exists())
+        absFilePath = QDir::cleanPath(setuptoolsTryPkgPath + QDir::separator() + filePath);
+    return absFilePath;
 }
 
 void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
 {
-    QString sLine = item->text();
+    QString line = item->text();
     QString actualJump = item->data(ROLE_COLLECTED_FILE).toString(); // item->toolTip();
     QString actualJumpLine = item->data(ROLE_COLLECTED_LINE).toString(); // item->toolTip();
     if (actualJumpLine.length() > 0)
-        sLine = actualJumpLine;
-    bool bTest = false;
-    QString sFile = (item->data(ROLE_COLLECTED_FILE)).toString();
-    QString sFileAbs = sFile;
-    QString sErr;
-    if (sFile.length() > 0) {
-        if (bDebug) {
-            qInfo().noquote() << "clicked_file: '" + sFile + "'";
+        line = actualJumpLine;
+    bool ok = false;
+    QString filePath = (item->data(ROLE_COLLECTED_FILE)).toString();
+    QString absFilePath = filePath;
+    QString errorMsg;
+    if (filePath.length() > 0) {
+        if (this->m_Verbose) {
+            qInfo().noquote() << "clicked_file: '" + filePath + "'";
             qInfo().noquote() << "tooltip: '" + item->toolTip() + "'";
         }
-        sFileAbs = absPathOrSame(sFile);
-        QString sRowInTarget = (item->data(ROLE_ROW)).toString();
-        QString sColInTarget = (item->data(ROLE_COL)).toString();
-        if (bDebug) {
-            qInfo().noquote() << "sRowInTarget: '" + sRowInTarget + "'";
-            qInfo().noquote() << "sColInTarget: '" + sColInTarget + "'";
+        absFilePath = absPathOrSame(filePath);
+        QString citedRowS = (item->data(ROLE_ROW)).toString();
+        QString citedColS = (item->data(ROLE_COL)).toString();
+        if (this->m_Verbose) {
+            qInfo().noquote() << "citedRowS: '" + citedRowS + "'";
+            qInfo().noquote() << "citedColS: '" + citedColS + "'";
         }
-        int iRowTarget = sRowInTarget.toInt(&bTest, 10);
-        int iColInTarget = sColInTarget.toInt(&bTest, 10);
-
-        cacheConfig(); // TODO: deprecate this (mostly used to set xEditorOffset & yEditorOffset--make them local)
+        int citedRow = citedRowS.toInt(&ok, 10);
+        int citedCol = citedColS.toInt(&ok, 10);
+        int xEditorOffset = this->config->getInt("xEditorOffset");
+        int yEditorOffset = this->config->getInt("yEditorOffset");
         // region only for Kate <= 2
-        iRowTarget += yEditorOffset;
-        sRowInTarget.setNum(iRowTarget, 10);
-        iColInTarget += xEditorOffset;
-        sColInTarget.setNum(iColInTarget, 10);
+        citedRow += yEditorOffset;
+        citedRowS.setNum(citedRow, 10);
+        citedCol += xEditorOffset;
+        citedColS.setNum(citedCol, 10);
         // endregion only for Kate <= 2
-        if (bCompensateForKateTabDifferences) {
-            QFile qfileSource(sFileAbs);
-            QString sLine;
-            // bool bFoundKateCmd=false;
-            int iParseSourceLine = 0;
+        if (this->m_CompensateForKateTabDifferences) {
+            QFile qfileSource(absFilePath);
+            QString line;
+            int readCitedI = 0; /**< This is the current line number while the
+                                     loop reads the entire cited file. */
             if (qfileSource.open(QFile::ReadOnly)) { //| QFile::Translate
                 QTextStream qtextNow(&qfileSource);
                 while (!qtextNow.atEnd()) {
-                    sLine = qtextNow.readLine(0); //does trim off newline characters
-                    if (iParseSourceLine == ((iRowTarget - yEditorOffset) - 1)) {
-                        int iCountTabs = 0;
-                        for (int iNow = 0; iNow < sLine.length(); iNow++) {
-                            if (sLine.mid(iNow, 1) == "\t")
-                                iCountTabs++;
+                    line = qtextNow.readLine(0); //does trim off newline characters
+                    if (readCitedI == ((citedRow - yEditorOffset) - 1)) {
+                        int tabCount = 0;
+                        for (int iNow = 0; iNow < line.length(); iNow++) {
+                            if (line.mid(iNow, 1) == "\t")
+                                tabCount++;
                             else
                                 break;
                         }
-                        QString sDebug;
-                        if (iCountTabs > 0) {
-                            sDebug.setNum(iCountTabs, 10);
-                            sDebug = "tabs:" + sDebug;
-                            // if subtracted 1 for kate 2, the 1st character after a line with 1 tab is currently iColInTarget==6,  otherwise it is 7
-                            // if subtracted 1 for kate 2, the 2nd character after a line with 1 tab is currently iColInTarget==7,  otherwise it is 8
-                            // if subtracted 1 for kate 2, the 1st character after a line with 2tabs is currently iColInTarget==12, otherwise it is 13
-                            // if subtracted 1 for kate 2, the 2nd character after a line with 2tabs is currently iColInTarget==13, otherwise it is 14
-                            if (iKateRevisionMajor < 3)
-                                iColInTarget -= xEditorOffset;
-                            sDebug += "; sColInTarget-old:" + sColInTarget;
-                            iColInTarget -= iCountTabs * (iCompilerTabWidth - 1);
-                            //iColInTarget+=xEditorOffset;
-                            sColInTarget.setNum(iColInTarget, 10);
-                            sDebug += "; iColInTarget-abs:" + sColInTarget;
-                            // if above worked, then iColInTarget is now an absolute character (counting tabs as 1 character)
-                            // if subtracted 1 for kate 2, the 1st character after a line with 1 tab has now become iColInTarget==1,  otherwise it is 2 (when using compiler tabwidth of 6 and 5 was subtracted [==(1*(6-1))]
-                            // if subtracted 1 for kate 2, the 2nd character after a line with 1 tab has now become iColInTarget==2,  otherwise it is 3 (when using compiler tabwidth of 6 and 5 was subtracted [==(1*(6-1))]
-                            // if subtracted 1 for kate 2, the 1st character after a line with 2tabs has now become iColInTarget==2,  otherwise it is 3 (when using compiler tabwidth of 6 and 10 was subtracted [==(1*(6-1))]
-                            // if subtracted 1 for kate 2, the 2nd character after a line with 2tabs has now become iColInTarget==3,  otherwise it is 4 (when using compiler tabwidth of 6 and 10 was subtracted [==(1*(6-1))]
-                            if (iKateRevisionMajor < 3) {
+                        QString tabDebugMsg;
+                        if (tabCount > 0) {
+                            tabDebugMsg.setNum(tabCount, 10);
+                            tabDebugMsg = "tabs:" + tabDebugMsg;
+                            // if subtracted 1 for kate 2, the 1st character after a line with 1 tab is currently citedCol==6,  otherwise it is 7
+                            // if subtracted 1 for kate 2, the 2nd character after a line with 1 tab is currently citedCol==7,  otherwise it is 8
+                            // if subtracted 1 for kate 2, the 1st character after a line with 2tabs is currently citedCol==12, otherwise it is 13
+                            // if subtracted 1 for kate 2, the 2nd character after a line with 2tabs is currently citedCol==13, otherwise it is 14
+                            if (this->m_KateMajorVer < 3)
+                                citedCol -= xEditorOffset;
+                            tabDebugMsg += "; citedColS-old:" + citedColS;
+                            citedCol -= tabCount * (this->config->getInt("CompilerTabWidth") - 1);
+                            //citedCol+=xEditorOffset;
+                            citedColS.setNum(citedCol, 10);
+                            tabDebugMsg += "; citedCol-abs:" + citedColS;
+                            // if above worked, then citedCol is now an absolute character (counting tabs as 1 character)
+                            // if subtracted 1 for kate 2, the 1st character after a line with 1 tab has now become citedCol==1,  otherwise it is 2 (when using compiler tabwidth of 6 and 5 was subtracted [==(1*(6-1))]
+                            // if subtracted 1 for kate 2, the 2nd character after a line with 1 tab has now become citedCol==2,  otherwise it is 3 (when using compiler tabwidth of 6 and 5 was subtracted [==(1*(6-1))]
+                            // if subtracted 1 for kate 2, the 1st character after a line with 2tabs has now become citedCol==2,  otherwise it is 3 (when using compiler tabwidth of 6 and 10 was subtracted [==(1*(6-1))]
+                            // if subtracted 1 for kate 2, the 2nd character after a line with 2tabs has now become citedCol==3,  otherwise it is 4 (when using compiler tabwidth of 6 and 10 was subtracted [==(1*(6-1))]
+                            if (this->m_KateMajorVer < 3) {
                                 // Kate 2.5.9 reads a 'c' argument value of 0 as the beginning of the line and 1 as the first character after the leading tabs
-                                if (iColInTarget < iCountTabs)
-                                    iColInTarget = 0;
+                                if (citedCol < tabCount)
+                                    citedCol = 0;
                                 else {
-                                    // iColInTarget currently starts at 1 at the beginning of the line
-                                    iColInTarget -= (iCountTabs);
-                                    sColInTarget.setNum(iColInTarget, 10);
-                                    sDebug += "; iColInTarget-StartAt1-rel-to-nontab:" + sColInTarget;
-                                    // iColInTarget now starts at 1 starting from the first text after tabs
-                                    int iRegen = 1;
-                                    sDebug += "; skips:";
+                                    // citedCol currently starts at 1 at the beginning of the line
+                                    citedCol -= (tabCount);
+                                    citedColS.setNum(citedCol, 10);
+                                    tabDebugMsg += "; citedCol-StartAt1-rel-to-nontab:" + citedColS;
+                                    // citedCol now starts at 1 starting from the first text after tabs
+                                    int regeneratedCol = 1;
+                                    tabDebugMsg += "; skips:";
                                     // int iTotalSkip=0;
-                                    // for (int iNow=1; iNow<(iKate2TabWidth*2+1)&&iNow<iColInTarget; iNow+=iKate2TabWidth) {
+                                    // for (int iNow=1; iNow<(this->config->getInt("Kate2TabWidth")*2+1)&&iNow<citedCol; iNow+=this->config->getInt("Kate2TabWidth")) {
 
                                     // }
 
                                     // This approximates how Kate 2 traverses tabs (the 'c' argument actually can't reach certain positions directly after the tabs):
-                                    if (iCountTabs > 2)
-                                        iColInTarget += iCountTabs - 2;
-                                    for (int iNow = 1; iNow < iColInTarget; iNow++) {
-                                        if (iNow <= (iCountTabs - 1) * iKate2TabWidth + 1) {
-                                            if (iNow != 1 && (iNow - 1) % iKate2TabWidth == 0) {
-                                                iRegen++; // only add if it is 4,7,10,etc where adder is iKate2TabWidth (1+iKate2TabWidth*position)
-                                                sDebug += "-";
+                                    if (tabCount > 2)
+                                        citedCol += tabCount - 2;
+                                    for (int iNow = 1; iNow < citedCol; iNow++) {
+                                        if (iNow <= (tabCount - 1) * this->config->getInt("Kate2TabWidth") + 1) {
+                                            if (iNow != 1 && (iNow - 1) % this->config->getInt("Kate2TabWidth") == 0) {
+                                                regeneratedCol++; // only add if it is 4,7,10,etc where addend is this->config->getInt("Kate2TabWidth") (1+this->config->getInt("Kate2TabWidth")*position)
+                                                tabDebugMsg += "-";
                                             }
                                         } else {
-                                            iRegen++;
+                                            regeneratedCol++;
                                         }
                                     }
-                                    iColInTarget = iRegen; // +( (iCountTabs>3&&iCountTabs<6) ? iCountTabs : 0 );
+                                    citedCol = regeneratedCol; // +( (tabCount>3&&tabCount<6) ? tabCount : 0 );
                                     // end accounting for kate gibberish column translation
                                 }
                             }
                             // else kate 3+, which handles tabs as absolute positions
-                            sColInTarget.setNum(iColInTarget, 10);
-                            sDebug += "; sColInTarget-new:" + sColInTarget;
-                            if (bDebugTabs)
-                                QMessageBox::information(this, "Output Inspector - Debug tab compensation", sDebug);
-                        } // end if iCountTabs>0
+                            citedColS.setNum(citedCol, 10);
+                            tabDebugMsg += "; citedColS-new:" + citedColS;
+                            if (this->m_EnableTabDebugMsg)
+                                QMessageBox::information(this, "Output Inspector - Debug tab compensation", tabDebugMsg);
+                        } // end if tabCount>0
                         break;
                     } // if correct line found
-                    iParseSourceLine++;
+                    readCitedI++;
                 } // while not at end of source file
                 qfileSource.close();
             } // end if can open source file
             else {
-                sErr = "Specified file '" + sFile + "' does not exist or is not accessible (if path looks right, try running from the location where it exists instead of '" + QDir::currentPath() + "')";
+                errorMsg = "Specified file '" + filePath + "' does not exist or is not accessible (if path looks right, try running from the location where it exists instead of '" + QDir::currentPath() + "')";
             }
-        } // end if bCompensateForKateTabDifferences
-        // QString sArgs="-u "+sFileAbs+" -l "+sRowInTarget+" -c "+sColInTarget;
-        // QProcess qprocNow(configString("kate")+sArgs);
+        } // end if this->m_CompensateForKateTabDifferences
+        // QString sArgs="-u "+absFilePath+" -l "+citedRowS+" -c "+citedColS;
+        // QProcess qprocNow(this->config->getString("editor")+sArgs);
         // qprocNow
-        if (QFile(sFileAbs).exists()) {
-            sDebug = configString("kate");
+        if (QFile(absFilePath).exists()) {
+            QString commandMsg = this->config->getString("editor");
             QStringList qslistArgs;
             // NOTE: -u is not needed at least as of kate 16.12.3 which does not create additional
             // instances of kate
             // qslistArgs.append("-u");
-            // sDebug+=" -u";
-            // qslistArgs.append("\""+sFileAbs+"\"");
-            qslistArgs.append(sFileAbs);
-            sDebug += " " + sFileAbs;
+            // commandMsg+=" -u";
+            // qslistArgs.append("\""+absFilePath+"\"");
+            qslistArgs.append(absFilePath);
+            commandMsg += " " + absFilePath;
             qslistArgs.append("--line"); // split into separate arg, otherwise geany complains that
                                          // it doesn't understand the arg "--line 1"
-            qslistArgs.append(sRowInTarget);
-            sDebug += " --line " + sRowInTarget;
-            // qslistArgs.append(sRowInTarget);
+            qslistArgs.append(citedRowS);
+            commandMsg += " --line " + citedRowS;
+            // qslistArgs.append(citedRowS);
             qslistArgs.append("--column"); // NOTE: -c is column in kate, but alternate config dir
                                            // in geany, so use --column
-            qslistArgs.append(sColInTarget); // NOTE: -c is column in kate, but alternate config dir
+            qslistArgs.append(citedColS); // NOTE: -c is column in kate, but alternate config dir
                                              // in geany, so use --column
-            sDebug += " --column " + sColInTarget;
-            // qslistArgs.append(sColInTarget);
+            commandMsg += " --column " + citedColS;
+            // qslistArgs.append(citedColS);
             // qWarning().noquote() << "qslistArgs: " << qslistArgs;
-            QProcess::startDetached(configString("kate"), qslistArgs);
-            if (!QFile::exists(configString("kate"))) {
+            QProcess::startDetached( this->config->getString("editor"), qslistArgs);
+            if (!QFile::exists(this->config->getString("editor"))) {
                 // ok to run anyway for fault tolerance, since may be in system path
-                QMessageBox::information(this, "Output Inspector - Configuration", configString("kate") + " cannot be accessed.  Try setting the value of kate in /etc/outputinspector.conf");
+                QMessageBox::information(this, "Output Inspector - Configuration", this->config->getString("editor") + " cannot be accessed.  Try setting the value of kate in /etc/outputinspector.conf");
             }
-            // if (bDebug)
-            statusbarNow->showMessage(sDebug, 0);
+            // if (this->m_Verbose)
+            ui->statusBar->showMessage(commandMsg, 0);
             // system(sCmd);//stdlib
             // QMessageBox::information(this,"test",sCmd);
-        } else
-            sErr = "Specified file '" + sFileAbs + "' does not exist (try a different line, or try running from the location where it exists instead of '" + QDir::currentPath() + "')";
+        } else {
+            // errorMsg = "Specified file '" + absFilePath + "' does not exist (try a different line, or try running from the location where it exists instead of '" + QDir::currentPath() + "')";
+            errorMsg = "[Output Inspector] No file exists here: '" + absFilePath + "'";
+        }
     } // end if line is in proper format
     else
-        sErr = "Could not detect error format";
-    if (sErr.length() > 0) {
-        if (sFile.length() > 0) {
-            qWarning().noquote() << sErr << " in '" + sLine + "':";
-            qWarning().noquote() << "  actualJump: " + item->data(this->ROLE_COLLECTED_FILE).toString();
-            qWarning().noquote() << "  actualJumpLine: " + item->data(this->ROLE_COLLECTED_LINE).toString();
-            qWarning().noquote() << "  info:";
-            std::map<QString, QString>* info = lineInfo(sLine, actualJump, actualJumpLine, false);
-            // for (auto const& it : (*info)) {  // >=C++11 only (use dot notation not -> below if using this)
+        errorMsg = "Could not detect error format";
+    if (errorMsg.length() > 0) {
+        if (filePath.length() > 0) {
+            // qWarning().noquote() << errorMsg << " in '" + line + "':";
+            std::map<QString, QString>* info = lineInfo(line, actualJump, actualJumpLine, false);
+            QString infoS;
             for (auto it = info->begin(); it != info->end(); it++) {
-                qWarning().noquote() << "    " << it->first // key
-                        + ": '" + it->second + "'"; //value
+                // qWarning().noquote() << "    " << it->first // key
+                //         + ": '" + it->second + "'"; //value
+                infoS += "; " + it->first + ": '" + it->second + "'";
             }
-            QMessageBox::information(this, "Output Inspector", sErr);
-            // QMessageBox::information(this,"Output Inspector","'"+sFileAbs+"' cannot be accessed (try a different line, or if this line's path looks right, try running from the location where it exists instead of '"+QDir::currentPath()+"')");
+            qWarning().noquote() << errorMsg << " in '" + line + "':"
+                                 << "; actualJump: " + item->data(this->ROLE_COLLECTED_FILE).toString()
+                                 << "  actualJumpLine: " + item->data(this->ROLE_COLLECTED_LINE).toString()
+                                 << infoS;
+            //                      << "  info:";
+
+            // for (auto const& it : (*info)) {  // >=C++11 only (use dot notation not -> below if using this)
+
+            QMessageBox::information(this, "Output Inspector", errorMsg);
+            // QMessageBox::information(this,"Output Inspector","'"+absFilePath+"' cannot be accessed (try a different line, or if this line's path looks right, try running from the location where it exists instead of '"+QDir::currentPath()+"')");
             // or pasting the entire line to 'Issues' link on web-based git repository
         } else {
-            qInfo().noquote() << "No file was detected in line: '" + sLine + "'";
-            qInfo().noquote() << "ERROR: '" + sErr + "'";
+            qInfo().noquote() << "[Output Inspector] No file was detected in line: '" + line + "'";
+            qInfo().noquote() << "[Output Inspector] ERROR: '" + errorMsg + "'";
         }
     }
 }

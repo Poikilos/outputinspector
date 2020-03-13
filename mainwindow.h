@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QListWidgetItem>
 #include <QTimer>
+#include "settings.h"
 // #include <map>
 
 
@@ -17,7 +18,8 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    bool bDebugBadHint=true;
+
+    bool m_DebugBadHints = true;
     const QString COLLECT_REUSE = "REUSE"; /**< The target in the analyzed
                                                 output should be also used as
                                                 the jump location for the
@@ -26,28 +28,28 @@ public:
                                               down in the call stack, so it is
                                               probably not pointing to the
                                               relevant code. */
-    const int PARSE_MARKER_FILE = 0; /**< Markers[PARSE_MARKER_FILE]
+    const int TOKEN_FILE = 0; /**< Def[TOKEN_FILE]
                                           is the opener for the file path
                                           (blank if the file path starts
                                           at the begginning of the line). */
-    const int PARSE_MARKER_PARAM_A = 1; /**< Markers[PARSE_MARKER_PARAM_A]
-                                             is the first coordinate marker
+    const int TOKEN_PARAM_A = 1; /**< Def[TOKEN_PARAM_A]
+                                             is the first coordinate token
                                              (blank if none, such as grep--
                                              -n is automatically added if you
                                              use the included ogrep script). */
-    const int PARSE_MARKER_PARAM_B = 2; /**< Markers[PARSE_MARKER_PARAM_B]
+    const int TOKEN_PARAM_B = 2; /**< Def[TOKEN_PARAM_B]
                                              is the second coordinate
                                              delimiter (blank if no column). */
-    const int PARSE_MARKER_END_PARAMS = 3; /**< Markers[PARSE_MARKER_END_PARAMS]
+    const int TOKEN_END_PARAMS = 3; /**< Def[TOKEN_END_PARAMS]
                                                 ParamsEnder (what is after last
                                                 coord). */
-    const int PARSE_COLLECT = 4; /**< Markers[PARSE_COLLECT]
+    const int PARSE_COLLECT = 4; /**< Def[PARSE_COLLECT]
                                       determines the mode
                                       for connecting lines. For possible values
                                       and their behaviors, see the documentation
                                       for COLLECT_REUSE (or future COLLECT_*
                                       constants). */
-    const int PARSE_STACK = 5; /**< Markers[PARSE_STACK]
+    const int PARSE_STACK = 5; /**< Def[PARSE_STACK]
                                     flags a pattern as being for a callstack,
                                     such as to connect it to a previous error
                                     (see documentation for STACK_LOWER or for
@@ -65,17 +67,26 @@ public:
     std::map<QString, QBrush> brushes;
 
     explicit MainWindow(QWidget *parent = 0);
-    // QString sErrorsListFileName="err.txt";
     ~MainWindow();
-    void readConfig();
-    void setConfigValue(QString k, QString v);
     void addLine(QString, bool);
     void init(QString);
     bool isFatalSourceError(QString);
-    std::map<QString, QString>* lineInfo(const QString sLine, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
+    std::map<QString, QString>* lineInfo(const QString line, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
     void lineInfo(std::map<QString, QString>* info, const QString sLineOriginal, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
-    QString absPathOrSame(QString sFile);
-
+    QString absPathOrSame(QString filePath);
+    Settings* config = nullptr;
+    bool m_EnableTabDebugMsg = false;
+    bool m_CompensateForKateTabDifferences = true;
+    int m_KateMajorVer = 0; /**< Use 2 to represent the 2.5.9 (kde3
+                                     version); and 3 for 3.0.3 (kde4 version),
+                                     etc. */
+    #ifdef QT_DEBUG
+    bool m_Verbose = true;
+    bool m_VerboseParsing = true; /**< Enable line-by-line parser output */
+    #else
+    bool m_Verbose = false;
+    bool m_VerboseParsing = false;
+    #endif
 private slots:
     void on_mainListWidget_itemDoubleClicked(QListWidgetItem *item);
     void readInput();
@@ -84,11 +95,11 @@ private:
     Ui::MainWindow *ui;
     void CompensateForEditorVersion();
     QString getConvertedSourceErrorAndWarnElseGetUnmodified(QString);
-    void cacheConfig();
+
     QStringList m_ToDoFlags = {"TODO","FIXME"};
     QString m_Error = "Error";
     QString m_Warning = "Warning";
-    QString m_CommentMark = "//";
+    QString m_CommentToken = "//";
 
     QList<QListWidgetItem*> lwiWarnings;
     QList<QListWidgetItem*> lwiToDos;
@@ -108,6 +119,11 @@ private:
     void pushWarnings(); /**< Push warnings to the GUI. */
 
     QTimer* inTimer; /**< Read standard input lines regularly **/
+
+    int iErrors = 0;
+    int iWarnings = 0;
+    int iTODOs = 0;
+    QStringList m_Files;
 };
 
 #endif // MAINWINDOW_H

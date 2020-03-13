@@ -3,6 +3,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [git] - 2020-03-13
+### Changed
+- Place the configuration into a separate class (Se settings.h and
+  settings.cpp).
+- Move globals into classes.
+- Rename variables.
+
+
+## [git] - 2020-03-13
+### Changed
+- Reduce double-click warnings (such as for missing file) to one line.
+- Prepend "[Output Inspector]" to warnings.
+
 
 ## [1.3.0] - 2020-03-13
 ### Changed
