@@ -68,6 +68,7 @@ public:
     ~MainWindow();
     void readConfig();
     void setConfigValue(QString k, QString v);
+    void addLine(QString, bool);
     void init(QString);
     bool isFatalSourceError(QString);
     std::map<QString, QString>* lineInfo(const QString sLine, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
@@ -82,6 +83,27 @@ private:
     void CompensateForEditorVersion();
     QString getConvertedSourceErrorAndWarnElseGetUnmodified(QString);
     void cacheConfig();
+    QStringList m_ToDoFlags = {"TODO","FIXME"};
+    QString m_Error = "Error";
+    QString m_Warning = "Warning";
+    QString m_CommentMark = "//";
+
+    QList<QListWidgetItem*> lwiWarnings;
+    QList<QListWidgetItem*> lwiToDos;
+    int m_LineCount = 0;
+    int m_NonBlankLineCount = 0;
+    QString m_ActualJump; /**< Store the jump in case the file & line# are on
+                               a different line than the error, such as with
+                               nosetests. */
+    QString m_ActualJumpLine;
+    bool m_IsJumpLower = true;
+
+
+    QString m_MasterLine;
+    QString m_ActualJumpRow;
+    QString m_ActualJumpColumn;
+
+    void pushWarnings(); /**< Push warnings to the GUI. */
 };
 
 #endif // MAINWINDOW_H
