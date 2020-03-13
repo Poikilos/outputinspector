@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
 ## [1.3.0] - 2020-03-13
+### Changed
+- Move known issues to the issue tracker ("allow param for directory" is
+  now a part of issue #5)
+
+
+## [1.3.0] - 2020-03-13
 ### Added
 - Accept standard input such as by piping from another program!
 

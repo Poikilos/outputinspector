@@ -179,24 +179,6 @@ see CHANGELOG.md
 * allow reading from standard input
 
 
-## Known Issues
-* should have user-space config generated at startup if doesn't exist (instead
-  of requiring install script to run as root and generate
-  `/etc/outputinspector.conf`)
-* Move OutputInspectorSleepThread to new h and cpp
-* Move declarations from cpp to h file (keep initialization in cpp file);
-  possibly move to class
-* Encapsulate settings functions; possibly use an existing class from qt or
-  other source
-* Doesn't add to error count for lines that contain string "previous error"
-* application icon doesn't work (see comments in main.cpp for setting via the
-  QApplication object named 'a')
-* allow param for directory containing source files to which error output refers
-* Change iterators to packed range-based equivalent `for (auto it&& : vec)`
-  (but not exactly that way, which makes element of ptr list no longer ptr as
-  a side effect).
-
-
 ## Developer Notes
 ### Compiling
 * Right-click the downloaded zip file, then click Extract Here
