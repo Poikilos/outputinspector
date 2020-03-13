@@ -205,9 +205,35 @@ MainWindow::MainWindow(QWidget* parent)
         sMinetestLuaTracebackMarkers[PARSE_MARKER_PARAM_A] = ":";
         sMinetestLuaTracebackMarkers[PARSE_MARKER_PARAM_B] = "";
         sMinetestLuaTracebackMarkers[PARSE_MARKER_END_PARAMS] = ":";
-        sMinetestLuaTracebackMarkers[PARSE_COLLECT] = COLLECT_REUSE;
+        // sMinetestLuaTracebackMarkers[PARSE_COLLECT] = COLLECT_REUSE;
         sMinetestLuaTracebackMarkers[PARSE_STACK] = "";
         enclosures.push_back(sMinetestLuaTracebackMarkers);
+    }
+    {
+        QStringList sMinetestAccessWarningMarkers;
+        for (int i = 0; i < PARSE_PARTS_COUNT; i++)
+            sMinetestAccessWarningMarkers.append("");
+        // TODO: change to "WARNING\[Server\].* accessed at " (requires: implement regex)
+        sMinetestAccessWarningMarkers[PARSE_MARKER_FILE] = " accessed at ";
+        sMinetestAccessWarningMarkers[PARSE_MARKER_PARAM_A] = ":";
+        sMinetestAccessWarningMarkers[PARSE_MARKER_PARAM_B] = "";
+        sMinetestAccessWarningMarkers[PARSE_MARKER_END_PARAMS] = "\n";
+        // sMinetestAccessWarningMarkers[PARSE_COLLECT] = COLLECT_REUSE;
+        sMinetestAccessWarningMarkers[PARSE_STACK] = "";
+        enclosures.push_back(sMinetestAccessWarningMarkers);
+    }
+    {
+        QStringList sMinetestWarningInsideFunctionMarkers;
+        for (int i = 0; i < PARSE_PARTS_COUNT; i++)
+            sMinetestWarningInsideFunctionMarkers.append("");
+        // TODO: change to "WARNING\[Server\].* accessed at " (requires: implement regex)
+        sMinetestWarningInsideFunctionMarkers[PARSE_MARKER_FILE] = " inside a function at ";
+        sMinetestWarningInsideFunctionMarkers[PARSE_MARKER_PARAM_A] = ":";
+        sMinetestWarningInsideFunctionMarkers[PARSE_MARKER_PARAM_B] = "";
+        sMinetestWarningInsideFunctionMarkers[PARSE_MARKER_END_PARAMS] = ".";
+        //sMinetestWarningInsideFunctionMarkers[PARSE_COLLECT] = COLLECT_REUSE;
+        sMinetestWarningInsideFunctionMarkers[PARSE_STACK] = "";
+        enclosures.push_back(sMinetestWarningInsideFunctionMarkers);
     }
     {
         // TODO: (?) This comment said, "default must iterate LAST (in back)"
