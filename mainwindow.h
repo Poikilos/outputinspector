@@ -78,7 +78,7 @@ public:
     std::map<QString, QString>* lineInfo(const QString line, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
     void lineInfo(std::map<QString, QString>* info, const QString sLineOriginal, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
     QString absPathOrSame(QString filePath);
-    Settings* config = nullptr;
+    Settings* settings = nullptr;
     bool m_EnableTabDebugMsg = false;
     bool m_CompensateForKateTabDifferences = true;
     int m_KateMajorVer = 0; /**< Use 2 to represent the 2.5.9 (kde3

@@ -20,7 +20,7 @@ public:
     QString filePath;
     QStringList checkedKeys;
 
-    static bool truthy(QString value);
+    static bool is_truthy(QString value);
 
     Settings();
     Settings(QString filePath);
@@ -31,11 +31,13 @@ public:
     int getInt(QString key);
     QString getString(QString key);
     void setValue(QString key, QVariant value);
-    void setIfMissing(QString key, QVariant value);
+    bool setIfMissing(QString key, QVariant value);
     void remove(QString key);
     // QVariant value(QString key);
 
     bool contains(QString key);
+    QString fileName();
+    void sync();
     QString sDebug;
 };
 

@@ -1,4 +1,4 @@
-#include <QTextStream>
+#include <QDebug>
 
 #include "settings.h"
 
@@ -19,6 +19,9 @@ Settings::~Settings()
     if (this->qs != nullptr) {
         this->qs->sync();
         delete this->qs;
+    }
+    else {
+        qWarning() << "The QSettings object was not initialized before the Settings object was deleted.";
     }
 }
 
@@ -47,7 +50,7 @@ bool Settings::getBool(QString key)
                 this->sDebug += key + ":" + this->qs->value(key).toString() + ".  ";
                 checkedKeys.append(key);
             }
-            return truthy(this->qs->value(key).toString());
+            return is_truthy(this->qs->value(key).toString());
         } else if (!checkedKeys.contains(key)) {
             this->sDebug += "No " + key + " line is in " + this->qs->fileName() + ".  ";
             checkedKeys.append(key);
@@ -102,15 +105,24 @@ void Settings::setValue(QString key, QVariant value)
     }
 }
 
-void Settings::setIfMissing(QString key, QVariant value)
+/**
+ * @brief Set the variable if it is missing (such as for defaults).
+ * @param key the name of the settings variable
+ * @param value the new value
+ * @return whether the value was actually changed (check sDebug for issues)
+ */
+bool Settings::setIfMissing(QString key, QVariant value)
 {
+    bool changed = false;
     if (this->qs != nullptr) {
         if (!this->qs->contains(key)) {
             this->qs->setValue(key, value);
+            changed = true;
         }
     }
     else this->sDebug += "setIfMissing tried to set " + key
             + "before qs was ready.";
+    return changed;
 }
 
 void Settings::remove(QString key)
@@ -139,12 +151,30 @@ bool Settings::contains(QString key)
     return false;
 }
 
+QString Settings::fileName()
+{
+    if (this->qs != nullptr) {
+        return this->qs->fileName();
+    }
+    return "";
+}
+
+void Settings::sync()
+{
+    if (this->qs != nullptr) {
+        this->qs->sync();
+    }
+    else {
+        qWarning() << "[outputinspector] Saving settings with sync() failed because the QSettings object was not initialized.";
+    }
+}
+
 /**
  * @brief Check if the value is in a list of "trues" (true yes, on, 1, ...).
  * @param value
  * @return
  */
-bool Settings::truthy(QString value)
+bool Settings::is_truthy(QString value)
 {
     for (auto s : Settings::trues) {
         if (value.toLower()==s)

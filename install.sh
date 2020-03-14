@@ -230,10 +230,11 @@ else
   #NOTE: this is accurate since would have exited already if couldn't edit
   echo "Successfully installed."
   echo "NOTE: you can also use:"
-  echo "  kate=/usr/bin/geany"
-  echo "  # in '/etc/outputinspector.conf'"
+  echo "  editor=/usr/bin/geany"
+  echo "  # or editor=/usr/bin/kate"
+  echo "  # in '\$HOME/.local/share/outputinspector/settings.txt'"
   echo "  # (outputinspector knows how to tell Geany which line"
-  echo "  # and column for jumping to line similar or same way as Kate)"
+  echo "  # and column for setting your cursor position like with Kate)"
   echo "See above for other information."
 fi
 echo

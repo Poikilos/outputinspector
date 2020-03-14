@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
             if (signIndex>-1) {
                 int valueIndex = signIndex + 1;
                 QString name = qArg.mid(2, signIndex-2);
-                window.config->setValue(name, qArg.mid(valueIndex).trimmed());
+                window.settings->setValue(name, qArg.mid(valueIndex).trimmed());
                 qInfo() << "set " + name + " to '"
                            + qArg.mid(valueIndex).trimmed() + "'";
             }

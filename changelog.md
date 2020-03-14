@@ -5,21 +5,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [git] - 2020-03-13
 ### Added
-- a description (`PARSE_DESCRIPTION`) in the syntax `def`
-- unmangledPath (remove ellipsis!) resolves #5
+- Show warning regarding deprecated settings (show what value was used).
 
 ### Changed
-- Place the configuration into a separate class (Se settings.h and
+- Document the new settings file path correctly (in documents and
+  message(s) shown at run-time).
+- Rename variable from "kate" to `editor` as of
+  https://github.com/liufa/Tuplinator/commit/d19bd0074bfb633c4ce68225a37c1509fb255fab
+- Copy the old `kate` variable to the new `editor variable`
+- Rename `config` object to `settings`.
+- Clarify names of transient variables.
+- Improve formatting in readme.md.
+
+### Removed
+- Delete previously-commented code in DoubleClicked event.
+
+
+## [git] - 2020-03-13
+### Added
+- a description (`PARSE_DESCRIPTION`) in the syntax `def`
+- `unmangledPath` (remove ellipsis!) resolves #5
+
+### Changed
+- Place the configuration into a separate class (See settings.h and
   settings.cpp).
 - Move globals into classes.
 - Rename variables.
 - Move jshint parsing to a unified parsing def.
+- Change settings path from `/etc/outputinspector.conf` to
+  `$HOME/.local/share/outputinspector/settings.txt`
 
 
 ## [git] - 2020-03-13
 ### Changed
 - Reduce double-click warnings (such as for missing file) to one line.
-- Prepend "[Output Inspector]" to warnings.
+- Prepend "[outputinspector]" to output such as warnings.
 
 
 ## [1.3.0] - 2020-03-13

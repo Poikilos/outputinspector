@@ -72,52 +72,63 @@ For automatic usage on Linux, create a build command in Geany:
     `passthrough-outputinspector python3 "%f" --ExitOnNoErrors=no`
 
 ### Specific Uses
-* For py file linting: you can use pycodestyle (tested with pycodestyle-3
+
+#### Python linting
+For py file linting: you can use pycodestyle (tested with pycodestyle-3
 command--package may be named python3-pycodestyle in your Linux distro):
 ```
 pycodestyle-3 > err.txt
 outputinspector &
 ```
-* For cs files, you have to run outputinspector from the location of the cs
-  files you are compiling, and your compiler error output has to be redirected
-  to err.txt.\
-  Example:
-  ```
-  mcs AssemblyInfo.cs MainForm.cs 2>err.txt
-  outputinspector &
-  ```
-  (a space then & sign after outputinspector makes it not prevent continued use
-  of console, however this is not recommended or else you may forget its open
-  and if these instructions have been followed, and your compiler errors are in
-  err.txt in the same folder, specified with lines starting with:
-  ```
-  Filename.ext(row,col): error
-  ```
-  Then Output Inspector should work when you double-click on the error.
-* for nose tests:
+
+#### C#
+For cs files, you have to run outputinspector from the location of the cs
+files you are compiling, and your compiler error output has to be redirected
+to err.txt.\
+Example:
+```
+mcs AssemblyInfo.cs MainForm.cs 2>err.txt
+outputinspector &
+```
+(a space then & sign after outputinspector makes it not prevent continued use
+of console, however this is not recommended or else you may forget its open
+and if these instructions have been followed, and your compiler errors are in
+err.txt in the same folder, specified with lines starting with:
+```
+Filename.ext(row,col): error
+```
+Then Output Inspector should work when you double-click on the error.
+
+### Python Nose Tests
 ```
 nosetests 1>out.txt 2>err.txt
 outputinspector &
 ```
-* jshint instructions (jshint package helps check js files)
-  ```
-  jshint > err.txt
-  outputinspector &
-  ```
-  If these instructions have been followed, and your compiler errors are in
-  err.txt in the same folder, with lines starting the sourcecode filename as per
-  one of the output formats (see 'Formats' section above),
-  then Output Inspector should work when you double-click on the error.
-* `outputinspector err.txt &` can be added to the end of your linting or build
-  script, allowing you to immediately go to the correct source file and
-  line containing the error! Your compiler or linter output can be
-  redirected to any file, then the file can be specified as the first
-  parameter of outputinspector (default is err.txt). You can also run
-  outputinspector manually if you have a file containing
-  linter/compiler output.
-* Your source file should not have any unsaved changes in any other program at
-  the time (it is ok if in Kate, but saving first and using your parser on that
-  version is recommended for accuracy).
+
+#### "JavaScript" (Node.js or ECMAScript) linting using jshint
+The jshint package helps check js files by providing the jshint command.
+If you need to check an entire project at once, append them all to the
+same file. You can automatically use err.txt, or specify a file:
+```
+echo "" > err.txt # erase it first
+jshint app.js >> err.txt
+jshint config.js >> err.txt
+outputinspector &
+```
+
+or
+
+```
+echo "" > issues.txt # erase it first
+jshint app.js >> issues.txt
+jshint config.js >> issues.txt
+outputinspector issues.txt &
+```
+
+Your source file should not have any unsaved changes in any other program at
+the time (it is ok if in Geany or Kate--whichever outputinspector is
+using--but saving first and using your parser on that
+version is recommended for accuracy).
 
 Other than jshint output, Output Inspector has only been tested on `mcs` (mono
 compiler) output, but may work for any C# compiler and will work for any
@@ -128,15 +139,18 @@ formatting.
 
 Output of jshint is expected unless the second formatting is used by your parser
 (such as `mcs`).
-* OPTIONAL: To use Geany, set: `kate=/usr/bin/geany` in
-  '/etc/outputinspector.conf'" (outputinspector knows how to tell Geany which
-  line and column for jumping to line by using args compatible with both Geany
-  and Kate)"
+* OPTIONAL: To use Geany, set: `editor=/usr/bin/geany` in
+  '$HOME/.local/share/outputinspector/settings.txt"
+  (outputinspector knows how to tell Geany which
+  line and column for jumping to line by using args compatible with both
+  Geany and Kate)"
 * You can set any of the ini options as command line options (case sensitive).
-  For a list of settings, see "/etc/outputinspector.conf" after install, or the
-  included "etc/outputinspector.example.conf"\
-  example:\
-  `outputinspector --ExitOnNoErrors=yes` (or `true` or `on` or `1`)
+  For a list of settings, see
+  "$HOME/.local/share/outputinspector/settings.txt" after running then
+  closing the program, or see "etc/outputinspector.example.conf"\
+  - Here is an example (which overrides a setting from the settings
+    file):\
+    `outputinspector --ExitOnNoErrors=yes` (or `true` or `on` or `1`)
 
 
 #### Overview of jshint
@@ -239,15 +253,20 @@ dnf -y install meld
 ~~    Requires: qt4 libqt4 libqt4-gui libqt4-core~~
 
 ### Backward Compatibility
-* Remember to edit /etc/outputinspector.conf specifying the kate binary (i.e.
+* Remember to edit `$HOME/.local/share/outputinspector/settings.txt`
+  specifying the kate binary (i.e.
   include the line `kate=/usr/bin/kate` such as for Fedora 25 or
-  `kate=/usr/lib/kde4/bin/kate` or appropriate command for older linux distro
-  such as Ubuntu Hardy).
+  `editor=/usr/lib/kde4/bin/kate` or appropriate command for older linux distro
+  such as Ubuntu Hardy). You can also use geany's path if it exists.
 * Tab handling:  If you are using `mcs` 1.2.6 or other compiler that reads tabs
   as 6 spaces, and you are using Kate 2 with the default tab width of 8 or are
   using Kate 3, you don't have to change anything.  Otherwise:
-  * Set CompilerTabWidth and Kate2TabWidth in /etc/outputinspector.conf -- kate
+  * Set CompilerTabWidth and Kate2TabWidth in
+    `$HOME/.local/share/outputinspector/settings.txt` -- kate
     3.0.0+ is handled automatically, but CompilerTabWidth may have to be set.
     If the compiler treats tabs as 1 character, make sure you set
     `CompilerTabWidth=1` -- as of 1.2.6, `mcs` counts tabs as 6 spaces
     (outputinspector default).
+* If the `editor` setting is not present but the `kate` setting is, the
+  program will copy the setting to the new `editor` variable in the conf
+  file.
