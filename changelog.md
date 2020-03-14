@@ -5,14 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [2.0.0] - 2020-03-13
 ### Added
-- Show warning regarding deprecated settings (show what value was used).
+- Show a warning regarding deprecated settings (show what value was
+  used).
 
 ### Changed
 - Document the new settings file path correctly (in documents and
   message(s) shown at run-time).
 - Rename variable from `kate` to `editor` as of
   https://github.com/poikilos/outputinspector/commit/d19bd0074bfb633c4ce68225a37c1509fb255fab
-- Copy the old `kate` variable to the new `editor variable`
+- Copy the old `kate` variable to the new `editor` variable.
 - Rename `config` object to `settings`.
 - Clarify names of transient variables.
 - Improve formatting in readme.md.
@@ -39,7 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [2.0.0] - 2020-03-13
 ### Changed
 - Reduce double-click warnings (such as for missing file) to one line.
-- Prepend "[outputinspector]" to output such as warnings.
+- Prepend "[outputinspector]" to stdout/stderr (such as warnings).
 
 
 ## [1.3.0] - 2020-03-13
@@ -76,8 +77,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [1.1.0] - 2020-03-12
 ### Added
-- Handle Minetest Lua tracebacks (such as from debug.txt or stderr)
-  (requires fix below)
+- Handle Minetest Lua tracebacks (such as from debug.txt or stderr).
+  - This feature requires the fix below.
+  - :edit: This is improved now since issue #5 is closed
+    (enhancement: un-mangle a path containing an ellipsis)!
 
 ### Fixed
 - Handle `PARSE_MARKER_FILE` value not at the start of a line.

@@ -38,7 +38,7 @@ wget -O ~/.local/bin/passthrough-outputinspector https://github.com/poikilos/out
 * Color code lines in your output (red: error; orange: warning; yellow:
   issue in installed library used [if in site-packages]; black:
   formatting marks; gray: unrecognized information)
-  * Detect flags in your output such as `Warning` or `Error`.
+  * Detect flags in your output (such as `Warning` or `Error`).
 * Detect flags in files cited by your output: `TODO` or `FIXME` (in
   inline comments). Predicing inline comment marks is possible when
   the file uses one of the following extensions: `py`, `pyw`, `sh`, `c`,
@@ -99,7 +99,7 @@ Filename.ext(row,col): error
 ```
 Then Output Inspector should work when you double-click on the error.
 
-### Python Nose Tests
+#### Python Nose Tests
 ```
 nosetests 1>out.txt 2>err.txt
 outputinspector &
@@ -153,7 +153,7 @@ Output of jshint is expected unless the second formatting is used by your parser
     `outputinspector --ExitOnNoErrors=yes` (or `true` or `on` or `1`)
 
 
-#### Overview of jshint
+##### Overview of jshint
 Usually from the nodejs-jshint package, jshint is a linting and/or
 hinting tool for javascript (especially node.js) which is considered a
 successor to jslinter. Here is the timeline:
@@ -190,7 +190,7 @@ successor to jslinter. Here is the timeline:
     * A filename search for jslint in `/usr/lib/python2.7/site-packages`
       yields no binaries or files other than those in the folders above.
 
-### Minetest Lua tracebacks
+#### Minetest Lua tracebacks
 Output Inspector un-mangles paths with an ellipsis!
 ```
 2020-03-13 03:15:17: ERROR[Main]: ServerError: AsyncErr: environment_Step: Runtime error from mod 'unified_foods' in callback environment_Step(): ...../gameshunger.lua:342: attempt to compare number with nil
@@ -211,23 +211,20 @@ See [changelog.md](changelog.md).
 ## Developer Notes
 ### Compiling
 * Right-click the downloaded zip file, then click Extract Here
-* open in QT Creator 5
-* then push the F7 key.  When it is finished compiling, exit.
-* open a terminal
-    * cd to the directory where you extracted outputinspector such as:
-      ```
-      # If you want to install to /usr/local,
-      # then do `su root` before attempting install below (or use
-      # sudo ./install.sh instead).
-      # If you are not named root, the default PREFIX is ~/.local
-      # (you can also set the PREFIX environment variable manually).
-      cd outputinspector
-      # or
-      cd outputinspector-master
-      ```
-      ```
-      ./install.sh
-      ```
+* Open the `outputinspector.pro` in QT Creator 5.
+* Push the F7 key.  When it is finished compiling, exit.
+* Open a terminal and enter the following:
+```
+# If you are not named root, the default PREFIX is ~/.local
+# (you can also set the PREFIX environment variable manually).
+cd outputinspector
+# or
+cd outputinspector-master
+# If you want to install to /usr/local,
+# then do `su root` before attempting install below (or use
+# sudo ./install.sh instead).
+./install.sh
+```
 
 ### coding style
 cd to project dir, then
@@ -257,7 +254,7 @@ dnf -y install meld
   specifying the kate binary (i.e.
   include the line `kate=/usr/bin/kate` such as for Fedora 25 or
   `editor=/usr/lib/kde4/bin/kate` or appropriate command for older linux distro
-  such as Ubuntu Hardy). You can also use geany's path if it exists.
+  such as Ubuntu Hardy). You can also use Geany's path if it exists.
 * Tab handling:  If you are using `mcs` 1.2.6 or other compiler that reads tabs
   as 6 spaces, and you are using Kate 2 with the default tab width of 8 or are
   using Kate 3, you don't have to change anything.  Otherwise:
