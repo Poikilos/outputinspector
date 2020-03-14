@@ -28,7 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 - Place the configuration into a separate class (See settings.h and
-  settings.cpp).
+  settings.cpp)--resolves #9.
 - Move globals into classes.
 - Rename variables.
 - Move jshint parsing to a unified parsing def.
@@ -52,6 +52,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [1.3.0] - 2020-03-13
 ### Added
 - Accept standard input such as by piping from another program!
+  - resolves #2 (enhancement)
 
 ### Changed
 - If any standard input is waiting, change dialog behavior. Instead of
@@ -70,7 +71,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Handle Minetest Lua Warnings.
 - Add Qt-style doxygen strings for constants pointing to parsing markers
-  and their values.
+  and their values (resolves #3).
 
 
 ## [1.1.0] - 2020-03-12
