@@ -25,7 +25,7 @@ using if all you want is fast code navigation during debugging.
 Usually, you should replace RELEASE with the latest version from the
 [Releases](https://github.com/poikilos/outputinspector/releases) page):
 ```
-RELEASE=1.3.0
+RELEASE=2.0.0
 mkdir -p ~/.local/bin
 wget -O ~/.local/bin/outputinspector https://github.com/poikilos/outputinspector/releases/download/$RELEASE/outputinspector
 wget -O ~/.local/bin/ogrep https://github.com/poikilos/outputinspector/raw/master/package/bin/ogrep

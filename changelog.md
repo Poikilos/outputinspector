@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [git] - 2020-03-13
+## [2.0.0] - 2020-03-13
 ### Added
 - Show warning regarding deprecated settings (show what value was used).
 
@@ -21,7 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Delete previously-commented code in DoubleClicked event.
 
 
-## [git] - 2020-03-13
+## [2.0.0] - 2020-03-13
 ### Added
 - a description (`PARSE_DESCRIPTION`) in the syntax `def`
 - `unmangledPath` (remove ellipsis!) resolves #5
@@ -36,7 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `$HOME/.local/share/outputinspector/settings.txt`
 
 
-## [git] - 2020-03-13
+## [2.0.0] - 2020-03-13
 ### Changed
 - Reduce double-click warnings (such as for missing file) to one line.
 - Prepend "[outputinspector]" to output such as warnings.
