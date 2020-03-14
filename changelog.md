@@ -10,8 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 - Document the new settings file path correctly (in documents and
   message(s) shown at run-time).
-- Rename variable from "kate" to `editor` as of
-  https://github.com/liufa/Tuplinator/commit/d19bd0074bfb633c4ce68225a37c1509fb255fab
+- Rename variable from `kate` to `editor` as of
+  https://github.com/poikilos/outputinspector/commit/d19bd0074bfb633c4ce68225a37c1509fb255fab
 - Copy the old `kate` variable to the new `editor variable`
 - Rename `config` object to `settings`.
 - Clarify names of transient variables.
