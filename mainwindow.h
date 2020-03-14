@@ -18,6 +18,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
+    static QString unmangledPath(QString path);
 
     bool m_DebugBadHints = true;
     const QString COLLECT_REUSE = "REUSE"; /**< The target in the analyzed
@@ -28,33 +29,36 @@ public:
                                               down in the call stack, so it is
                                               probably not pointing to the
                                               relevant code. */
-    const int TOKEN_FILE = 0; /**< Def[TOKEN_FILE]
-                                          is the opener for the file path
-                                          (blank if the file path starts
-                                          at the begginning of the line). */
-    const int TOKEN_PARAM_A = 1; /**< Def[TOKEN_PARAM_A]
-                                             is the first coordinate token
-                                             (blank if none, such as grep--
-                                             -n is automatically added if you
-                                             use the included ogrep script). */
-    const int TOKEN_PARAM_B = 2; /**< Def[TOKEN_PARAM_B]
-                                             is the second coordinate
-                                             delimiter (blank if no column). */
-    const int TOKEN_END_PARAMS = 3; /**< Def[TOKEN_END_PARAMS]
-                                                ParamsEnder (what is after last
-                                                coord). */
-    const int PARSE_COLLECT = 4; /**< Def[PARSE_COLLECT]
+    const int TOKEN_FILE = 0; /**< def[TOKEN_FILE]
+                                   is the opener for the file path
+                                   (blank if the file path starts
+                                   at the begginning of the line). */
+    const int TOKEN_PARAM_A = 1; /**< def[TOKEN_PARAM_A]
+                                      is the first coordinate token
+                                      (blank if none, such as grep--
+                                      -n is automatically added if you
+                                      use the included ogrep script). */
+    const int TOKEN_PARAM_B = 2; /**< def[TOKEN_PARAM_B]
+                                      is the second coordinate
+                                      delimiter (blank if no column). */
+    const int TOKEN_END_PARAMS = 3; /**< def[TOKEN_END_PARAMS]
+                                         ParamsEnder (what is after last
+                                         coord). */
+    const int PARSE_COLLECT = 4; /**< def[PARSE_COLLECT]
                                       determines the mode
                                       for connecting lines. For possible values
                                       and their behaviors, see the documentation
                                       for COLLECT_REUSE (or future COLLECT_*
                                       constants). */
-    const int PARSE_STACK = 5; /**< Def[PARSE_STACK]
+    const int PARSE_STACK = 5; /**< def[PARSE_STACK]
                                     flags a pattern as being for a callstack,
                                     such as to connect it to a previous error
                                     (see documentation for STACK_LOWER or for
                                     any later-added STACK_* constants). */
-    const int PARSE_PARTS_COUNT = 6;
+    const int PARSE_DESCRIPTION = 5; /**< def[PARSE_STACK]
+                                          describes the parser mode (def)
+                                          in a human-readable way.*/
+    const int PARSE_PARTS_COUNT = 7;
     const int ROLE_COLLECTED_FILE = Qt::UserRole;
     const int ROLE_ROW = Qt::UserRole + 1;
     const int ROLE_COL = Qt::UserRole + 2;
@@ -94,7 +98,6 @@ private slots:
 private:
     Ui::MainWindow *ui;
     void CompensateForEditorVersion();
-    QString getConvertedSourceErrorAndWarnElseGetUnmodified(QString);
 
     QStringList m_ToDoFlags = {"TODO","FIXME"};
     QString m_Error = "Error";

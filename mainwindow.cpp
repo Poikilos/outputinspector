@@ -81,6 +81,47 @@ bool qcontains_any(T haystack, std::list<T>& needles, Qt::CaseSensitivity cs = Q
     return count_if(needles.begin(), needles.end(), bind(qcontains<T>, haystack, std::placeholders::_1, cs)) > 0;
 }
 
+QString MainWindow::unmangledPath(QString path)
+{
+    QRegularExpression literalDotsRE("\\.\\.\\.+"); /**< Match 2 dots followed by more. */
+    QRegularExpressionMatch match = literalDotsRE.match(path);
+    bool verbose = false; // This is manually set to true for debug only.
+    if (match.hasMatch()) {
+        // int start = match.capturedStart(0);
+        int end = match.capturedEnd(0);
+        QList<int> tryOffsets = QList<int>();
+        tryOffsets.append(-2);
+        tryOffsets.append(1);
+        tryOffsets.append(0);
+        for (auto tryOffset : tryOffsets) {
+            QString tryPath = path.mid(end+tryOffset);
+            if (QFile(tryPath).exists()) {
+                if (verbose) {
+                    qInfo().noquote().nospace()
+                        << "[outputinspector]"
+                        << " transformed *.../dir into ../dir: \""
+                        << tryPath << "\"";
+                }
+                return tryPath;
+            }
+            else {
+                if (verbose) {
+                    qInfo().noquote().nospace()
+                        << QString::fromStdString("[outputinspector] There is no \"")
+                        << QString::fromStdString(tryPath.toStdString())
+                        << "\" in the current directory (\""
+                        << QString::fromStdString(QDir::currentPath().toStdString())
+                        << "\")";
+                }
+            }
+        }
+    }
+    else {
+        if (verbose) qInfo() << "[outputinspector] There is no \"...\" in the cited path: \"" << path << "\"";
+    }
+    return path;
+}
+
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -128,12 +169,13 @@ MainWindow::MainWindow(QWidget* parent)
     }
     this->config->setIfMissing("editor", "/usr/bin/geany");
 
+
     // init(errorsListFileName);
     // formats with "\n" at end must be AFTER other single-param formats that have
     // same TOKEN_FILE and PARSE_PARAM_A, because "\n" is forced
     // (which would leave extra stuff at the end if there are more tokenings)
     {
-        QStringList def; /**< Nose Error */
+        QStringList def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         def[TOKEN_FILE] = "  File ";
@@ -142,10 +184,11 @@ MainWindow::MainWindow(QWidget* parent)
         def[TOKEN_END_PARAMS] = "";
         def[PARSE_COLLECT] = "";
         def[PARSE_STACK] = "";
+        def[PARSE_DESCRIPTION] = "Nose error";
         enclosures.push_back(def);
     }
     {
-        QStringList def; /**< Nose Lower Traceback */
+        QStringList def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         def[TOKEN_FILE] = "  File ";
@@ -154,10 +197,11 @@ MainWindow::MainWindow(QWidget* parent)
         def[TOKEN_END_PARAMS] = ",";
         def[PARSE_COLLECT] = COLLECT_REUSE;
         def[PARSE_STACK] = STACK_LOWER;
+        def[PARSE_DESCRIPTION] = "Nose lower traceback";
         enclosures.push_back(def);
     }
     {
-        QStringList def; /**< Nose Syntax Error */
+        QStringList def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         def[TOKEN_FILE] = "ERROR: Failure: SyntaxError (invalid syntax (";
@@ -166,10 +210,11 @@ MainWindow::MainWindow(QWidget* parent)
         def[TOKEN_END_PARAMS] = ")";
         def[PARSE_COLLECT] = "";
         def[PARSE_STACK] = "";
+        def[PARSE_DESCRIPTION] = "Nose syntax error";
         enclosures.push_back(def);
     }
     {
-        QStringList def; /**< Nose Upper Traceback */
+        QStringList def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         def[TOKEN_FILE] = "  File ";
@@ -178,10 +223,11 @@ MainWindow::MainWindow(QWidget* parent)
         def[TOKEN_END_PARAMS] = "\n";
         def[PARSE_COLLECT] = COLLECT_REUSE;
         def[PARSE_STACK] = "";
+        def[PARSE_DESCRIPTION] = "Nose upper traceback";
         enclosures.push_back(def);
     }
     {
-        QStringList def; /**< Minetest Lua Traceback */
+        QStringList def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         def[TOKEN_FILE] = "ERROR[Main]:";
@@ -190,10 +236,26 @@ MainWindow::MainWindow(QWidget* parent)
         def[TOKEN_END_PARAMS] = ":";
         // def[PARSE_COLLECT] = COLLECT_REUSE;
         def[PARSE_STACK] = "";
+        def[PARSE_DESCRIPTION] = "Minetest Lua traceback";
         enclosures.push_back(def);
     }
     {
-        QStringList def; /**< Minetest Access Warning */
+        // An example of jshint output is the entire next comment:
+        // functions.js: line 32, col 26, Use '!==' to compare with 'null'.
+        QStringList def;
+        for (int i = 0; i < PARSE_PARTS_COUNT; i++)
+            def.append("");
+        def[TOKEN_FILE] = "";
+        def[TOKEN_PARAM_A] = ": line ";
+        def[TOKEN_PARAM_B] = ", col ";
+        def[TOKEN_END_PARAMS] = ", ";
+        // def[PARSE_COLLECT] = COLLECT_REUSE;
+        def[PARSE_STACK] = "";
+        def[PARSE_DESCRIPTION] = "hint from jshint";
+        enclosures.push_back(def);
+    }
+    {
+        QStringList def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         // TODO: change to "WARNING\[Server\].* accessed at " (requires:
@@ -204,10 +266,11 @@ MainWindow::MainWindow(QWidget* parent)
         def[TOKEN_END_PARAMS] = "\n";
         // def[PARSE_COLLECT] = COLLECT_REUSE;
         def[PARSE_STACK] = "";
+        def[PARSE_DESCRIPTION] = "Minetest access warning";
         enclosures.push_back(def);
     }
     {
-        QStringList def; /**< Minetest Warning in function */
+        QStringList def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         /// TODO: change to "WARNING\[Server\].* accessed at " (requires:
@@ -218,6 +281,7 @@ MainWindow::MainWindow(QWidget* parent)
         def[TOKEN_END_PARAMS] = ".";
         // def[PARSE_COLLECT] = COLLECT_REUSE;
         def[PARSE_STACK] = "";
+        def[PARSE_DESCRIPTION] = "Minetest warning 'inside a function'";
         enclosures.push_back(def);
     }
     {
@@ -236,12 +300,11 @@ MainWindow::MainWindow(QWidget* parent)
         def[TOKEN_END_PARAMS] = ")";
         def[PARSE_COLLECT] = "";
         def[PARSE_STACK] = "";
+        def[PARSE_DESCRIPTION] = "generic ('path(row,*col)')";
         enclosures.push_back(def);
     }
     {
         QStringList def;
-        // -n option for grep shows line # like:
-        // <filename>:<number>:
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         def[TOKEN_FILE] = "";
@@ -250,6 +313,7 @@ MainWindow::MainWindow(QWidget* parent)
         def[TOKEN_END_PARAMS] = ":";
         def[PARSE_COLLECT] = "";
         def[PARSE_STACK] = "";
+        def[PARSE_DESCRIPTION] = "pycodestyle-like";
         enclosures.push_back(def);
     }
     {
@@ -264,6 +328,7 @@ MainWindow::MainWindow(QWidget* parent)
         def[TOKEN_END_PARAMS] = ":";
         def[PARSE_COLLECT] = "";
         def[PARSE_STACK] = "";
+        def[PARSE_DESCRIPTION] = "grep -n result";
         enclosures.push_back(def);
     }
     {
@@ -276,6 +341,7 @@ MainWindow::MainWindow(QWidget* parent)
         def[TOKEN_END_PARAMS] = ":";
         def[PARSE_COLLECT] = "";
         def[PARSE_STACK] = "";
+        def[PARSE_DESCRIPTION] = "grep-like result (path then colon)";
         enclosures.push_back(def);
     }
     brushes["TracebackNotTop"] = QBrush(QColor::fromRgb(128, 60, 0));
@@ -452,12 +518,9 @@ void MainWindow::addLine(QString line, bool enablePush)
             lwi->setForeground(brushes["Regular"]);
             ui->mainListWidget->addItem(lwi);
         } else {
-            line = getConvertedSourceErrorAndWarnElseGetUnmodified(line);
-            bool jshint_enable = false;
-            if (line != originalLine)
-                jshint_enable = true;
-
+            // lineInfo does the actual parsing:
             lineInfo(info, line, this->m_ActualJump, this->m_ActualJumpLine, true);
+
             if (info->at("master") == "true") {
                 this->m_ActualJump = info->at("file");
                 this->m_ActualJumpLine = line;
@@ -531,14 +594,15 @@ void MainWindow::addLine(QString line, bool enablePush)
                 }
             }
 
-            if ((jshint_enable && (*info)["file"].endsWith(".js")) || line.indexOf(this->m_Error, 0, Qt::CaseInsensitive) > -1) {
-                // TODO?: if (jshint_enable || line.indexOf("previous error",0,Qt::CaseInsensitive)<0) iErrors++;
-                // if (this->config->getBool("ShowWarningsLast")) this->m_Errors.append(line);
-            }
+            //if ((is_jshint && (*info)["file"].endsWith(".js")) || line.indexOf(this->m_Error, 0, Qt::CaseInsensitive) > -1) {
+            //  // TODO?: if (is_jshint|| line.indexOf("previous error",0,Qt::CaseInsensitive)<0) iErrors++;
+            //  // if (this->config->getBool("ShowWarningsLast")) this->m_Errors.append(line);
+            //}
 
             if (this->config->getBool("FindTODOs")) {
                 if (info->at("good") == "true") {
-                    QString sFileX = absPathOrSame(info->at("file")); // =line.mid(0,line.indexOf("("));
+                    QString sFileX;// = unmangledPath(info->at("file"));
+                    sFileX = absPathOrSame(sFileX); // =line.mid(0,line.indexOf("("));
                     if (!this->m_Files.contains(sFileX, Qt::CaseSensitive)) {
                         this->m_Files.append(sFileX);
                         QFile qfileSource(sFileX);
@@ -551,7 +615,7 @@ void MainWindow::addLine(QString line, bool enablePush)
                             int iSourceLineFindToDo = 0;
                             while (!qtextSource.atEnd()) {
                                 QString sSourceLine = qtextSource.readLine(0);
-                                iSourceLineFindToDo++; // add first since compiler line numbering starts at 1
+                                iSourceLineFindToDo++; // Increment this now since the compiler's line numbering starts with 1.
                                 int iToDoFound = -1;
                                 int iCommentFound = sSourceLine.indexOf(this->m_CommentToken, 0, Qt::CaseInsensitive);
                                 if (iCommentFound > -1) {
@@ -664,55 +728,6 @@ void MainWindow::CompensateForEditorVersion()
     }
 }
 
-// converts jshint output such as:
-// functions.js: line 32, col 26, Use '!==' to compare with 'null'.
-// to mcs format which is a result of:
-// etc/foo.cs(10,24): error CS0103: The name `Path' does not exist in the current context
-QString MainWindow::getConvertedSourceErrorAndWarnElseGetUnmodified(QString line)
-{
-    QString jshint_filename_ender = ": line ";
-    int src_jshint_filename_ender_i = line.indexOf(jshint_filename_ender);
-    // on purpose for readability:
-    // * string operations are done separately and as soon as required info becomes available
-    // * offset is used even on the second indexOf (even thougth first search term theoretically does not ever contain the second one)
-    if (src_jshint_filename_ender_i > -1) {
-        QString src_filename_s = line.mid(0, src_jshint_filename_ender_i);
-        int src_row_i = src_jshint_filename_ender_i + jshint_filename_ender.length();
-        QString src_line_ender = ", col ";
-        int src_line_ender_i = line.indexOf(src_line_ender, src_row_i + 1);
-        if (src_line_ender_i > -1) {
-            int src_row_len = src_line_ender_i - src_row_i;
-            QString src_line_s = line.mid(src_row_i, src_row_len);
-            int src_col_i = src_line_ender_i + src_line_ender.length();
-            QString col_closer = ", ";
-            int src_col_ender_i = line.indexOf(col_closer, src_col_i + 1);
-            if (src_col_ender_i > -1) {
-                int src_col_len = src_col_ender_i - src_col_i;
-                QString src_col_s = line.mid(src_col_i, src_col_len);
-                int src_comment_i = src_col_ender_i + col_closer.length();
-                QString src_comment_s = line.mid(src_comment_i);
-                line = src_filename_s + "(" + src_line_s + "," + src_col_s + "): " + src_comment_s;
-                // if (this->m_DebugBadHints) {
-                //     QMessageBox::information(this,"Output Inspector - Parsing Notice","error format was converted to "+line);
-                //     this->m_DebugBadHints=false;
-                // }
-            } else if (this->m_DebugBadHints) {
-                QMessageBox::information(this, "Output Inspector - Parsing Error", "jshint parsing error: missing '" + col_closer + "' after column number after '" + src_line_ender + "' after '" + jshint_filename_ender + "'");
-                this->m_DebugBadHints = false;
-            }
-        } else if (this->m_DebugBadHints) {
-            QMessageBox::information(this, "Output Inspector - Parsing Error", "jshint parsing error: missing '" + src_line_ender + "' after '" + jshint_filename_ender + "'");
-            this->m_DebugBadHints = false;
-        }
-    } else if (this->m_DebugBadHints) {
-        if (this->m_Verbose) {
-            QMessageBox::information(this, "Output Inspector - Parsing Notice", "Detected mcs error format"); //debug only
-            this->m_DebugBadHints = false;
-        }
-    }
-    return line;
-}
-
 void MainWindow::pushWarnings()
 {
     if (this->lwiWarnings.length() > 0) {
@@ -721,7 +736,7 @@ void MainWindow::pushWarnings()
         }
         this->lwiWarnings.clear();
     }
-} // end getConvertedSourceErrorAndWarnElseGetUnmodified
+}
 
 std::map<QString, QString>* MainWindow::lineInfo(const QString line, QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine)
 {
@@ -742,7 +757,6 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString origin
     (*info)["master"] = "false";
     (*info)["color"] = "Default";
     QString line = originalLine;
-    line = getConvertedSourceErrorAndWarnElseGetUnmodified(line);
 
     QString fileToken;
     QString paramAToken;
@@ -852,7 +866,7 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString origin
                             if ((*itList)[PARSE_STACK] == STACK_LOWER)
                                 (*info)["lower"] = "true";
                             if (this->m_VerboseParsing) {
-                                qInfo().noquote() << "        has post-params '" + endParamsToken.replace('\n', '\\n') + "' ending@"
+                                qInfo().noquote() << "        has post-params '" + endParamsToken.replace("\n", "\\n") + "' ending@"
                                                   << endParamsTokenI << ">=" << (paramBTokenI + paramBToken.length()) << "="
                                                   << paramBTokenI << "+" << paramBToken.length() << "in '" + line + "'";
                             }
@@ -889,17 +903,24 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString origin
     // qInfo().noquote() << "paramAToken: " << paramAToken;
     // qInfo().noquote() << "paramBToken: " << paramBToken;
     // qInfo().noquote() << "endParamsToken: " << endParamsToken;
-    if (endParamsTokenI >= 0) {
+    if (fileI >= 0 && (paramATokenI > fileI || endParamsToken > fileI)) {
         // Even if closer is not present,
         // endParamsTokenI is set to length() IF applicable to this enclosure
 
-        QString filePath = line.mid(fileI, paramATokenI - fileI);
+        QString filePath;
+        if (paramATokenI > fileI)
+            filePath = line.mid(fileI, paramATokenI - fileI);
+        else
+            filePath = line.mid(fileI, endParamsTokenI - fileI);
+
         filePath = filePath.trimmed();
         if (filePath.length() >= 2) {
             if ((filePath.startsWith('"') && filePath.endsWith('"')) || (filePath.startsWith('\'') && filePath.endsWith('\''))) {
                 filePath = filePath.mid(1, filePath.length() - 2);
             }
         }
+        qDebug() << "[outputinspector][debug] file path before unmangling: \"" << filePath << "\"";
+        filePath = unmangledPath(filePath);
         (*info)["file"] = filePath;
         (*info)["row"] = line.mid(paramAI, paramBTokenI - paramAI);
         if (paramBToken.length() > 0)
@@ -939,8 +960,13 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString origin
         else if (filePath.endsWith(".php", Qt::CaseSensitive))
             (*info)["language"] = "php";
         qDebug().noquote() << "  detected file: '" + filePath + "'";
+        (*info)["good"] = "true";
+        // qInfo() << "[outputinspector] found a good line with the following filename: " << filePath;
     }
-    (*info)["good"] = (endParamsTokenI > -1) ? "true" : "false";
+    else {
+        (*info)["good"] = "false";
+        // qInfo() << "[outputinspector] found a bad line: " << originalLine;
+    }
     if ((*info)["good"] == "true") {
         if (actualJump.length() > 0 && (*info)["master"] == "false") {
             qDebug() << "INFO: nosetests output was detected, but the line is not first"
@@ -1125,11 +1151,11 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
             // QMessageBox::information(this,"test",sCmd);
         } else {
             // errorMsg = "Specified file '" + absFilePath + "' does not exist (try a different line, or try running from the location where it exists instead of '" + QDir::currentPath() + "')";
-            errorMsg = "[Output Inspector] No file exists here: '" + absFilePath + "'";
+            errorMsg = "[Output Inspector] No file exists here: '" + absFilePath + "'\n";
         }
     } // end if line is in proper format
     else
-        errorMsg = "Could not detect error format";
+        errorMsg = "Could not detect error format\n";
     if (errorMsg.length() > 0) {
         if (filePath.length() > 0) {
             // qWarning().noquote() << errorMsg << " in '" + line + "':";
@@ -1140,7 +1166,7 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
                 //         + ": '" + it->second + "'"; //value
                 infoS += "; " + it->first + ": '" + it->second + "'";
             }
-            qWarning().noquote() << errorMsg << " in '" + line + "':"
+            qWarning().noquote() << "[outputinspector][error] " << errorMsg << " in the line:"
                                  << "; actualJump: " + item->data(this->ROLE_COLLECTED_FILE).toString()
                                  << "  actualJumpLine: " + item->data(this->ROLE_COLLECTED_LINE).toString()
                                  << infoS;

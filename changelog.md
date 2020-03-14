@@ -4,11 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [git] - 2020-03-13
+### Added
+- a description (`PARSE_DESCRIPTION`) in the syntax `def`
+- unmangledPath (remove ellipsis!) resolves #5
+
 ### Changed
 - Place the configuration into a separate class (Se settings.h and
   settings.cpp).
 - Move globals into classes.
 - Rename variables.
+- Move jshint parsing to a unified parsing def.
 
 
 ## [git] - 2020-03-13

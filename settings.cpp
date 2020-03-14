@@ -6,7 +6,7 @@ QStringList Settings::trues = QStringList() << "true" << "1" << "on" << "yes";
 
 Settings::Settings()
 {
-    this->qs = new QSettings("poikilos.org");
+    this->qs = new QSettings("outputinspector.conf", QSettings::IniFormat);
 }
 
 Settings::Settings(QString filePath)

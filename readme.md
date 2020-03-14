@@ -176,6 +176,19 @@ successor to jslinter. Here is the timeline:
     * A filename search for jslint in `/usr/lib/python2.7/site-packages`
       yields no binaries or files other than those in the folders above.
 
+### Minetest Lua tracebacks
+Output Inspector un-mangles paths with an ellipsis!
+```
+2020-03-13 03:15:17: ERROR[Main]: ServerError: AsyncErr: environment_Step: Runtime error from mod 'unified_foods' in callback environment_Step(): ...../gameshunger.lua:342: attempt to compare number with nil
+2020-03-13 03:15:17: ERROR[Main]:       ...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: in function <...../games/ENLIVEN/mods/coderfood/unif
+```
+`*.../dir` becomes `../dir`, resulting in a path such as:
+`../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua` (this will
+work if you run outputinspector from the same directory as the program
+you ran. If the path exists in `.` then the path will also be
+transformed correctly to something like
+`games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua`.
+
 
 ## Changes
 See [changelog.md](changelog.md).
