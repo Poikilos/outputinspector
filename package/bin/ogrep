@@ -10,14 +10,26 @@ import subprocess
 #   how-do-i-pipe-a-subprocess-call-to-a-text-file>
 
 tmp_path = tempfile.mktemp(prefix="ogrep")
-always_use = ["-n"]  # add line number to grep output
+long_forms = {}
+long_forms["-n"] = ["--line-number", "--line-buffered"]
+long_forms["-H"] = ["--with-filename"]
+always_use = ["-n", "-H"]  # add line number to grep output
 args = []
+used_singles = []
 
 for i in range(1, len(sys.argv)):
     args.append(sys.argv[i])
 
+# Collect short versions of long options used:
+for i in range(1, len(sys.argv)):
+    for k, options in long_forms.items():
+        for option in options:
+            if sys.argv[i] == option:
+                if sys.argv[i] not in used_singles:
+                    used_singles.append(k)
+
 for arg in always_use:
-    if arg not in args:
+    if (arg not in args) and (arg not in used_singles):
         args.append(arg)
 
 with open(tmp_path, 'w') as outs:
