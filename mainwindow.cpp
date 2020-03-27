@@ -423,9 +423,17 @@ void MainWindow::init(QString errorsListFileName)
     if (!(this->settings->contains("xEditorOffset") || this->settings->contains("yEditorOffset")))
         CompensateForEditorVersion();
     if (errorsListFileName.length() == 0) {
-        errorsListFileName = "err.txt";
+        QString tryPath = "debug.txt";
+        if (QFile(tryPath).exists()) {
+            errorsListFileName = tryPath;
+            qInfo().noquote().nospace() << "[outputinspector]"
+                << " detected \"" << tryPath << "\"...examining...";
+        }
+        else
+            errorsListFileName = "err.txt";
     }
     // QTextStream err(stderr);  // avoid quotes and escapes caused by qWarning().noquote() being derived from qDebug()--alternative to qWarning().noquote().noquote()<<
+
     QFile qfileTest(errorsListFileName);
     // this->m_ToDoFlags.append("TODO");
     // this->m_ToDoFlags.append("FIXME");
@@ -433,8 +441,14 @@ void MainWindow::init(QString errorsListFileName)
     // ui->mainListWidget is a QListWidget
     // setCentralWidget(ui->mainListWidget);
     // ui->mainListWidget->setSizePolicy(QSizePolicy::)
-
-    if (qfileTest.exists()) {
+    // OutputInspectorSleepThread::msleep(150); // wait for stdin (doesn't work)
+    if (std::cin.rdbuf()->in_avail() > 1) {
+        // TODO: fix this--this never happens (Issue #16)
+        qInfo().noquote().nospace() << "[outputinspector]"
+            << " detected standard input (such as from a console pipe)"
+            << "...skipping \"" << errorsListFileName << "\"...";
+    }
+    else if (qfileTest.exists()) {
         if (qfileTest.open(QFile::ReadOnly)) { //| QFile::Translate
             QTextStream qtextNow(&qfileTest);
             while (!qtextNow.atEnd()) {
