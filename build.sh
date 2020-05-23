@@ -3,6 +3,10 @@ if [ ! `which qmake-qt5` ]; then
   echo "You must first install qt5-devel"
   echo "...on fedora:"
   echo "  sudo dnf -y install make gcc-c++ gdb qt5*-devel"
+  echo "  #if you get package conflicts, try:"
+  echo "  sudo dnf -y upgrade --refresh && sudo dnf -y install make gcc-c++ gdb qt5*-devel"
+  echo "  #or:"
+  echo "  sudo dnf -y upgrade --refresh && sudo dnf -y install make gcc-c++ gdb qt5-devel"
   exit 1
 fi
 package_name="outputinspector"
@@ -47,7 +51,7 @@ fi
 if [ -f "$build_dir_rel/$package_name" ]; then
   echo "successfully built $build_dir_rel/$package_name"
   echo "You can now run:"
-  echo "  sudo ./install"
+  echo "  sudo ./install.sh"
   echo "  #to install $package_name"
 else
   echo "failed to build $build_dir_rel/$package_name"

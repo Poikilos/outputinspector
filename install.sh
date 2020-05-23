@@ -148,10 +148,13 @@ echo
 echo "Resetting $outputconf"
 #rm $outputconf
 kate_path=$(command -v kate)
+geany_path=$(command -v geany)
 if [ -f "$kate_path" ]; then
   echo "kate=$kate_path" > $outputconf
+elif [ -f "$geany_path" ]; then
+  echo "kate=$geany_path" > $outputconf
 else
-  end_error="WARNING: path to kate could not be found. Kate must be installed in order for this program to work."
+  end_error="WARNING: path to kate could not be found. Kate or Geany must be installed in order for this program to work."
   echo $end_error
   echo "kate=/usr/bin/kate" > $outputconf
 fi
@@ -228,7 +231,7 @@ if [ ! -z "$end_error" ]; then
   echo "$end_error"
 else
   #NOTE: this is accurate since would have exited already if couldn't edit
-  echo "Successfully installed."
+  echo "The $BIN_FILE_NAME is successfully installed at $BIN_DEST_DIR."
   echo "NOTE: you can also use:"
   echo "  editor=/usr/bin/geany"
   echo "  # or editor=/usr/bin/kate"
