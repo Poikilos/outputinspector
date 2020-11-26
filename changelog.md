@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [git] - 2020-11-25
+### Add
+- xcf and ico versions of the icon
+- optional static build script as per
+  <https://wiki.qt.io/Building_a_static_Qt_for_Windows_using_MinGW>
+
+### Fixed
+- Change icon to ico to allow a Windows exe to build.
+  - Add it as the Windows icon in the pro file.
+  - Change the window icon to in the UI file using the Designer view.
+
+
 ## [git] - 2020-03-27
 ### Added
 - Detect debug.txt in current directory if present.

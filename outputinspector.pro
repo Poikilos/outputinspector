@@ -21,6 +21,9 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui
 #Windows (R) application icon:
-RC_ICONS = outputinspector-64.png
+RC_ICONS = outputinspector.ico
 #Mac OS (R) application icon:
-ICON = outputinspector-64.png
+ICON =
+
+DISTFILES += \
+    outputinspector.ico

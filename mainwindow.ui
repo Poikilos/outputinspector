@@ -21,7 +21,7 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>outputinspector-64.png</normaloff>outputinspector-64.png</iconset>
+    <normaloff>outputinspector.ico</normaloff>outputinspector.ico</iconset>
   </property>
   <property name="toolButtonStyle">
    <enum>Qt::ToolButtonIconOnly</enum>
@@ -58,7 +58,7 @@
      <x>0</x>
      <y>0</y>
      <width>613</width>
-     <height>29</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>
