@@ -207,13 +207,44 @@ transformed correctly to something like
 ## Changes
 See [changelog.md](changelog.md).
 
+## Compiling
+
 
 ## Developer Notes
 ### Compiling
+* Ensure that qt is installed, not just Qt designer
+  - On Linux: install a package such as `qt-devel` on Fedora or
+    `qtbase5-dev` on Debian or Ubuntu as per Henk van der Laak's Nov 20,
+    2014 answer on
+    <https://askubuntu.com/questions/508503/whats-the-development-package-for-qt5-in-14-04>.
+    Also, possibly for other projects but not this one,
+    `qtdeclarative5-dev` as per AlexGreg's  Aug 8, 2014 answer there.
+  - On Windows: Go to Apps & Features, Qt, Change, and check the latest
+    Qt (it will install required components such as MinGW compiler).
+    - Static building (`windows-build-qt-static.ps1`) is not working
+      until
+      [Issue #20](https://github.com/poikilos/outputinspector/issues/20)
+      is resolved (but feel free to try it on your system--you may have
+      to modify it to download the version of Qt matching your Qt
+      Creator installation (See doc\development\windeployqt_exe.png
+      for examples using Qt 5.15.2).
+* Open "Qt Creator"
 * Right-click the downloaded zip file, then click Extract Here
-* Open the `outputinspector.pro` in QT Creator 5.
+* Open the `outputinspector.pro` in QT Creator.
 * Push the F7 key.  When it is finished compiling, exit.
-* Open a terminal and enter the following:
+* Install
+  * Windows:
+    The Windows build (even regular not static) isn't working right now
+    since it only runs when you push "Run" not when you double click it
+    and instead shows an error--until [Issue
+    #21](https://github.com/poikilos/outputinspector/issues/21)
+    is resolved.
+    - Tried: Find your version of windeployqt.exe that matches your
+      configuration, and run it on the built exe.
+      For example, if you are using MinGW 64-bit and you made a release
+      build , run:
+      `C:\Qt\5.15.2\mingw81_64\bin\windeployqt.exe C:\Users\Jatlivecom\GitHub\build-outputinspector-Desktop_Qt_5_15_2_MinGW_64_bit-Release\release\outputinspector.exe`
+  * Linux: Open a terminal and enter the following:
 ```
 # If you are not named root, the default PREFIX is ~/.local
 # (you can also set the PREFIX environment variable manually).
