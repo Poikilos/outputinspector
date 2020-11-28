@@ -213,11 +213,12 @@ See [changelog.md](changelog.md).
 ## Developer Notes
 ### Compiling
 * Ensure that qt is installed, not just Qt designer
-  - On Linux: install a package such as `qt-devel` on Fedora or
-    `qtbase5-dev` on Debian or Ubuntu as per Henk van der Laak's Nov 20,
-    2014 answer on
-    <https://askubuntu.com/questions/508503/whats-the-development-package-for-qt5-in-14-04>.
-    Also, possibly for other projects but not this one,
+  - On Linux: install a package such as `qt-devel` on Fedora
+    (and possibly `qt5-devel` if it is not installed automatically, 
+    which should pull in `qt5-qtbase-devel`) or `qtbase5-dev` on Debian 
+    or Ubuntu as per Henk van der Laak's Nov 20, 2014 answer on 
+    <https://askubuntu.com/questions/508503/whats-the-development-package-for-qt5-in-14-04>. 
+    Also, possibly for other projects but not this one, 
     `qtdeclarative5-dev` as per AlexGreg's  Aug 8, 2014 answer there.
   - On Windows: Go to Apps & Features, Qt, Change, and check the latest
     Qt (it will install required components such as MinGW compiler).
