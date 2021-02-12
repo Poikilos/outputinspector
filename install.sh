@@ -1,9 +1,11 @@
 #!/bin/bash
 BIN_FILE_NAME=outputinspector
 PROJECT_NAME=outputinspector
+SC_NAME=$PROJECT_NAME.desktop
 CONF_NAME=outputinspector.conf
 # NOTE: $SRC_BINS_PATH cannot have spaces (usages can't use quotes since * is used)
 SRC_BINS_PATH=./package/bin
+ICON="outputinspector-64.png"
 echo
 echo
 echo
@@ -13,18 +15,30 @@ echo
 echo "looking for instances to terminate..."
 killall $BIN_FILE_NAME
 
+echo "Checking environment:"
 if [ -z "$PREFIX" ]; then
     if [ "@$USER" == "@root" ]; then
         PREFIX=/usr/local
+        echo "PREFIX=$PREFIX"
+        echo "# ^ defaulted to this since no PREFIX and user is root"
     else
         PREFIX=~/.local
         mkdir -p ~/.local/bin
+        echo "PREFIX=$PREFIX"
+        echo "# ^ defaulted to this since no PREFIX and user is not root"
     fi
+else
+    echo "PREFIX=$PREFIX"
+    echo "# ^ as specified by environment"
 fi
+PIXMAPS="$PREFIX/share/pixmaps"
+APPLICATIONS="$PREFIX/share/applications"
+DST_ICON_PATH="$PIXMAPS/$ICON"
+DST_SC_PATH="$APPLICATIONS/$SC_NAME"
 
-echo "Using prefix $PREFIX (export environment variable or use env before running to change)"
-echo "such as:"
-echo "  env PREFIX=/usr ./install"
+echo "# ^ export environment variable or use env before running to change,"
+echo "# such as via:"
+echo "  export PREFIX=/usr ./install"
 BIN_DEST_DIR=$PREFIX/bin
 #remember, project-specific info is also at end of this script (post-install notes)
 BIN_CONFLICT_DIR=/usr/bin
@@ -103,24 +117,34 @@ echo
 
 was_there=false
 if [ -f "$BIN_DEST_DIR/$BIN_FILE_NAME" ]; then
-  was_there=true
-  rm -f "$BIN_DEST_DIR/$BIN_FILE_NAME"
-  if [ -f "$BIN_DEST_DIR/$BIN_FILE_NAME" ]; then
-    echo
-    echo
-    echo "ERROR: install could not remove existing '$BIN_DEST_DIR/$BIN_FILE_NAME' since you don't have root permission (you must run this install script with root permissions)."
-    echo
-    echo
-    exit 3
-  fi
+    was_there=true
+elif [ -L "$BIN_DEST_DIR/$BIN_FILE_NAME" ]; then
+    echo "* detected symlink $BIN_DEST_DIR/$BIN_FILE_NAME"
+    was_there=true
+else
+    echo "* adding new $BIN_DEST_DIR/$BIN_FILE_NAME..."
 fi
-
+if [ "@$was_there" = "@true" ]; then
+    printf "* removing old $BIN_DEST_DIR/$BIN_FILE_NAME..."
+    rm -f "$BIN_DEST_DIR/$BIN_FILE_NAME"
+    if [ -f "$BIN_DEST_DIR/$BIN_FILE_NAME" ]; then
+        echo "FAILED"
+        echo
+        echo "ERROR: install could not remove existing '$BIN_DEST_DIR/$BIN_FILE_NAME'"
+        echo
+        echo
+        exit 3
+    else
+        echo "OK"
+    fi
+fi
+echo "cp -f \"$BIN_FILE_PATH\" \"$BIN_DEST_DIR/\""
 cp -f "$BIN_FILE_PATH" "$BIN_DEST_DIR/"
 if [ ! -f "$BIN_DEST_DIR/$BIN_FILE_NAME" ]; then
   echo
   echo
   #this error is always accurate since program would have exited already if file were already there before the cp command and couldn't be deleted:
-  echo "ERROR: install could not create '$BIN_DEST_DIR/$BIN_FILE_NAME' since you don't have root permission (you must run this install script with root permissions)."
+  echo "ERROR: install could not create '$BIN_DEST_DIR/$BIN_FILE_NAME'."
   echo
   echo
   exit 4
@@ -196,6 +220,67 @@ fi
 # else
 #   echo "WARNING: missing '$SRC_BINS_PATH'"
 
+printf "* creating \"$PIXMAPS\"..."
+mkdir -p "$PIXMAPS"
+if [ $? -ne 0 ]; then
+    echo "'mkdir -p \"$PIXMAPS\"' failed."
+    exit 1
+else
+    echo "OK"
+fi
+cp "$ICON" "$DST_ICON_PATH"
+if [ $? -ne 0 ]; then
+    echo "'cp \"$ICON\" \"$DST_ICON_PATH\"' failed."
+    exit 1
+fi
+
+#TMP_ICON="/tmp/$ICON"
+#printf "* writing icon $TMP_ICON..."
+#cat > "$TMP_ICON" <<END
+
+printf "* writing icon $DST_SC_PATH..."
+cat > "$DST_SC_PATH" <<END
+[Desktop Entry]
+Name=Output Inspector
+Exec=outputinspector %f
+Type=Application
+Icon=$DST_ICON_PATH
+END
+#Terminal=true
+if [ $? -ne 0 ]; then
+    echo "'writing \"$DST_SC_PATH\"' failed."
+    exit 1
+else
+    echo "OK"
+fi
+printf "* setting as executable..."
+chmod +x "$DST_SC_PATH"
+if [ $? -ne 0 ]; then
+    echo "'chmod +x \"$DST_SC_PATH\"' failed."
+    exit 1
+else
+    echo "  OK"
+fi
+echo "* installing icon..."
+export XDG_UTILS_DEBUG_LEVEL=999
+xdg-desktop-icon install --novendor "$DST_SC_PATH"
+# ^ --novendor: install even if name doesn't start with tld.domain.
+if [ $? -ne 0 ]; then
+    echo "'xdg-desktop-icon install --novendor \"$DST_SC_PATH\"' failed."
+    exit 1
+else
+    echo "  OK"
+fi
+echo "* installing ogrep..."
+cp "./package/bin/ogrep" "$HOME/.local/bin/ogrep"
+if [ $? -ne 0 ]; then
+    echo "'cp \"./package/bin/ogrep\" \"$HOME/.local/bin/ogrep\"' failed."
+    exit 1
+else
+    echo "  OK"
+fi
+
+echo
 echo
 echo "TROUBLESHOOTING"
 echo "If you have trouble with a release binary, open"
