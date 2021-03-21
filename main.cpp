@@ -16,19 +16,23 @@ int main(int argc, char *argv[])
     QString sErrorsListFileName; //reverts to err.txt if left blank
     QStringList qArgs = QCoreApplication::arguments();
     // start at 1 since qArgs[0] is self:
-    for (int i=1; i<qArgs.length(); i++) {
+    for (int i=1; i<qArgs.length(); i++)
+    {
         QString qArg = qArgs[i];
-        if (!qArg.startsWith("--")) {
+        if (!qArg.startsWith("--"))
+        {
             sErrorsListFileName = qArg;
         }
-        else {
+        else
+        {
             int signIndex = qArg.indexOf("=");
-            if (signIndex>-1) {
+            if (signIndex>-1)
+            {
                 int valueIndex = signIndex + 1;
                 QString name = qArg.mid(2, signIndex-2);
                 window.settings->setValue(name, qArg.mid(valueIndex).trimmed());
                 qInfo() << "set " + name + " to '"
-                           + qArg.mid(valueIndex).trimmed() + "'";
+                        + qArg.mid(valueIndex).trimmed() + "'";
             }
         }
     }

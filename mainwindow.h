@@ -9,7 +9,8 @@
 
 
 
-namespace Ui {
+namespace Ui
+{
 class MainWindow;
 }
 
@@ -84,13 +85,13 @@ public:
     int m_KateMajorVer = 0; /**< Use 2 to represent the 2.5.9 (kde3
                                      version); and 3 for 3.0.3 (kde4 version),
                                      etc. */
-    #ifdef QT_DEBUG
+#ifdef QT_DEBUG
     bool m_Verbose = true;
     bool m_VerboseParsing = true; /**< Enable line-by-line parser output */
-    #else
+#else
     bool m_Verbose = false;
     bool m_VerboseParsing = false;
-    #endif
+#endif
 private slots:
     void on_mainListWidget_itemDoubleClicked(QListWidgetItem *item);
     void readInput();

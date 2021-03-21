@@ -16,11 +16,13 @@ Settings::Settings(QString filePath)
 
 Settings::~Settings()
 {
-    if (this->qs != nullptr) {
+    if (this->qs != nullptr)
+    {
         this->qs->sync();
         delete this->qs;
     }
-    else {
+    else
+    {
         qWarning() << "The QSettings object was not initialized before the Settings object was deleted.";
     }
 }
@@ -28,9 +30,12 @@ Settings::~Settings()
 bool Settings::readIni(QString filePath)
 {
     this->filePath = filePath;
-    if (this->qs != nullptr) {
+    if (this->qs != nullptr)
+    {
         delete this->qs;
-    } else { //if (this->qs == nullptr) {
+    }
+    else     //if (this->qs == nullptr) {
+    {
     }
     this->qs = new QSettings(filePath, QSettings::IniFormat);
     return true;
@@ -44,14 +49,19 @@ bool Settings::readIni(QString filePath)
 bool Settings::getBool(QString key)
 {
     static const QString bad="<%outputinspector(missing)%>";
-    if (this->qs != nullptr) {
-        if (this->qs->contains(key)) {
-            if (!checkedKeys.contains(key)) {
+    if (this->qs != nullptr)
+    {
+        if (this->qs->contains(key))
+        {
+            if (!checkedKeys.contains(key))
+            {
                 this->sDebug += key + ":" + this->qs->value(key).toString() + ".  ";
                 checkedKeys.append(key);
             }
             return is_truthy(this->qs->value(key).toString());
-        } else if (!checkedKeys.contains(key)) {
+        }
+        else if (!checkedKeys.contains(key))
+        {
             this->sDebug += "No " + key + " line is in " + this->qs->fileName() + ".  ";
             checkedKeys.append(key);
         }
@@ -62,9 +72,12 @@ bool Settings::getBool(QString key)
 int Settings::getInt(QString key)
 {
     int value = 0;
-    if (this->qs != nullptr) {
-        if (this->qs->contains(key)) {
-            if (!checkedKeys.contains(key)) {
+    if (this->qs != nullptr)
+    {
+        if (this->qs->contains(key))
+        {
+            if (!checkedKeys.contains(key))
+            {
                 this->sDebug += key + ":" + this->qs->value(key).toString() + ".  ";
                 checkedKeys.append(key);
             }
@@ -73,7 +86,9 @@ int Settings::getInt(QString key)
             if (!ok)
                 this->sDebug += "Converting " + key + "(value '"
                                 + this->qs->value(key).toString() + "') failed.";
-        } else if (!checkedKeys.contains(key)) {
+        }
+        else if (!checkedKeys.contains(key))
+        {
             this->sDebug += "No " + key + " line is in " + this->qs->fileName() + ".  ";
             checkedKeys.append(key);
         }
@@ -83,14 +98,19 @@ int Settings::getInt(QString key)
 
 QString Settings::getString(QString key)
 {
-    if (this->qs != nullptr) {
-        if (this->qs->contains(key)) {
-            if (!checkedKeys.contains(key)) {
+    if (this->qs != nullptr)
+    {
+        if (this->qs->contains(key))
+        {
+            if (!checkedKeys.contains(key))
+            {
                 this->sDebug += key + ":" + this->qs->value(key).toString() + ".  ";
                 checkedKeys.append(key);
             }
             return this->qs->value(key).toString();
-        } else if (!checkedKeys.contains(key)) {
+        }
+        else if (!checkedKeys.contains(key))
+        {
             this->sDebug += "No " + key + " line is in " + this->qs->fileName() + ".  ";
             checkedKeys.append(key);
         }
@@ -100,7 +120,8 @@ QString Settings::getString(QString key)
 
 void Settings::setValue(QString key, QVariant value)
 {
-    if (this->qs != nullptr) {
+    if (this->qs != nullptr)
+    {
         this->qs->setValue(key, value);
     }
 }
@@ -114,26 +135,30 @@ void Settings::setValue(QString key, QVariant value)
 bool Settings::setIfMissing(QString key, QVariant value)
 {
     bool changed = false;
-    if (this->qs != nullptr) {
-        if (!this->qs->contains(key)) {
+    if (this->qs != nullptr)
+    {
+        if (!this->qs->contains(key))
+        {
             this->qs->setValue(key, value);
             changed = true;
         }
     }
     else this->sDebug += "setIfMissing tried to set " + key
-            + "before qs was ready.";
+                             + "before qs was ready.";
     return changed;
 }
 
 void Settings::remove(QString key)
 {
-    if (this->qs != nullptr) {
-        if (!this->qs->contains(key)) {
+    if (this->qs != nullptr)
+    {
+        if (!this->qs->contains(key))
+        {
             this->qs->remove(key);
         }
     }
     else this->sDebug += "remove tried to remove " + key
-            + "before qs was ready.";
+                             + "before qs was ready.";
 }
 
 /*
@@ -145,7 +170,8 @@ QVariant Settings::value(QString key)
 
 bool Settings::contains(QString key)
 {
-    if (this->qs != nullptr) {
+    if (this->qs != nullptr)
+    {
         return this->qs->contains(key);
     }
     return false;
@@ -153,7 +179,8 @@ bool Settings::contains(QString key)
 
 QString Settings::fileName()
 {
-    if (this->qs != nullptr) {
+    if (this->qs != nullptr)
+    {
         return this->qs->fileName();
     }
     return "";
@@ -161,10 +188,12 @@ QString Settings::fileName()
 
 void Settings::sync()
 {
-    if (this->qs != nullptr) {
+    if (this->qs != nullptr)
+    {
         this->qs->sync();
     }
-    else {
+    else
+    {
         qWarning() << "[outputinspector] Saving settings with sync() failed because the QSettings object was not initialized.";
     }
 }
@@ -176,7 +205,8 @@ void Settings::sync()
  */
 bool Settings::is_truthy(QString value)
 {
-    for (auto s : Settings::trues) {
+    for (auto s : Settings::trues)
+    {
         if (value.toLower()==s)
             return true;
     }
