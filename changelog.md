@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [new new-python branch in git] - 2020-03-21
+### Changed
+(Change to Python. So far, only change punctuation only using cpp2python.py from <https://github.com/andreikop/cpp2python> so far)
+- `astyle --style=ansi *.cpp *.h`
+- `python3 cpp2python.py ~/git/outputinspector-ansi-pre-python`
+- combine h.py and cpp.py files.
+- rename main.cpp.py run.pyw
+- rename mainwindow.py outputinspector/__init__.py
+- rename etc to projects and move other files out of there to:
+  - doc/development
+  - tests/data
+  - and other places
+- rename package to dist
+
+### Remove
+- files related to Qt
+
+
+
 ## [git] - 2020-11-25
 ### Add
 - xcf and ico versions of the icon

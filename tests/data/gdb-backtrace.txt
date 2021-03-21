@@ -1,0 +1,108 @@
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+TestUtility...OK
+TestSettings...WARNING: settings.set got a(n) int (value "Poikilos") for username, but expected a(n) string.
+(The warning above is expected during the test: expected string, got int)
+OK
+max_recent
+  valueI length: 2
+  valueF length: 0
+recent0
+  valueI length: 0
+  valueF length: 0
+recent1
+  valueI length: 0
+  valueF length: 0
+recent10
+  valueI length: 0
+  valueF length: 0
+recent11
+  valueI length: 0
+  valueF length: 0
+recent12
+  valueI length: 0
+  valueF length: 0
+recent13
+  valueI length: 0
+  valueF length: 0
+recent14
+  valueI length: 0
+  valueF length: 0
+recent15
+  valueI length: 0
+  valueF length: 0
+recent16
+  valueI length: 0
+  valueF length: 0
+recent17
+  valueI length: 0
+  valueF length: 0
+recent18
+  valueI length: 0
+  valueF length: 0
+recent19
+  valueI length: 0
+  valueF length: 0
+recent2
+  valueI length: 0
+  valueF length: 0
+recent20
+  valueI length: 0
+  valueF length: 0
+recent21
+  valueI length: 0
+  valueF length: 0
+recent22
+  valueI length: 0
+  valueF length: 0
+recent23
+  valueI length: 0
+  valueF length: 0
+recent3
+  valueI length: 0
+  valueF length: 0
+recent4
+  valueI length: 0
+  valueF length: 0
+recent5
+  valueI length: 0
+  valueF length: 0
+recent6
+  valueI length: 0
+  valueF length: 0
+recent7
+  valueI length: 0
+  valueF length: 0
+recent8
+  valueI length: 0
+  valueF length: 0
+recent9
+  valueI length: 0
+  valueF length: 0
+* load finished reading /home/owner/.config/b3view/settings.conf (elements:25)
+[New Thread 0x7ffff50a9700 (LWP 18356)]
+Irrlicht Engine version 1.8.4
+Linux 5.10.0-0.bpo.3-amd64 #1 SMP Debian 5.10.13-1~bpo10+1 (2021-02-11) x86_64
+Using renderer: OpenGL 3.0
+Mesa DRI Intel(R) Haswell Desktop : Intel Open Source Technology Center
+OpenGL driver version is 1.2 or better.
+GLSL version: 1.3
+There was no menu for 1 in hasRecent
+terminate called after throwing an instance of 'std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >'
+
+Thread 1 "b3view" received signal SIGABRT, Aborted.
+__GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:50
+50	../sysdeps/unix/sysv/linux/raise.c: No such file or directory.
+#0  __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:50
+#1  0x00007ffff7061535 in __GI_abort () at abort.c:79
+#2  0x00007ffff7429983 in ?? () from /lib/x86_64-linux-gnu/libstdc++.so.6
+#3  0x00007ffff742f8c6 in ?? () from /lib/x86_64-linux-gnu/libstdc++.so.6
+#4  0x00007ffff742f901 in std::terminate() () from /lib/x86_64-linux-gnu/libstdc++.so.6
+#5  0x00007ffff742fb34 in __cxa_throw () from /lib/x86_64-linux-gnu/libstdc++.so.6
+#6  0x0000555555581b7c in UserInterface::hasRecent (this=0x55555599e3a0, path="/home/owner/git/b3view/dist/ninja.b3d") at ../b3view/UserInterface.cpp:846
+#7  0x000055555558147e in UserInterface::addRecentMenuItem (this=0x55555599e3a0, path="/home/owner/git/b3view/dist/ninja.b3d", addToEngine=false) at ../b3view/UserInterface.cpp:799
+#8  0x0000555555581864 in UserInterface::addRecentMenuItems (this=0x55555599e3a0, paths=std::vector of length 24, capacity 24 = {...}, addToEngine=false) at ../b3view/UserInterface.cpp:827
+#9  0x000055555557cfce in UserInterface::setupUserInterface (this=0x55555599e3a0) at ../b3view/UserInterface.cpp:65
+#10 0x000055555557f433 in UserInterface::UserInterface (this=0x55555599e3a0, engine=0x5555555fdc10) at ../b3view/UserInterface.cpp:520
+#11 0x0000555555570217 in Engine::Engine (this=0x5555555fdc10) at ../b3view/Engine.cpp:409
+#12 0x000055555556d58c in main (argc=1, argv=0x7fffffffe7a8) at ../b3view/main.cpp:40

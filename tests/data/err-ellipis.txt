@@ -1,0 +1,14 @@
+2020-03-13 00:06:00: ERROR[Main]: ServerError: AsyncErr: environment_Step: Runtime error from mod 'unified_foods' in callback environment_Step(): ...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: attempt to compare number with nil
+2020-03-13 00:06:00: ERROR[Main]: 	...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: in function <...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:320>
+2020-03-13 02:45:24: ERROR[Main]: ServerError: AsyncErr: environment_Step: Runtime error from mod 'unified_foods' in callback environment_Step(): ...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: attempt to compare number with nil
+2020-03-13 02:45:24: ERROR[Main]: 	...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: in function <...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:320>
+2020-03-13 02:58:01: ERROR[Main]: ServerError: AsyncErr: environment_Step: Runtime error from mod 'unified_foods' in callback environment_Step(): ...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: attempt to compare number with nil
+2020-03-13 02:58:01: ERROR[Main]: 	...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: in function <...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:320>
+2020-03-13 03:05:13: ERROR[Main]: ServerError: AsyncErr: environment_Step: Runtime error from mod 'unified_foods' in callback environment_Step(): ...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: attempt to compare number with nil
+2020-03-13 03:05:13: ERROR[Main]: 	...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: in function <...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:320>
+2020-03-13 03:12:00: ERROR[Main]: ServerError: AsyncErr: environment_Step: Runtime error from mod 'unified_foods' in callback environment_Step(): ...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: attempt to compare number with nil
+2020-03-13 03:12:00: ERROR[Main]: 	...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: in function <...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:320>
+2020-03-13 03:15:17: ERROR[Main]: ServerError: AsyncErr: environment_Step: Runtime error from mod 'unified_foods' in callback environment_Step(): ...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: attempt to compare number with nil
+2020-03-13 03:15:17: ERROR[Main]: 	...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: in function <...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:320>
+2020-03-13 18:14:02: ERROR[Main]: ServerError: AsyncErr: environment_Step: Runtime error from mod 'unified_foods' in callback environment_Step(): ...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: attempt to compare number with nil
+2020-03-13 18:14:02: ERROR[Main]: 	...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:342: in function <...../games/ENLIVEN/mods/coderfood/unified_foods/hunger.lua:320>

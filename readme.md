@@ -18,21 +18,6 @@ a popular IDE. This becomes possible for any scenario now, so you do
 not have to work with an IDE you don't like for some language you are
 using if all you want is fast code navigation during debugging.
 
-
-## Install
-### Web Install
-#### Linux
-Usually, you should replace RELEASE with the latest version from the
-[Releases](https://github.com/poikilos/outputinspector/releases) page):
-```
-RELEASE=2.0.0
-mkdir -p ~/.local/bin
-wget -O ~/.local/bin/outputinspector https://github.com/poikilos/outputinspector/releases/download/$RELEASE/outputinspector
-wget -O ~/.local/bin/ogrep https://github.com/poikilos/outputinspector/raw/master/package/bin/ogrep
-wget -O ~/.local/bin/passthrough-outputinspector https://github.com/poikilos/outputinspector/raw/master/package/bin/passthrough-outputinspector
-```
-
-
 ## Primary Features
 * Double-click an error to go to where the error occurs in your code.
 * Color code lines in your output (red: error; orange: warning; yellow:
@@ -46,13 +31,14 @@ wget -O ~/.local/bin/passthrough-outputinspector https://github.com/poikilos/out
 * Install passthrough-outputinspector for use in IDEs (see Usage).
 
 
-## Usage
+## How to Use
 Before first use, make sure kate or geany package is installed (run
 install script again if wasn't when install script ran--it recreates
 the config based on detecting kate's location if you enter `y` for yes).
 
+## Planned features
 ### Piping
-You can pipe output from another program to get near-realtime (depending
+Pipe output from another program to get near-realtime (depending
 on your OS's implementation of piping) results without using files.
 
 To get error output, run: `... 2>&1 >/dev/null | outputinspector`;
@@ -61,6 +47,8 @@ otherwise, simply run: `... | outputinspector`
 
 ### GUI-based use
 For automatic usage on Linux, create a build command in Geany:
+* Place passthrough-outputinspector in ~/.local/bin
+* In a terminal, run `echo "PATH=$PATH:$HOME/.local/bin" >> ~/.bashrc`
 * "Build," "Set Build Commands"
 * Set Execute (or an empty box under "Independent commands") to:\
   `passthrough-outputinspector python3 "%f"`\
@@ -72,6 +60,17 @@ For automatic usage on Linux, create a build command in Geany:
     `passthrough-outputinspector python3 "%f" --ExitOnNoErrors=no`
 
 ### Specific Uses
+
+#### C++
+##### Backtracing
+(Parsing output such as in tests/data/gdb-backtrace.txt using the Python version of outputinspector is not available at least until the python branch becomes the default branch)
+1. Compile your program with the option to add debugging symbols.
+2. In a Terminal, set `MY_EXE` to the path to your debug executable.
+3. In the same terminal run the following:
+```
+gdb "$MY_EXE" --eval-command=run --eval-command=bt --batch  >& err.txt
+outputinspector &
+```
 
 #### Python linting
 For py file linting: you can use pycodestyle (tested with pycodestyle-3
@@ -214,11 +213,11 @@ See [changelog.md](changelog.md).
 ### Compiling
 * Ensure that qt is installed, not just Qt designer
   - On Linux: install a package such as `qt-devel` on Fedora
-    (and possibly `qt5-devel` if it is not installed automatically, 
-    which should pull in `qt5-qtbase-devel`) or `qtbase5-dev` on Debian 
-    or Ubuntu as per Henk van der Laak's Nov 20, 2014 answer on 
-    <https://askubuntu.com/questions/508503/whats-the-development-package-for-qt5-in-14-04>. 
-    Also, possibly for other projects but not this one, 
+    (and possibly `qt5-devel` if it is not installed automatically,
+    which should pull in `qt5-qtbase-devel`) or `qtbase5-dev` on Debian
+    or Ubuntu as per Henk van der Laak's Nov 20, 2014 answer on
+    <https://askubuntu.com/questions/508503/whats-the-development-package-for-qt5-in-14-04>.
+    Also, possibly for other projects but not this one,
     `qtdeclarative5-dev` as per AlexGreg's  Aug 8, 2014 answer there.
   - On Windows: Go to Apps & Features, Qt, Change, and check the latest
     Qt (it will install required components such as MinGW compiler).

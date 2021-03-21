@@ -1,0 +1,23 @@
+#!/bin/bash
+RUN_NAME=run.pyw
+if [ "@$OUTPUTINSPECTOR_PATH" = "@" ]; then
+    OUTPUTINSPECTOR_PATH=
+    for tryPath in `realpath .` ~/git/outputinspector ~/.local/lib/outputinspector ~/Downloads/poikilos/git/outputinspector
+    do
+        if [ -f "$tryPath/$RUN_NAME" ]; then
+            OUTPUTINSPECTOR_PATH="$tryPath"
+            break
+        else
+            echo "* run.py is not in \"$tryPath\"..."
+        fi
+    done
+fi
+if [ -z "$OUTPUTINSPECTOR_PATH" ]; then
+    echo "The OUTPUTINSPECTOR_PATH such as ~/.local/lib/outputinspector containing run.py was not found. Try setting OUTPUTINSPECTOR_PATH in $HOME/.bashrc"
+    exit 0
+fi
+cd "$OUTPUTINSPECTOR_PATH"
+if [ $? -ne 0 ]; then
+    echo "Error: 'cd \"$OUTPUTINSPECTOR_PATH\"' failed."
+fi
+./$RUN_NAME

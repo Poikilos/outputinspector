@@ -1,0 +1,59 @@
+#!/bin/sh
+
+usage()
+{
+  echo
+  echo "Usage:"
+  echo "$0 <compiler/linter> <full-path-to-source>"
+  echo
+  echo "(currently only works with single-file statements)"
+  echo "Example:"
+  echo "$0 python3 $HOME/git/myproject/run.py"
+  echo
+  echo
+}
+
+if [ -z "$1" ]; then
+  usage
+  exit 1
+fi
+
+if [ -z "$2" ]; then
+  usage
+  exit 2
+fi
+passthrough_params=""
+if [ ! -z "$3" ]; then
+  passthrough_params="$passthrough_params$3"
+fi
+if [ ! -z "$4" ]; then
+  passthrough_params="$passthrough_params$4"
+fi
+if [ ! -z "$5" ]; then
+  passthrough_params="$passthrough_params$5"
+fi
+if [ ! -z "$6" ]; then
+  passthrough_params="$passthrough_params$6"
+fi
+if [ ! -z "$7" ]; then
+  passthrough_params="$passthrough_params$7"
+fi
+if [ ! -z "$8" ]; then
+  passthrough_params="$passthrough_params$8"
+fi
+if [ ! -z "$9" ]; then
+  passthrough_params="$passthrough_params$9"
+fi
+
+# echo "extra outputinspector params: $passthrough_params"
+
+if [ -f "$2" ]; then
+  # cd to directory of file (expand 0 then take only what is before slash)
+  echo "${2%/*}"
+  $1 $2 2>err.txt
+  outputinspector --ExitOnNoErrors=yes $passthrough_params
+else
+  echo "WARNING: cannot find source file '$2'"
+  # usage
+  # exit 3
+fi
