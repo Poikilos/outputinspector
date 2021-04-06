@@ -3,10 +3,33 @@
 
 #include <iostream>//this is a trailing comment with no space before or after slashes (for clang-format test)
 #include <vector>
+#include <cstddef>
 
 #include "settings.h"
 
- std::string OIWidget::text();
+using namespace std;
+
+
+string os_path_join(string p1, string p2) {
+    return p1 + "/" + p2;
+}
+
+string OIWidget::text();
+
+
+OIBrush::OIBrush(OIColor color)
+{
+    this->_color = color;
+}
+
+OIColor OIColor::fromRgb(int r, int g, int b)
+{
+    OIColor color;
+    color.r = r;
+    color.g = g;
+    color.b = b;
+    return color;
+}
 
 // endregion scripting
 
@@ -54,7 +77,7 @@ bool contains_any(T haystack, std::list<T>& needles, Qt::CaseSensitivity cs = Qt
     return count_if(needles.begin(), needles.end(), bind(contains, haystack, std::placeholders::_1)) > 0;
 }
 */
-
+/*
 template <class T>
 bool qcontains(T haystack, T needle, Qt::CaseSensitivity cs = Qt::CaseSensitive)
 {
@@ -66,6 +89,7 @@ bool qcontains_any(T haystack, std::list<T>& needles, Qt::CaseSensitivity cs = Q
 {
     return count_if(needles.begin(), needles.end(), bind(qcontains<T>, haystack, std::placeholders::_1, cs)) > 0;
 }
+*/
 
 string MainWindow::unmangledPath(string path)
 {
@@ -135,9 +159,9 @@ MainWindow::MainWindow()
     }
     // qInfo().noquote().nospace() << "Creating settings: " << filePath;
     this->settings = new Settings(filePath);
-    qInfo().noquote().nospace()
-        << "[outputinspector]"
-        << " used the settings file \"" << this->settings->fileName() << "\"";
+    this->info(
+        "[outputinspector] used the settings file \"" + this->settings->fileName() + "\"";
+    )
     // if (QFile("/etc/outputinspector.conf").exists()) {
     //     this->config = new Settings("/etc/outputinspector.conf");
     // }
@@ -345,21 +369,21 @@ MainWindow::MainWindow()
         def[PARSE_DESCRIPTION] = "grep-like result (path then colon)";
         enclosures.push_back(def);
     }
-    brushes["TracebackNotTop"] = QBrush(QColor::fromRgb(128, 60, 0));
-    brushes["Unusable"] = QBrush(Qt::lightGray);
-    brushes["Internal"] = QBrush(QColor::fromRgb(192, 192, 100));
-    brushes["Warning"] = QBrush(QColor::fromRgb(192, 120, 80));
-    brushes["WarningDetails"] = QBrush(QColor::fromRgb(255, 180, 120));
-    brushes["Error"] = QBrush(QColor::fromRgb(80, 0, 0));
-    brushes["ErrorDetails"] = QBrush(QColor::fromRgb(160, 80, 80));
-    brushes["ToDo"] = QBrush(Qt::darkGreen);
-    brushes["Default"] = QBrush(Qt::black);
+    brushes["TracebackNotTop"] = OIBrush(OIColor::fromRgb(128, 60, 0));
+    brushes["Unusable"] = OIBrush(Qt::lightGray);
+    brushes["Internal"] = OIBrush(OIColor::fromRgb(192, 192, 100));
+    brushes["Warning"] = OIBrush(OIColor::fromRgb(192, 120, 80));
+    brushes["WarningDetails"] = OIBrush(OIColor::fromRgb(255, 180, 120));
+    brushes["Error"] = OIBrush(OIColor::fromRgb(80, 0, 0));
+    brushes["ErrorDetails"] = OIBrush(OIColor::fromRgb(160, 80, 80));
+    brushes["ToDo"] = OIBrush(Qt::darkGreen);
+    brushes["Default"] = OIBrush(Qt::black);
 
     sInternalFlags.push_back("/site-packages/");
-    assert(qcontains_any<string>("/usr/lib/python2.7/site-packages/nose/importer.py", sInternalFlags));
+    assert(contains_any<string>("/usr/lib/python2.7/site-packages/nose/importer.py", sInternalFlags));
 
     sSectionBreakFlags.push_back("--------");
-    assert(qcontains_any<string>("---------------------", sSectionBreakFlags));
+    assert(contains_any<string>("---------------------", sSectionBreakFlags));
 
     this->debug("* The debug stream is active.");
     // qInfo().noquote() << "qInfo() stream is active.";
@@ -525,7 +549,7 @@ void MainWindow::addLine(string line, bool enablePush)
             this->m_NonBlankLineCount++;
         if (isFatalSourceError(line)) {
             ui->mainListWidget->addItem(new QListWidgetItem(line + " <your compiler (or other tool) recorded this fatal or summary error before outputinspector ran>", ui->mainListWidget));
-        } else if (qcontains_any<string>(line, sSectionBreakFlags)) {
+        } else if (contains_any<string>(line, sSectionBreakFlags)) {
             this->m_ActualJump = "";
             this->m_ActualJumpLine = "";
             this->m_ActualJumpRow = "";
@@ -580,7 +604,7 @@ void MainWindow::addLine(string line, bool enablePush)
                 else
                     lwi->setForeground(brushes["Unusable"]);
             }
-            if (qcontains_any<string>(this->m_MasterLine, this->sInternalFlags)) {
+            if (contains_any<string>(this->m_MasterLine, this->sInternalFlags)) {
                 lwi->setForeground(brushes["Internal"]);
             }
             lwi->setData(ROLE_COLLECTED_LINE, this->m_MasterLine);
@@ -663,7 +687,7 @@ void MainWindow::addLine(string line, bool enablePush)
                                     lwi->setData(ROLE_LOWER, "false");
                                     lwi->setData(ROLE_COLLECTED_LINE, sLineToDo);
                                     lwi->setData(ROLE_DETAILS, "false");
-                                    if (qcontains_any<string>(this->m_MasterLine, this->sInternalFlags)) {
+                                    if (contains_any<string>(this->m_MasterLine, this->sInternalFlags)) {
                                         lwi->setForeground(brushes["Internal"]);
                                     } else {
                                         lwi->setForeground(brushes["ToDo"]);

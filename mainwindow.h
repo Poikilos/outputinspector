@@ -5,11 +5,26 @@
 // #include <map>
 #include <vector>
 #include <list>
+#include <cstddef>
 
-class QBrush
+std::string os_path_join(std::string p1, std::string p2);
+
+class OIColor
 {
-
+public:
+    int r;
+    int g;
+    int b;
+    static OIColor fromRgb(int r, int g,int b);
 };
+
+class OIBrush
+{
+public:
+    OIBrush(OIColor color);
+    OIColor _color;
+};
+
 
 class OIWidget
 {
@@ -81,7 +96,7 @@ public:
     std::list<std::string> sInternalFlags;
     std::list<std::string> sSectionBreakFlags;
     std::list<std::vector<std::string>> enclosures;
-    std::map<std::string, QBrush> brushes;
+    std::map<std::string, OIBrush> brushes;
 
     MainWindow();
     ~MainWindow();
