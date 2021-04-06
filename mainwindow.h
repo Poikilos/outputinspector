@@ -7,6 +7,7 @@
 #include <list>
 #include <cstddef>
 
+bool startswith(std::string haystack, std::string needle);
 std::string os_path_join(std::string p1, std::string p2);
 
 class OIColor

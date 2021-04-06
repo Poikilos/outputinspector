@@ -10,6 +10,10 @@
 using namespace std;
 
 
+bool startswith(std::string haystack, std::string needle) {
+    return haystack.rfind(needle, 0) == 0;
+}
+
 string os_path_join(string p1, string p2) {
     return p1 + "/" + p2;
 }
@@ -69,14 +73,15 @@ bool contains(T haystack, T needle)
     return haystack.contains(needle);
 }
 
-/*
+
 template <class T>
-bool contains_any(T haystack, std::list<T>& needles, Qt::CaseSensitivity cs = Qt::CaseSensitive)
+bool contains_any(T haystack, std::list<T>& needles)
 {
+    //  Qt::CaseSensitivity cs = Qt::CaseSensitive
     // TODO: use unused parameter cs.
     return count_if(needles.begin(), needles.end(), bind(contains, haystack, std::placeholders::_1)) > 0;
 }
-*/
+
 /*
 template <class T>
 bool qcontains(T haystack, T needle, Qt::CaseSensitivity cs = Qt::CaseSensitive)
@@ -106,27 +111,28 @@ string MainWindow::unmangledPath(string path)
             string tryPath = path.mid(end+tryOffset);
             if (QFile(tryPath).exists()) {
                 if (verbose) {
-                    qInfo().noquote().nospace()
-                        << "[outputinspector]"
-                        << " transformed *.../dir into ../dir: \""
-                        << tryPath << "\"";
+                    this->info(
+                        "[outputinspector] transformed *.../dir into ../dir: \""
+                        + tryPath + "\""
+                    );
                 }
                 return tryPath;
             }
             else {
                 if (verbose) {
-                    qInfo().noquote().nospace()
-                        << string::fromStdString("[outputinspector] There is no \"")
-                        << string::fromStdString(tryPath.toStdString())
-                        << "\" in the current directory (\""
-                        << string::fromStdString(QDir::currentPath().toStdString())
-                        << "\")";
+                    this->info(
+                        string::fromStdString("[outputinspector] There is no \"")
+                        + string::fromStdString(tryPath.toStdString())
+                        + "\" in the current directory (\""
+                        + string::fromStdString(QDir::currentPath().toStdString())
+                        + "\")"
+                    );
                 }
             }
         }
     }
     else {
-        if (verbose) qInfo() << "[outputinspector] There is no \"...\" in the cited path: \"" << path << "\"";
+        if (verbose) this->info("[outputinspector] There is no \"...\" in the cited path: \"" + path + "\"");
     }
     return path;
 }
@@ -157,7 +163,7 @@ MainWindow::MainWindow()
 
         }
     }
-    // qInfo().noquote().nospace() << "Creating settings: " << filePath;
+    // this->info("Creating settings: " + this->filePath());
     this->settings = new Settings(filePath);
     this->info(
         "[outputinspector] used the settings file \"" + this->settings->fileName() + "\"";
@@ -168,29 +174,31 @@ MainWindow::MainWindow()
     // else if (QFile("/etc/outputinspector.conf").exists()) {
     //     this->config = new Settings("/etc/outputinspector.conf");
     // }
-    this->settings->setIfMissing("Kate2TabWidth", 8);
-    this->settings->setIfMissing("CompilerTabWidth", 6);
-    this->settings->setIfMissing("ShowWarningsLast", false);
+    this->settings->setIfMissing("Kate2TabWidth", "8");
+    this->settings->setIfMissing("CompilerTabWidth", "6");
+    this->settings->setIfMissing("ShowWarningsLast", "false");
     /// TODO: Implement ShowWarningsLast (but ignore it and behave as if it were
     /// false if there is anything in stdin).
-    this->settings->setIfMissing("FindTODOs", true);
+    this->settings->setIfMissing("FindTODOs", "true");
     if (this->settings->contains("kate")) {
         bool changed = this->settings->setIfMissing("editor", this->settings->getString("kate"));
         this->settings->remove("kate");
         this->settings->sync();
         if (changed)
-            qInfo().noquote().nospace()
-                << "[outputinspector]" << " transferred the old setting"
-                << " 'kate=" << this->settings->getString("kate")
-                << "' to 'editor=" << this->settings->getString("editor")
-                << "'.";
+            this->info(
+                "[outputinspector] transferred the old setting"
+                + string(" 'kate=") + this->settings->getString("kate")
+                + "' to 'editor=" + this->settings->getString("editor")
+                + "'."
+            );
         else
-            qInfo().noquote().nospace()
-                << "[outputinspector]" << " ignored the deprecated setting"
-                << " 'kate=" << this->settings->getString("kate")
-                << "' in favor of 'editor="
-                << this->settings->getString("editor")
-                << "'.";
+            this->info(
+                "[outputinspector] ignored the deprecated setting"
+                + string(" 'kate=") + this->settings->getString("kate")
+                + "' in favor of 'editor="
+                + this->settings->getString("editor")
+                + "'."
+            );
     }
     this->settings->setIfMissing("editor", "/usr/bin/geany");
 
@@ -202,7 +210,7 @@ MainWindow::MainWindow()
     {
         std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            def.append("");
+            def.push_back("");
         def[TOKEN_FILE] = "  File ";
         def[TOKEN_PARAM_A] = ", line ";
         def[TOKEN_PARAM_B] = ")";
@@ -215,7 +223,7 @@ MainWindow::MainWindow()
     {
         std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            def.append("");
+            def.push_back("");
         def[TOKEN_FILE] = "  File ";
         def[TOKEN_PARAM_A] = ", line ";
         def[TOKEN_PARAM_B] = "";
@@ -228,7 +236,7 @@ MainWindow::MainWindow()
     {
         std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            def.append("");
+            def.push_back("");
         def[TOKEN_FILE] = "ERROR: Failure: SyntaxError (invalid syntax (";
         def[TOKEN_PARAM_A] = ", line ";
         def[TOKEN_PARAM_B] = "";
@@ -241,7 +249,7 @@ MainWindow::MainWindow()
     {
         std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            def.append("");
+            def.push_back("");
         def[TOKEN_FILE] = "  File ";
         def[TOKEN_PARAM_A] = ", line ";
         def[TOKEN_PARAM_B] = "";
@@ -254,7 +262,7 @@ MainWindow::MainWindow()
     {
         std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            def.append("");
+            def.push_back("");
         def[TOKEN_FILE] = "ERROR[Main]:";
         def[TOKEN_PARAM_A] = ":";
         def[TOKEN_PARAM_B] = "";
@@ -269,7 +277,7 @@ MainWindow::MainWindow()
         // functions.js: line 32, col 26, Use '!==' to compare with 'null'.
         std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            def.append("");
+            def.push_back("");
         def[TOKEN_FILE] = "";
         def[TOKEN_PARAM_A] = ": line ";
         def[TOKEN_PARAM_B] = ", col ";
@@ -282,7 +290,7 @@ MainWindow::MainWindow()
     {
         std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            def.append("");
+            def.push_back("");
         // TODO: change to "WARNING\[Server\].* accessed at " (requires:
         // implementing regex)
         def[TOKEN_FILE] = " accessed at ";
@@ -297,7 +305,7 @@ MainWindow::MainWindow()
     {
         std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            def.append("");
+            def.push_back("");
         /// TODO: change to "WARNING\[Server\].* accessed at " (requires:
         // implementing regex)
         def[TOKEN_FILE] = " inside a function at ";
@@ -318,7 +326,7 @@ MainWindow::MainWindow()
                               simpler ones after this one). */
 
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            def.append("");
+            def.push_back("");
         def[TOKEN_FILE] = "";
         def[TOKEN_PARAM_A] = "(";
         def[TOKEN_PARAM_B] = ",";
@@ -331,7 +339,7 @@ MainWindow::MainWindow()
     {
         std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            def.append("");
+            def.push_back("");
         def[TOKEN_FILE] = "";
         def[TOKEN_PARAM_A] = ":";
         def[TOKEN_PARAM_B] = ":";
@@ -346,7 +354,7 @@ MainWindow::MainWindow()
         // -n option for grep shows line # like:
         // <filename>:<number>:
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            def.append("");
+            def.push_back("");
         def[TOKEN_FILE] = "";
         def[TOKEN_PARAM_A] = ":";
         def[TOKEN_PARAM_B] = "";
@@ -359,7 +367,7 @@ MainWindow::MainWindow()
     {
         std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
-            def.append("");
+            def.push_back("");
         def[TOKEN_FILE] = "";
         def[TOKEN_PARAM_A] = "";
         def[TOKEN_PARAM_B] = "";
@@ -391,7 +399,7 @@ MainWindow::MainWindow()
     // qCritical().noquote() << "qCritical() stream is active.";
     // qFatal().noquote() << "qFatal() stream is active.";
     if (this->m_Verbose)
-        qInfo().noquote() << "lists:";
+        this->info("lists:");
     // this for loop has the brace on the next line (for clang-format test):
     for (auto itList = enclosures.begin(); itList != enclosures.end(); itList++) {
         // qInfo().noquote() << "  -";
@@ -399,8 +407,11 @@ MainWindow::MainWindow()
         //     qInfo().noquote() << "    - " << (*itList)[i];
         // }
         assert(itList->size() >= PARSE_PARTS_COUNT); // qInfo().noquote() << "  items->size(): " << itList->size();
-        if (this->m_Verbose)
-            qInfo().noquote() << "  items: ['" + (*itList).join("', '") + "']";
+        /*
+        if (this->m_Verbose) {
+            this->info(string("  items: ['") + (*itList).join("', '") + string("']"));
+        }
+        */
     }
 }
 
@@ -433,8 +444,7 @@ void MainWindow::init(string errorsListFileName)
         string tryPath = "debug.txt";
         if (QFile(tryPath).exists()) {
             errorsListFileName = tryPath;
-            qInfo().noquote().nospace() << "[outputinspector]"
-                << " detected \"" << tryPath << "\"...examining...";
+            this->info("[outputinspector] detected \"" + tryPath + "\"...examining...");
         }
         else
             errorsListFileName = "err.txt";
@@ -451,9 +461,9 @@ void MainWindow::init(string errorsListFileName)
     // OutputInspectorSleepThread::msleep(150); // wait for stdin (doesn't work)
     if (std::cin.rdbuf()->in_avail() > 1) {
         // TODO: fix this--this never happens (Issue #16)
-        qInfo().noquote().nospace() << "[outputinspector]"
-            << " detected standard input (such as from a console pipe)"
-            << "...skipping \"" << errorsListFileName << "\"...";
+        this->info(string("[outputinspector]")
+                   + string(" detected standard input (such as from a console pipe)")
+                   + "...skipping \"" + errorsListFileName + "\"...");
     }
     else if (qfileTest.exists()) {
         if (qfileTest.open(QFile::ReadOnly)) { //| QFile::Translate
@@ -493,7 +503,7 @@ void MainWindow::init(string errorsListFileName)
             ui->statusBar->showMessage(sMsg, 0);
             if (this->settings->getBool("ExitOnNoErrors")) {
                 if (iErrors<1) {
-                    qInfo() << "Closing since no errors...";
+                    this->info("Closing since no errors...");
                     // QCoreApplication::quit(); // doesn't work
                     // aptr->exit(); // doesn't work (QApplication*)
                     // aptr->quit(); // doesn't work
@@ -813,14 +823,14 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
     QRegExp nOrZRE("\\d*"); // a digit (\d), zero or more times (*)
     QRegExp numOrMoreRE("\\d+"); // a digit (\d), 1 or more times (+)
     if (this->m_VerboseParsing) {
-        qInfo().noquote() << "`" + originalLine + "`:";
+        this->info("`" + originalLine + "`:");
     }
     for (auto itList = enclosures.begin(); itList != enclosures.end(); itList++) {
         if ((((*itList)[TOKEN_FILE]).length() == 0) || line.contains((*itList)[TOKEN_FILE])) {
             fileToken = (*itList)[TOKEN_FILE];
             if (this->m_VerboseParsing) {
                 if (fileToken.length() > 0)
-                    qInfo().noquote() << "  looking for fileToken '" + fileToken + "'";
+                    this->info("  looking for fileToken '" + fileToken + "'");
                 }
             paramAToken = (*itList)[TOKEN_PARAM_A];
             paramBToken = (*itList)[TOKEN_PARAM_B]; // coordinate delimiter (blank if no column)
@@ -831,8 +841,8 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
                 fileTokenI = 0; // if file path at begining of line
             if (fileTokenI > -1) {
                 if (this->m_VerboseParsing) {
-                    qInfo().noquote() << "  has '" + fileToken + "' @ " << fileTokenI
-                                      << ">= START";
+                    this->info("  has '" + fileToken + "' @ " + to_string(fileTokenI)
+                               + ">= START");
                 }
 
                 if (paramAToken.length() > 0) {
@@ -857,11 +867,11 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
                 }
                 if (paramATokenI > -1) {
                     if (this->m_VerboseParsing) {
-                        qInfo().noquote() << "    has pre-ParamA '" + paramAToken + "' @"
-                                          << paramATokenI << " (after " << fileToken.length() << "-long file token at "
-                                          << fileTokenI
-                                          << " ending at " << (fileTokenI + fileToken.length())
-                                          << ")"; // such as ', line '
+                        this->info("    has pre-ParamA '" + paramAToken + "' @"
+                                   + to_string(paramATokenI) << " (after " << to_string(fileToken.length()) << "-long file token at "
+                                   + to_string(fileTokenI)
+                                   + " ending at " << to_string((fileTokenI + fileToken.length()))
+                                   + ")"); // such as ', line '
                     }
                     paramAI = paramATokenI + paramAToken.length();
                     if (paramBToken.length() > 0) {
@@ -875,9 +885,9 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
                     }
                     if (paramBTokenI > -1) {
                         if (this->m_VerboseParsing) {
-                            qInfo().noquote() << "      has pre-ParamB token '" + paramBToken + "' @"
-                                              << paramBTokenI << " at or after ParamA token ending at"
-                                              << (paramATokenI + paramAToken.length());
+                            this->info("      has pre-ParamB token '" + paramBToken + "' @"
+                                       + paramBTokenI + " at or after ParamA token ending at"
+                                       + to_string(paramATokenI + paramAToken.length()));
                         }
                         // if (paramBToken != (*itList)[TOKEN_PARAM_B])
                         //    paramBToken = ""; // since may be used to locate next value
@@ -888,7 +898,7 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
                         if (endParamsToken.length() == 0) {
                             endParamsTokenI = paramBI;
                             if (this->m_VerboseParsing) {
-                                qInfo().noquote() << "  using paramBI for endParamsTokenI: " << paramBI;
+                                this->info("  using paramBI for endParamsTokenI: " + to_string(paramBI));
                             }
                         } else if (endParamsToken != "\n") {
                             endParamsTokenI = line.indexOf(endParamsToken, paramBI);
@@ -906,9 +916,9 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
                             if ((*itList)[PARSE_STACK] == STACK_LOWER)
                                 (*info)["lower"] = "true";
                             if (this->m_VerboseParsing) {
-                                qInfo().noquote() << "        has post-params '" + endParamsToken.replace("\n", "\\n") + "' ending@"
-                                                  << endParamsTokenI << ">=" << (paramBTokenI + paramBToken.length()) << "="
-                                                  << paramBTokenI << "+" << paramBToken.length() << "in '" + line + "'";
+                                this->info("        has post-params '" + endParamsToken.replace("\n", "\\n") + "' ending@"
+                                           + to_string(endParamsTokenI) + ">=" << to_string(paramBTokenI + paramBToken.length()) + "="
+                                           + to_string(paramBTokenI) + "+" << to_string(paramBToken.length()) + "in '" + line + "'");
                             }
                             if (endParamsToken != (*itList)[TOKEN_END_PARAMS]) {
                                 // since could be used for more stuff after 2 params in future versions,
@@ -918,31 +928,31 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
                             fileI = fileTokenI + fileToken.length();
                             break;
                         } else if (this->m_VerboseParsing) {
-                            qInfo().noquote() << "        no post-params '" + endParamsToken + "' >="
-                                              << (paramBTokenI + paramBToken.length()) << "in '" + line + "'";
+                            this->info("        no post-params '" + endParamsToken + "' >="
+                                       + to_string(paramBTokenI + paramBToken.length()) << "in '" + line + "'");
                         }
                     } else if (this->m_VerboseParsing) {
-                        qInfo().noquote() << "      no pre-ParamB '" + paramBToken + "' >="
-                                          << (paramATokenI + paramAToken.length()) << "in '" + line + "'";
+                        this->info("      no pre-ParamB '" + paramBToken + "' >="
+                                   + to_string(paramATokenI + paramAToken.length()) + "in '" + line + "'");
                     }
                 } else if (this->m_VerboseParsing) {
-                    qInfo().noquote() << "    no pre-paramA '" + paramAToken + "' >="
-                                      << (fileTokenI + fileToken.length());
+                    this->info("    no pre-paramA '" + paramAToken + "' >="
+                               + to_string(fileTokenI + fileToken.length()));
                 }
             } else if (this->m_VerboseParsing) {
-                qInfo().noquote() << "  no pre-File '" + fileToken + "' >= START";
+                this->info("  no pre-File '" + fileToken + "' >= START");
             }
         }
     }
 
-    // qInfo().noquote() << "fileTokenI: " << fileTokenI;
-    // qInfo().noquote() << "paramATokenI: " << paramATokenI;
-    // qInfo().noquote() << "paramBTokenI: " << paramBTokenI;
-    // qInfo().noquote() << "endParamsTokenI: " << endParamsTokenI;
-    // qInfo().noquote() << "fileToken: " << fileToken;
-    // qInfo().noquote() << "paramAToken: " << paramAToken;
-    // qInfo().noquote() << "paramBToken: " << paramBToken;
-    // qInfo().noquote() << "endParamsToken: " << endParamsToken;
+    // this->info("fileTokenI: "+ to_string(fileTokenI));
+    // this->info("paramATokenI: " + to_string(paramATokenI));
+    // this->info("paramBTokenI: " + to_string(paramBTokenI));
+    // this->info("endParamsTokenI: " + to_string(endParamsTokenI);
+    // this->info("fileToken: " + fileToken);
+    // this->info("paramAToken: " + paramAToken);
+    // this->info("paramBToken: " + paramBToken);
+    // this->info("endParamsToken: " + endParamsToken);
     if (fileI >= 0 && (paramATokenI > fileI || endParamsToken > fileI)) {
         // Even if closer is not present,
         // endParamsTokenI is set to length() IF applicable to this enclosure
@@ -967,13 +977,13 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
             (*info)["column"] = line.mid(paramBI, endParamsTokenI - paramBI);
         else
             (*info)["column"] = "";
-        if (this->m_VerboseParsing) qInfo().noquote() << "        file '" + line.mid(fileI, paramATokenI - fileI) + "'";
-        // if (this->m_VerboseParsing) qInfo().noquote() << "        row '" + line.mid(paramAI, paramBTokenI - paramAI) + "'";
-        if (this->m_VerboseParsing) qInfo().noquote() << "        row '" + (*info)["row"] + "'";
-        if (this->m_VerboseParsing) qInfo().noquote() << "          length " << paramBTokenI << "-" << paramAI;
+        if (this->m_VerboseParsing) this->info("        file '" + line.mid(fileI, paramATokenI - fileI) + "'");
+        // if (this->m_VerboseParsing) this->info("        row '" + line.mid(paramAI, paramBTokenI - paramAI) + "'");
+        if (this->m_VerboseParsing) this->info("        row '" + to_string((*info)["row"]) + "'");
+        if (this->m_VerboseParsing) this->info("          length " + to_string(paramBTokenI) + "-" to_string(paramAI);
         //if (this->m_VerboseParsing) qInfo().noquote() << "        col '" + line.mid(paramBI, endParamsTokenI - paramBI) + "'";
-        if (this->m_VerboseParsing) qInfo().noquote() << "        col '" + (*info)["column"] + "'";
-        if (this->m_VerboseParsing) qInfo().noquote() << "          length " << endParamsTokenI << "-" << paramBI;
+        if (this->m_VerboseParsing) this->info("        col '" + to_string((*info)["column"]) + "'");
+        if (this->m_VerboseParsing) this->info("          length " + to_string(endParamsTokenI) + "-" + to_string(paramBI));
 
         if (filePath.endsWith(".py", Qt::CaseSensitive))
             (*info)["language"] = "python";
@@ -1001,11 +1011,11 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
             (*info)["language"] = "php";
         this->debug("  detected file: '" + filePath + "'");
         (*info)["good"] = "true";
-        // qInfo() << "[outputinspector] found a good line with the following filename: " << filePath;
+        // this->info("[outputinspector] found a good line with the following filename: " + this->filePath());
     }
     else {
         (*info)["good"] = "false";
-        // qInfo() << "[outputinspector] found a bad line: " << originalLine;
+        // this->info("[outputinspector] found a bad line: " + originalLine);
     }
     if ((*info)["good"] == "true") {
         if (actualJump.length() > 0 && (*info)["master"] == "false") {
@@ -1040,7 +1050,7 @@ string MainWindow::absPathOrSame(string filePath)
     QDir cwDir = QDir(sCwd);
     string setuptoolsTryPkgPath = QDir::cleanPath(sCwd + QDir::separator() + cwDir.dirName());
     if (this->m_Verbose)
-        qInfo().noquote() << "setuptoolsTryPkgPath:" << setuptoolsTryPkgPath;
+        this->info("setuptoolsTryPkgPath:" + setuptoolsTryPkgPath);
     absFilePath = filePath.startsWith("/", Qt::CaseInsensitive) ? filePath : (sCwd + "/" + filePath);
     if (!QFile(absFilePath).exists() && QDir(setuptoolsTryPkgPath).exists())
         absFilePath = QDir::cleanPath(setuptoolsTryPkgPath + QDir::separator() + filePath);
@@ -1060,15 +1070,15 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(OIWidget* item)
     string errorMsg;
     if (filePath.length() > 0) {
         if (this->m_Verbose) {
-            qInfo().noquote() << "clicked_file: '" + filePath + "'";
-            qInfo().noquote() << "tooltip: '" + item->toolTip() + "'";
+            this->info("clicked_file: '" + filePath + "'");
+            this->info("tooltip: '" + item->toolTip() + "'");
         }
         absFilePath = absPathOrSame(filePath);
         string citedRowS = (item->data(ROLE_ROW)).toString();
         string citedColS = (item->data(ROLE_COL)).toString();
         if (this->m_Verbose) {
-            qInfo().noquote() << "citedRowS: '" + citedRowS + "'";
-            qInfo().noquote() << "citedColS: '" + citedColS + "'";
+            this->info("citedRowS: '" + citedRowS + "'");
+            this->info("citedColS: '" + citedColS + "'");
         }
         int citedRow = citedRowS.toInt(&ok, 10);
         int citedCol = citedColS.toInt(&ok, 10);
@@ -1226,8 +1236,8 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(OIWidget* item)
             // QMessageBox::information(this,"Output Inspector","'"+absFilePath+"' cannot be accessed (try a different line, or if this line's path looks right, try running from the location where it exists instead of '"+QDir::currentPath()+"')");
             // or pasting the entire line to 'Issues' link on web-based git repository
         } else {
-            qInfo().noquote() << "[Output Inspector] No file was detected in line: '" + line + "'";
-            qInfo().noquote() << "[Output Inspector] ERROR: '" + errorMsg + "'";
+            this->info("[Output Inspector] No file was detected in line: '" + line + "'");
+            this->info("[Output Inspector] ERROR: '" + errorMsg + "'");
         }
     }
 }
