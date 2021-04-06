@@ -1,15 +1,15 @@
-#include <QDebug>
-
 #include "settings.h"
+#include <string>
+using namespace std
 
-QStringList Settings::trues = QStringList() << "true" << "1" << "on" << "yes";
+std::vector<std::string> Settings::trues = { "true", "1", "on", "yes"};
 
 Settings::Settings()
 {
     this->qs = new QSettings("outputinspector.conf", QSettings::IniFormat);
 }
 
-Settings::Settings(QString filePath)
+Settings::Settings(string filePath)
 {
     readIni(filePath);
 }
@@ -21,11 +21,11 @@ Settings::~Settings()
         delete this->qs;
     }
     else {
-        qWarning() << "The QSettings object was not initialized before the Settings object was deleted.";
+        cerr << "WARNING: The QSettings object was not initialized before the Settings object was deleted.";
     }
 }
 
-bool Settings::readIni(QString filePath)
+bool Settings::readIni(string filePath)
 {
     this->filePath = filePath;
     if (this->qs != nullptr) {
@@ -41,9 +41,9 @@ bool Settings::readIni(QString filePath)
  * @param name
  * @return
  */
-bool Settings::getBool(QString key)
+bool Settings::getBool(string key)
 {
-    static const QString bad="<%outputinspector(missing)%>";
+    static const string bad="<%outputinspector(missing)%>";
     if (this->qs != nullptr) {
         if (this->qs->contains(key)) {
             if (!checkedKeys.contains(key)) {
@@ -59,7 +59,7 @@ bool Settings::getBool(QString key)
     return false;
 }
 
-int Settings::getInt(QString key)
+int Settings::getInt(string key)
 {
     int value = 0;
     if (this->qs != nullptr) {
@@ -81,7 +81,7 @@ int Settings::getInt(QString key)
     return value;
 }
 
-QString Settings::getString(QString key)
+string Settings::getString(string key)
 {
     if (this->qs != nullptr) {
         if (this->qs->contains(key)) {
@@ -98,7 +98,7 @@ QString Settings::getString(QString key)
     return "";
 }
 
-void Settings::setValue(QString key, QVariant value)
+void Settings::setValue(string key, QVariant value)
 {
     if (this->qs != nullptr) {
         this->qs->setValue(key, value);
@@ -111,7 +111,7 @@ void Settings::setValue(QString key, QVariant value)
  * @param value the new value
  * @return whether the value was actually changed (check sDebug for issues)
  */
-bool Settings::setIfMissing(QString key, QVariant value)
+bool Settings::setIfMissing(string key, QVariant value)
 {
     bool changed = false;
     if (this->qs != nullptr) {
@@ -125,7 +125,7 @@ bool Settings::setIfMissing(QString key, QVariant value)
     return changed;
 }
 
-void Settings::remove(QString key)
+void Settings::remove(string key)
 {
     if (this->qs != nullptr) {
         if (!this->qs->contains(key)) {
@@ -137,13 +137,13 @@ void Settings::remove(QString key)
 }
 
 /*
-QVariant Settings::value(QString key)
+QVariant Settings::value(string key)
 {
     return this->qs->value(key);
 }
 */
 
-bool Settings::contains(QString key)
+bool Settings::contains(string key)
 {
     if (this->qs != nullptr) {
         return this->qs->contains(key);
@@ -151,7 +151,7 @@ bool Settings::contains(QString key)
     return false;
 }
 
-QString Settings::fileName()
+string Settings::fileName()
 {
     if (this->qs != nullptr) {
         return this->qs->fileName();
@@ -165,7 +165,7 @@ void Settings::sync()
         this->qs->sync();
     }
     else {
-        qWarning() << "[outputinspector] Saving settings with sync() failed because the QSettings object was not initialized.";
+        cerr << "WARNING: [outputinspector] Saving settings with sync() failed because the QSettings object was not initialized.";
     }
 }
 
@@ -174,7 +174,7 @@ void Settings::sync()
  * @param value
  * @return
  */
-bool Settings::is_truthy(QString value)
+bool Settings::is_truthy(string value)
 {
     for (auto s : Settings::trues) {
         if (value.toLower()==s)

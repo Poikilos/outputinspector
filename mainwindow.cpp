@@ -1,26 +1,9 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include <QDebug> // Provide standard qt output streams.
-#include <QDir>
-#include <QFile>
-#include <QMessageBox>
-#include <QProcess>
-#include <QString>
-#include <QTextStream>
-#include <QThread>
-#include <QStandardPaths>
 #include <iostream>//this is a trailing comment with no space before or after slashes (for clang-format test)
 
 #include "settings.h"
-
-class OutputInspectorSleepThread : public QThread {
-public:
-    static void msleep(unsigned long msecs)
-    {
-        QThread::msleep(msecs);
-    }
-};
 
 // endregion scripting
 
@@ -81,11 +64,10 @@ bool qcontains_any(T haystack, std::list<T>& needles, Qt::CaseSensitivity cs = Q
     return count_if(needles.begin(), needles.end(), bind(qcontains<T>, haystack, std::placeholders::_1, cs)) > 0;
 }
 
-QString MainWindow::unmangledPath(QString path)
+string MainWindow::unmangledPath(string path)
 {
     QRegularExpression literalDotsRE("\\.\\.\\.+"); /**< Match 2 dots followed by more. */
     QRegularExpressionMatch match = literalDotsRE.match(path);
-    bool verbose = false; // This is manually set to true for debug only.
     if (match.hasMatch()) {
         // int start = match.capturedStart(0);
         int end = match.capturedEnd(0);
@@ -94,7 +76,7 @@ QString MainWindow::unmangledPath(QString path)
         tryOffsets.append(1);
         tryOffsets.append(0);
         for (auto tryOffset : tryOffsets) {
-            QString tryPath = path.mid(end+tryOffset);
+            string tryPath = path.mid(end+tryOffset);
             if (QFile(tryPath).exists()) {
                 if (verbose) {
                     qInfo().noquote().nospace()
@@ -107,10 +89,10 @@ QString MainWindow::unmangledPath(QString path)
             else {
                 if (verbose) {
                     qInfo().noquote().nospace()
-                        << QString::fromStdString("[outputinspector] There is no \"")
-                        << QString::fromStdString(tryPath.toStdString())
+                        << string::fromStdString("[outputinspector] There is no \"")
+                        << string::fromStdString(tryPath.toStdString())
                         << "\" in the current directory (\""
-                        << QString::fromStdString(QDir::currentPath().toStdString())
+                        << string::fromStdString(QDir::currentPath().toStdString())
                         << "\")";
                 }
             }
@@ -138,7 +120,7 @@ MainWindow::MainWindow(QWidget* parent)
     if (!d.exists()) {
         d.mkpath(d.absolutePath());
     }
-    QString filePath = QDir::cleanPath(d.absolutePath() + QDir::separator() + "settings.txt");
+    string filePath = QDir::cleanPath(d.absolutePath() + QDir::separator() + "settings.txt");
     QFile f{filePath};
     /// TODO: fill this in or remove it (and the comments).
     if (d.exists()) {
@@ -373,12 +355,12 @@ MainWindow::MainWindow(QWidget* parent)
     brushes["Default"] = QBrush(Qt::black);
 
     sInternalFlags.push_back("/site-packages/");
-    assert(qcontains_any<QString>("/usr/lib/python2.7/site-packages/nose/importer.py", sInternalFlags));
+    assert(qcontains_any<string>("/usr/lib/python2.7/site-packages/nose/importer.py", sInternalFlags));
 
     sSectionBreakFlags.push_back("--------");
-    assert(qcontains_any<QString>("---------------------", sSectionBreakFlags));
+    assert(qcontains_any<string>("---------------------", sSectionBreakFlags));
 
-    qDebug().noquote() << "qDebug() stream is active.";
+    this->debug("* The debug stream is active.");
     // qInfo().noquote() << "qInfo() stream is active.";
     // qWarning().noquote() << "qWarning() stream is active.";
     // qCritical().noquote() << "qCritical() stream is active.";
@@ -402,7 +384,7 @@ MainWindow::MainWindow(QWidget* parent)
  * @param line stderr output from your parser
  * @return
  */
-bool MainWindow::isFatalSourceError(QString line)
+bool MainWindow::isFatalSourceError(string line)
 {
     return (
         line.indexOf("Can't open", 0, Qt::CaseInsensitive) > -1 //jshint could not find a source file
@@ -418,12 +400,12 @@ MainWindow::~MainWindow()
     delete this->settings;
     delete ui;
 }
-void MainWindow::init(QString errorsListFileName)
+void MainWindow::init(string errorsListFileName)
 {
     if (!(this->settings->contains("xEditorOffset") || this->settings->contains("yEditorOffset")))
         CompensateForEditorVersion();
     if (errorsListFileName.length() == 0) {
-        QString tryPath = "debug.txt";
+        string tryPath = "debug.txt";
         if (QFile(tryPath).exists()) {
             errorsListFileName = tryPath;
             qInfo().noquote().nospace() << "[outputinspector]"
@@ -456,11 +438,11 @@ void MainWindow::init(QString errorsListFileName)
                 this->addLine(qtextNow.readLine(0), false);
             } // end while not at end of file named errorsListFileName
             qfileTest.close();
-            QString sNumErrors;
+            string sNumErrors;
             sNumErrors.setNum(iErrors, 10);
-            QString sNumWarnings;
+            string sNumWarnings;
             sNumWarnings.setNum(iWarnings, 10);
-            QString sNumTODOs;
+            string sNumTODOs;
             sNumTODOs.setNum(iTODOs, 10);
             pushWarnings();
             if (this->settings->getBool("FindTODOs")) {
@@ -480,7 +462,7 @@ void MainWindow::init(QString errorsListFileName)
                 }
             }
             // else hide errors since will exit anyway if no errors
-            QString sMsg = "Errors: " + sNumErrors + "; Warnings:" + sNumWarnings;
+            string sMsg = "Errors: " + sNumErrors + "; Warnings:" + sNumWarnings;
             if (this->settings->getBool("FindTODOs"))
                 sMsg += "; TODOs:" + sNumTODOs;
             ui->statusBar->showMessage(sMsg, 0);
@@ -497,9 +479,9 @@ void MainWindow::init(QString errorsListFileName)
             }
         } else {
             if (std::cin.rdbuf()->in_avail() < 1) {
-                QString my_path = QCoreApplication::applicationFilePath();
-                QString title = "Output Inspector - Help";
-                QString msg = my_path + ": Output Inspector cannot read the output file due to permissions or other read error (tried \"./" + errorsListFileName + "\").";
+                string my_path = QCoreApplication::applicationFilePath();
+                string title = "Output Inspector - Help";
+                string msg = my_path + ": Output Inspector cannot read the output file due to permissions or other read error (tried \"./" + errorsListFileName + "\").";
                 QMessageBox::information(this, title, msg);
                 // this->addLine(title + ":" + msg, true);
             }
@@ -507,9 +489,9 @@ void MainWindow::init(QString errorsListFileName)
     } // end if could open file named errorsListFileName
     else {
         if (std::cin.rdbuf()->in_avail() < 1) {
-            QString my_path = QCoreApplication::applicationFilePath();
-            QString title = "Output Inspector - Help";
-            QString msg = my_path + ": Output Inspector cannot find the output file to process (tried \"./" + errorsListFileName + "\").";
+            string my_path = QCoreApplication::applicationFilePath();
+            string title = "Output Inspector - Help";
+            string msg = my_path + ": Output Inspector cannot find the output file to process (tried \"./" + errorsListFileName + "\").";
             QMessageBox::information(this, title, msg);
             // this->addLine(title + ":" + msg, true);
         }
@@ -530,19 +512,19 @@ void MainWindow::init(QString errorsListFileName)
  * @param enablePush Push the line to the GUI right away (This is best for
  *        when reading information from standard input).
  */
-void MainWindow::addLine(QString line, bool enablePush)
+void MainWindow::addLine(string line, bool enablePush)
 {
     this->m_LineCount++;
-    QString originalLine = line;
+    string originalLine = line;
     this->m_MasterLine = line;
     // TODO: debug performance of new and delete
-    std::map<QString, QString>* info = new std::map<QString, QString>;
+    std::map<string, string>* info = new std::map<string, string>;
     if (line.length() > 0) {
         if (line.trimmed().length() > 0)
             this->m_NonBlankLineCount++;
         if (isFatalSourceError(line)) {
             ui->mainListWidget->addItem(new QListWidgetItem(line + " <your compiler (or other tool) recorded this fatal or summary error before outputinspector ran>", ui->mainListWidget));
-        } else if (qcontains_any<QString>(line, sSectionBreakFlags)) {
+        } else if (qcontains_any<string>(line, sSectionBreakFlags)) {
             this->m_ActualJump = "";
             this->m_ActualJumpLine = "";
             this->m_ActualJumpRow = "";
@@ -560,12 +542,12 @@ void MainWindow::addLine(QString line, bool enablePush)
                 this->m_ActualJumpRow = info->at("row");
                 this->m_ActualJumpColumn = info->at("column");
                 this->m_IsJumpLower = (info->at("lower") == "true");
-                qDebug().noquote() << "(master) set actualJump to '" + this->m_ActualJump + "'";
+                this->debug("(master) set actualJump to '" + this->m_ActualJump + "'");
             } else {
-                qDebug().noquote() << "(not master) line: '" + line + "'";
+                this->debug("(not master) line: '" + line + "'");
             }
             bool isWarning = false;
-            QString sColorPrefix = "Error";
+            string sColorPrefix = "Error";
             if (this->m_ActualJump.length() > 0) {
                 this->m_MasterLine = this->m_ActualJumpLine;
             }
@@ -597,7 +579,7 @@ void MainWindow::addLine(QString line, bool enablePush)
                 else
                     lwi->setForeground(brushes["Unusable"]);
             }
-            if (qcontains_any<QString>(this->m_MasterLine, this->sInternalFlags)) {
+            if (qcontains_any<string>(this->m_MasterLine, this->sInternalFlags)) {
                 lwi->setForeground(brushes["Internal"]);
             }
             lwi->setData(ROLE_COLLECTED_LINE, QVariant(this->m_MasterLine));
@@ -614,7 +596,7 @@ void MainWindow::addLine(QString line, bool enablePush)
             else
                 ui->mainListWidget->addItem(lwi);
 
-            QString sTargetLanguage = (*info)["language"];
+            string sTargetLanguage = (*info)["language"];
 
             if (sTargetLanguage.length() > 0) {
                 if (sTargetLanguage == "python" || sTargetLanguage == "sh") {
@@ -634,20 +616,20 @@ void MainWindow::addLine(QString line, bool enablePush)
 
             if (this->settings->getBool("FindTODOs")) {
                 if (info->at("good") == "true") {
-                    QString sFileX;// = unmangledPath(info->at("file"));
+                    string sFileX;// = unmangledPath(info->at("file"));
                     sFileX = absPathOrSame(sFileX); // =line.mid(0,line.indexOf("("));
                     if (!this->m_Files.contains(sFileX, Qt::CaseSensitive)) {
                         this->m_Files.append(sFileX);
                         QFile qfileSource(sFileX);
                         if (this->m_Verbose)
-                            qDebug() << "outputinspector trying to open '" + sFileX + "'...";
+                            this->debug("outputinspector trying to open '" + sFileX + "'...");
                         // if (!qfileSource.open(QFile::ReadOnly)) {
                         // }
                         if (qfileSource.open(QFile::ReadOnly)) {
                             QTextStream qtextSource(&qfileSource);
                             int iSourceLineFindToDo = 0;
                             while (!qtextSource.atEnd()) {
-                                QString sSourceLine = qtextSource.readLine(0);
+                                string sSourceLine = qtextSource.readLine(0);
                                 iSourceLineFindToDo++; // Increment this now since the compiler's line numbering starts with 1.
                                 int iToDoFound = -1;
                                 int iCommentFound = sSourceLine.indexOf(this->m_CommentToken, 0, Qt::CaseInsensitive);
@@ -659,9 +641,9 @@ void MainWindow::addLine(QString line, bool enablePush)
                                     }
                                 }
                                 if (iToDoFound > -1) {
-                                    QString sNumLine;
+                                    string sNumLine;
                                     sNumLine.setNum(iSourceLineFindToDo, 10);
-                                    QString sNumPos;
+                                    string sNumPos;
                                     int processedCol = iToDoFound;
                                     for (int citedI = 0; citedI < sSourceLine.length(); citedI++) {
                                         if (sSourceLine.mid(citedI, 1) == "\t")
@@ -672,7 +654,7 @@ void MainWindow::addLine(QString line, bool enablePush)
                                     processedCol += 1; // start numbering at 1 to mimic compiler
                                     processedCol += 2; // +2 to start after slashes
                                     sNumPos.setNum(processedCol, 10);
-                                    QString sLineToDo = sFileX + "(" + sNumLine + "," + sNumPos + ") " + sSourceLine.mid(iToDoFound);
+                                    string sLineToDo = sFileX + "(" + sNumLine + "," + sNumPos + ") " + sSourceLine.mid(iToDoFound);
                                     QListWidgetItem* lwi = new QListWidgetItem(sLineToDo);
                                     lwi->setData(ROLE_ROW, QVariant(sNumLine));
                                     lwi->setData(ROLE_COL, QVariant(sNumPos));
@@ -680,7 +662,7 @@ void MainWindow::addLine(QString line, bool enablePush)
                                     lwi->setData(ROLE_LOWER, QVariant("false"));
                                     lwi->setData(ROLE_COLLECTED_LINE, QVariant(sLineToDo));
                                     lwi->setData(ROLE_DETAILS, QVariant("false"));
-                                    if (qcontains_any<QString>(this->m_MasterLine, this->sInternalFlags)) {
+                                    if (qcontains_any<string>(this->m_MasterLine, this->sInternalFlags)) {
                                         lwi->setForeground(brushes["Internal"]);
                                     } else {
                                         lwi->setForeground(brushes["ToDo"]);
@@ -690,9 +672,9 @@ void MainWindow::addLine(QString line, bool enablePush)
                                 }
                             } // end while not at end of source file
                             if (this->m_Verbose)
-                                qDebug() << "outputinspector finished reading sourcecode";
+                                this->debug("outputinspector finished reading sourcecode");
                             if (this->m_Verbose)
-                                qDebug() << "(processed " << iSourceLineFindToDo << " line(s))";
+                                this->debug("(processed " << iSourceLineFindToDo << " line(s))");
                             qfileSource.close();
                         } // end if could open sourcecode
                         else {
@@ -701,10 +683,10 @@ void MainWindow::addLine(QString line, bool enablePush)
                     } // end if list does not already contain this file
                 } // end if found filename ender
                 else if (this->m_Verbose)
-                    qDebug() << "[outputinspector] WARNING: filename ender in " + line;
+                    this->debug("[outputinspector] WARNING: filename ender in " + line);
             } // end if getIniBool("FindTODOs")
             else
-                qDebug() << "[outputinspector] WARNING: getIniBool(\"FindTODOs\") off so skipped parsing " + line;
+                this->debug("[outputinspector] WARNING: getIniBool(\"FindTODOs\") off so skipped parsing " + line);
         } // end if a regular line (not fatal, not formatting)
     } // end if length>0 (after trim using 0 option for readLine)
     if (enablePush) {
@@ -717,19 +699,19 @@ void MainWindow::CompensateForEditorVersion()
 {
     bool isFound = false;
     QStringList sVersionArgs;
-    QString sFileTemp = "/tmp/outputinspector.using.kate.version.tmp";
+    string sFileTemp = "/tmp/outputinspector.using.kate.version.tmp";
     sVersionArgs.append("--version");
     sVersionArgs.append(" > " + sFileTemp);
     // QProcess::execute(IniString("editor"), sVersionArgs);
-    system((char*)QString(this->settings->getString("editor") + " --version > " + sFileTemp).toLocal8Bit().data());
+    system((char*)string(this->settings->getString("editor") + " --version > " + sFileTemp).toLocal8Bit().data());
     OutputInspectorSleepThread::msleep(125);
 
     QFile qfileTmp(sFileTemp);
-    QString line;
+    string line;
     if (qfileTmp.open(QFile::ReadOnly)) { // | QFile::Translate
         // detect Kate version using output of Kate command above
         QTextStream qtextNow(&qfileTmp);
-        QString sKateOpener = "Kate: ";
+        string sKateOpener = "Kate: ";
         while (!qtextNow.atEnd()) {
             line = qtextNow.readLine(0); // does trim off newline characters
             if (this->m_Verbose)
@@ -739,13 +721,13 @@ void MainWindow::CompensateForEditorVersion()
                 if (iDot > -1) {
                     bool ok;
                     isFound = true;
-                    this->m_KateMajorVer = QString(line.mid(6, iDot - 6)).toInt(&ok, 10);
+                    this->m_KateMajorVer = string(line.mid(6, iDot - 6)).toInt(&ok, 10);
                 }
             }
         }
         qfileTmp.close();
     } // end if could open temp file
-    QString sRevisionMajor;
+    string sRevisionMajor;
     sRevisionMajor.setNum(this->m_KateMajorVer, 10);
     if (this->m_Verbose)
         QMessageBox::information(this, "Output Inspector - Kate Version", isFound ? ("Detected Kate " + sRevisionMajor) : "Could not detect Kate version.");
@@ -771,14 +753,14 @@ void MainWindow::pushWarnings()
     }
 }
 
-std::map<QString, QString>* MainWindow::lineInfo(const QString line, QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine)
+std::map<string, string>* MainWindow::lineInfo(const string line, string actualJump, const string actualJumpLine, bool isPrevCallPrevLine)
 {
-    std::map<QString, QString>* info = new std::map<QString, QString>();
+    std::map<string, string>* info = new std::map<string, string>();
     lineInfo(info, line, actualJump, actualJumpLine, isPrevCallPrevLine);
     return info;
 }
 
-void MainWindow::lineInfo(std::map<QString, QString>* info, const QString originalLine, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine)
+void MainWindow::lineInfo(std::map<string, string>* info, const string originalLine, const string actualJump, const string actualJumpLine, bool isPrevCallPrevLine)
 {
     (*info)["file"] = ""; // same as info->at("file")
     (*info)["row"] = "";
@@ -789,12 +771,12 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString origin
     (*info)["lower"] = "false";
     (*info)["master"] = "false";
     (*info)["color"] = "Default";
-    QString line = originalLine;
+    string line = originalLine;
 
-    QString fileToken;
-    QString paramAToken;
-    QString paramBToken;
-    QString endParamsToken;
+    string fileToken;
+    string paramAToken;
+    string paramBToken;
+    string endParamsToken;
     int fileTokenI = -1;
     int fileI = -1;
     int paramATokenI = -1;
@@ -940,7 +922,7 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString origin
         // Even if closer is not present,
         // endParamsTokenI is set to length() IF applicable to this enclosure
 
-        QString filePath;
+        string filePath;
         if (paramATokenI > fileI)
             filePath = line.mid(fileI, paramATokenI - fileI);
         else
@@ -952,7 +934,7 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString origin
                 filePath = filePath.mid(1, filePath.length() - 2);
             }
         }
-        qDebug() << "[outputinspector][debug] file path before unmangling: \"" << filePath << "\"";
+        this->debug("[outputinspector][debug] file path before unmangling: \"" + filePath + "\"");
         filePath = unmangledPath(filePath);
         (*info)["file"] = filePath;
         (*info)["row"] = line.mid(paramAI, paramBTokenI - paramAI);
@@ -992,7 +974,7 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString origin
             (*info)["language"] = "sh";
         else if (filePath.endsWith(".php", Qt::CaseSensitive))
             (*info)["language"] = "php";
-        qDebug().noquote() << "  detected file: '" + filePath + "'";
+        this->debug("  detected file: '" + filePath + "'");
         (*info)["good"] = "true";
         // qInfo() << "[outputinspector] found a good line with the following filename: " << filePath;
     }
@@ -1002,9 +984,9 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString origin
     }
     if ((*info)["good"] == "true") {
         if (actualJump.length() > 0 && (*info)["master"] == "false") {
-            qDebug() << "INFO: nosetests output was detected, but the line is not first"
-                     << "line of a known multi-line error format, so flagging as"
-                     << "details (must be a sample line of code or something).";
+            this->debug(string("INFO: nosetests output was detected, but the line is not first")
+                        + string("line of a known multi-line error format, so flagging as")
+                        + "details (must be a sample line of code or something).");
             (*info)["good"] = "false"; // TODO: possibly eliminate this for fault tolerance
                                        // (different styles in same output)
             (*info)["details"] = "true";
@@ -1013,13 +995,25 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString origin
     }
 }
 
-QString MainWindow::absPathOrSame(QString filePath)
+void MainWindow::debug(string msg) {
+    if (this->verbose) {
+        cerr << msg << endl;
+    }
+}
+void MainWindow::info(string msg) {
+    cerr << "INFO: " << msg << endl;
+}
+void MainWindow::warn(string msg) {
+    cerr << "WARNING: " << msg << endl;
+}
+
+string MainWindow::absPathOrSame(string filePath)
 {
-    QString absFilePath;
-    QString sCwd = QDir::currentPath(); // current() returns a QDir object
+    string absFilePath;
+    string sCwd = QDir::currentPath(); // current() returns a QDir object
     // Don't use QDir::separator(), since this only is detectable on *nix & bsd-like OS:
     QDir cwDir = QDir(sCwd);
-    QString setuptoolsTryPkgPath = QDir::cleanPath(sCwd + QDir::separator() + cwDir.dirName());
+    string setuptoolsTryPkgPath = QDir::cleanPath(sCwd + QDir::separator() + cwDir.dirName());
     if (this->m_Verbose)
         qInfo().noquote() << "setuptoolsTryPkgPath:" << setuptoolsTryPkgPath;
     absFilePath = filePath.startsWith("/", Qt::CaseInsensitive) ? filePath : (sCwd + "/" + filePath);
@@ -1030,23 +1024,23 @@ QString MainWindow::absPathOrSame(QString filePath)
 
 void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
 {
-    QString line = item->text();
-    QString actualJump = item->data(ROLE_COLLECTED_FILE).toString(); // item->toolTip();
-    QString actualJumpLine = item->data(ROLE_COLLECTED_LINE).toString(); // item->toolTip();
+    string line = item->text();
+    string actualJump = item->data(ROLE_COLLECTED_FILE).toString(); // item->toolTip();
+    string actualJumpLine = item->data(ROLE_COLLECTED_LINE).toString(); // item->toolTip();
     if (actualJumpLine.length() > 0)
         line = actualJumpLine;
     bool ok = false;
-    QString filePath = (item->data(ROLE_COLLECTED_FILE)).toString();
-    QString absFilePath = filePath;
-    QString errorMsg;
+    string filePath = (item->data(ROLE_COLLECTED_FILE)).toString();
+    string absFilePath = filePath;
+    string errorMsg;
     if (filePath.length() > 0) {
         if (this->m_Verbose) {
             qInfo().noquote() << "clicked_file: '" + filePath + "'";
             qInfo().noquote() << "tooltip: '" + item->toolTip() + "'";
         }
         absFilePath = absPathOrSame(filePath);
-        QString citedRowS = (item->data(ROLE_ROW)).toString();
-        QString citedColS = (item->data(ROLE_COL)).toString();
+        string citedRowS = (item->data(ROLE_ROW)).toString();
+        string citedColS = (item->data(ROLE_COL)).toString();
         if (this->m_Verbose) {
             qInfo().noquote() << "citedRowS: '" + citedRowS + "'";
             qInfo().noquote() << "citedColS: '" + citedColS + "'";
@@ -1063,7 +1057,7 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
         // endregion only for Kate <= 2
         if (this->m_CompensateForKateTabDifferences) {
             QFile qfileSource(absFilePath);
-            QString line;
+            string line;
             int readCitedI = 0; /**< This is the current line number while the
                                      loop reads the entire cited file. */
             if (qfileSource.open(QFile::ReadOnly)) { //| QFile::Translate
@@ -1079,7 +1073,7 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
                             else
                                 break;
                         }
-                        QString tabDebugMsg;
+                        string tabDebugMsg;
                         if (tabCount > 0) {
                             tabDebugMsg.setNum(tabCount, 10);
                             tabDebugMsg = "tabs:" + tabDebugMsg;
@@ -1110,7 +1104,7 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
                                     tabDebugMsg += "; citedCol-StartAt1-rel-to-nontab:" + citedColS;
                                     // citedCol now starts at 1 starting from the first text after tabs
                                     int regeneratedCol = 1;
-                                    tabDebugMsg += "; skips:";                                    
+                                    tabDebugMsg += "; skips:";
                                     // This approximates how Kate 2 traverses tabs (the 'c' argument actually can't reach certain positions directly after the tabs):
                                     if (tabCount > 2)
                                         citedCol += tabCount - 2;
@@ -1144,11 +1138,11 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
                 errorMsg = "Specified file '" + filePath + "' does not exist or is not accessible (if path looks right, try running from the location where it exists instead of '" + QDir::currentPath() + "')";
             }
         } // end if this->m_CompensateForKateTabDifferences
-        // QString sArgs="-u "+absFilePath+" -l "+citedRowS+" -c "+citedColS;
+        // string sArgs="-u "+absFilePath+" -l "+citedRowS+" -c "+citedColS;
         // QProcess qprocNow(this->config->getString("editor")+sArgs);
         // qprocNow
         if (QFile(absFilePath).exists()) {
-            QString commandMsg = this->settings->getString("editor");
+            string commandMsg = this->settings->getString("editor");
             QStringList qslistArgs;
             // NOTE: -u is not needed at least as of kate 16.12.3 which does not create additional
             // instances of kate
@@ -1188,17 +1182,17 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
     if (errorMsg.length() > 0) {
         if (filePath.length() > 0) {
             // qWarning().noquote() << errorMsg << " in '" + line + "':";
-            std::map<QString, QString>* info = lineInfo(line, actualJump, actualJumpLine, false);
-            QString infoS;
+            std::map<string, string>* info = lineInfo(line, actualJump, actualJumpLine, false);
+            string infoS;
             for (auto it = info->begin(); it != info->end(); it++) {
                 // qWarning().noquote() << "    " << it->first // key
                 //         + ": '" + it->second + "'"; //value
                 infoS += "; " + it->first + ": '" + it->second + "'";
             }
-            qWarning().noquote() << "[outputinspector][error] " << errorMsg << " in the line:"
-                                 << "; actualJump: " + item->data(this->ROLE_COLLECTED_FILE).toString()
-                                 << "  actualJumpLine: " + item->data(this->ROLE_COLLECTED_LINE).toString()
-                                 << infoS;
+            this->warn("[outputinspector][error] " << errorMsg << " in the line:"
+                       + "; actualJump: " + item->data(this->ROLE_COLLECTED_FILE).toString()
+                       + "  actualJumpLine: " + item->data(this->ROLE_COLLECTED_LINE).toString()
+                       + infoS;
             //                      << "  info:";
 
             // for (auto const& it : (*info)) {  // >=C++11 only (use dot notation not -> below if using this)
@@ -1228,8 +1222,8 @@ void MainWindow::readInput()
         std::getline(std::cin, line);
         if (!std::cin.eof()) {
             // qInfo().noquote() << "OutputInspector: input is '" << line.c_str() << "'.";
-            // this->addLine(QString("OutputInspector: input is: ") + QString::fromStdString(line), true);
-            this->addLine(QString::fromStdString(line), true);
+            // this->addLine(string("OutputInspector: input is: ") + string::fromStdString(line), true);
+            this->addLine(string::fromStdString(line), true);
         }
         else {
             // qInfo().noquote() << "OutputInspector: input has ended.";

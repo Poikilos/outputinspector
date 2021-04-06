@@ -1,13 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QMainWindow>
-#include <QListWidgetItem>
-#include <QTimer>
 #include "settings.h"
 // #include <map>
-
-
 
 namespace Ui {
 class MainWindow;
@@ -18,14 +13,14 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    static QString unmangledPath(QString path);
-
+    static std::string unmangledPath(std::string path);
+    bool verbose = false; // This is manually set to true for debug only.
     bool m_DebugBadHints = true;
-    const QString COLLECT_REUSE = "REUSE"; /**< The target in the analyzed
+    const std::string COLLECT_REUSE = "REUSE"; /**< The target in the analyzed
                                                 output should be also used as
                                                 the jump location for the
                                                 following lines. */
-    const QString STACK_LOWER = "LOWER"; /**< The code reference is further
+    const std::string STACK_LOWER = "LOWER"; /**< The code reference is further
                                               down in the call stack, so it is
                                               probably not pointing to the
                                               relevant code. */
@@ -65,19 +60,22 @@ public:
     const int ROLE_LOWER = Qt::UserRole + 3;
     const int ROLE_COLLECTED_LINE = Qt::UserRole + 4;
     const int ROLE_DETAILS = Qt::UserRole + 5;
-    std::list<QString> sInternalFlags;
-    std::list<QString> sSectionBreakFlags;
+    std::list<std::string> sInternalFlags;
+    std::list<std::string> sSectionBreakFlags;
     std::list<QStringList> enclosures;
-    std::map<QString, QBrush> brushes;
+    std::map<std::string, QBrush> brushes;
 
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
-    void addLine(QString, bool);
-    void init(QString);
-    bool isFatalSourceError(QString);
-    std::map<QString, QString>* lineInfo(const QString line, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
-    void lineInfo(std::map<QString, QString>* info, const QString sLineOriginal, const QString actualJump, const QString actualJumpLine, bool isPrevCallPrevLine);
-    QString absPathOrSame(QString filePath);
+    void addLine(std::string, bool);
+    void init(std::string);
+    bool isFatalSourceError(std::string);
+    std::map<std::string, std::string>* lineInfo(const std::string line, const std::string actualJump, const std::string actualJumpLine, bool isPrevCallPrevLine);
+    void lineInfo(std::map<std::string, std::string>* info, const std::string sLineOriginal, const std::string actualJump, const std::string actualJumpLine, bool isPrevCallPrevLine);
+    void debug(string msg);
+    void warn(string msg);
+    void info(string msg);
+    std::string absPathOrSame(std::string filePath);
     Settings* settings = nullptr;
     bool m_EnableTabDebugMsg = false;
     bool m_CompensateForKateTabDifferences = true;
@@ -100,24 +98,24 @@ private:
     void CompensateForEditorVersion();
 
     QStringList m_ToDoFlags = {"TODO","FIXME"};
-    QString m_Error = "Error";
-    QString m_Warning = "Warning";
-    QString m_CommentToken = "//";
+    std::string m_Error = "Error";
+    std::string m_Warning = "Warning";
+    std::string m_CommentToken = "//";
 
     QList<QListWidgetItem*> lwiWarnings;
     QList<QListWidgetItem*> lwiToDos;
     int m_LineCount = 0;
     int m_NonBlankLineCount = 0;
-    QString m_ActualJump; /**< Store the jump in case the file & line# are on
+    std::string m_ActualJump; /**< Store the jump in case the file & line# are on
                                a different line than the error, such as with
                                nosetests. */
-    QString m_ActualJumpLine;
+    std::string m_ActualJumpLine;
     bool m_IsJumpLower = true;
 
 
-    QString m_MasterLine;
-    QString m_ActualJumpRow;
-    QString m_ActualJumpColumn;
+    std::string m_MasterLine;
+    std::string m_ActualJumpRow;
+    std::string m_ActualJumpColumn;
 
     void pushWarnings(); /**< Push warnings to the GUI. */
 
