@@ -54,8 +54,9 @@ class Settings
 {
 private:
     static std::vector<std::string> trues;
-    // const static QStringList trues {"true", "1", "on", "yes"};
-    QSettings* qs = nullptr; /**< QSettings doesn't work well as a superclass,
+    // const static std::vector<std::string> trues {"true", "1", "on", "yes"};
+    // QSettings* qs = nullptr;
+    /**< QSettings doesn't work well as a superclass,
                                   so contain it (See <https://www.qtcentre.org/
                                   threads/2786-Qsettings> and
                                   <https://forum.qt.io/topic/43870/subclassing-
@@ -63,7 +64,7 @@ private:
                                   file-in-linux-kubuntu/3>). */
 public:
     std::string filePath;
-    QStringList checkedKeys;
+    std::vector<std::string> checkedKeys;
 
     static bool is_truthy(std::string value);
 

@@ -6,7 +6,7 @@ std::vector<std::string> Settings::trues = { "true", "1", "on", "yes"};
 
 Settings::Settings()
 {
-    this->qs = new QSettings("outputinspector.conf", QSettings::IniFormat);
+    // this->qs = new QSettings("outputinspector.conf", QSettings::IniFormat);
 }
 
 Settings::Settings(string filePath)

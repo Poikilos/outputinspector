@@ -175,7 +175,7 @@ MainWindow::MainWindow(QWidget* parent)
     // same TOKEN_FILE and PARSE_PARAM_A, because "\n" is forced
     // (which would leave extra stuff at the end if there are more tokenings)
     {
-        QStringList def;
+        std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         def[TOKEN_FILE] = "  File ";
@@ -188,7 +188,7 @@ MainWindow::MainWindow(QWidget* parent)
         enclosures.push_back(def);
     }
     {
-        QStringList def;
+        std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         def[TOKEN_FILE] = "  File ";
@@ -201,7 +201,7 @@ MainWindow::MainWindow(QWidget* parent)
         enclosures.push_back(def);
     }
     {
-        QStringList def;
+        std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         def[TOKEN_FILE] = "ERROR: Failure: SyntaxError (invalid syntax (";
@@ -214,7 +214,7 @@ MainWindow::MainWindow(QWidget* parent)
         enclosures.push_back(def);
     }
     {
-        QStringList def;
+        std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         def[TOKEN_FILE] = "  File ";
@@ -227,7 +227,7 @@ MainWindow::MainWindow(QWidget* parent)
         enclosures.push_back(def);
     }
     {
-        QStringList def;
+        std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         def[TOKEN_FILE] = "ERROR[Main]:";
@@ -242,7 +242,7 @@ MainWindow::MainWindow(QWidget* parent)
     {
         // An example of jshint output is the entire next comment:
         // functions.js: line 32, col 26, Use '!==' to compare with 'null'.
-        QStringList def;
+        std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         def[TOKEN_FILE] = "";
@@ -255,7 +255,7 @@ MainWindow::MainWindow(QWidget* parent)
         enclosures.push_back(def);
     }
     {
-        QStringList def;
+        std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         // TODO: change to "WARNING\[Server\].* accessed at " (requires:
@@ -270,7 +270,7 @@ MainWindow::MainWindow(QWidget* parent)
         enclosures.push_back(def);
     }
     {
-        QStringList def;
+        std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         /// TODO: change to "WARNING\[Server\].* accessed at " (requires:
@@ -285,7 +285,7 @@ MainWindow::MainWindow(QWidget* parent)
         enclosures.push_back(def);
     }
     {
-        QStringList def; /**< This is a fallback definition that applies
+        std::vector<std::string> def; /**< This is a fallback definition that applies
                               to various parsers.
                               Simpler definitions must be attempted in
                               order from most to least complex to avoid
@@ -304,7 +304,7 @@ MainWindow::MainWindow(QWidget* parent)
         enclosures.push_back(def);
     }
     {
-        QStringList def;
+        std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         def[TOKEN_FILE] = "";
@@ -317,7 +317,7 @@ MainWindow::MainWindow(QWidget* parent)
         enclosures.push_back(def);
     }
     {
-        QStringList def;
+        std::vector<std::string> def;
         // -n option for grep shows line # like:
         // <filename>:<number>:
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
@@ -332,7 +332,7 @@ MainWindow::MainWindow(QWidget* parent)
         enclosures.push_back(def);
     }
     {
-        QStringList def;
+        std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.append("");
         def[TOKEN_FILE] = "";
@@ -698,7 +698,7 @@ void MainWindow::addLine(string line, bool enablePush)
 void MainWindow::CompensateForEditorVersion()
 {
     bool isFound = false;
-    QStringList sVersionArgs;
+    std::vector<std::string> sVersionArgs;
     string sFileTemp = "/tmp/outputinspector.using.kate.version.tmp";
     sVersionArgs.append("--version");
     sVersionArgs.append(" > " + sFileTemp);
@@ -1143,7 +1143,7 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
         // qprocNow
         if (QFile(absFilePath).exists()) {
             string commandMsg = this->settings->getString("editor");
-            QStringList qslistArgs;
+            std::vector<std::string> qslistArgs;
             // NOTE: -u is not needed at least as of kate 16.12.3 which does not create additional
             // instances of kate
             // qslistArgs.append("-u");

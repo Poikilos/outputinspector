@@ -62,7 +62,7 @@ public:
     const int ROLE_DETAILS = Qt::UserRole + 5;
     std::list<std::string> sInternalFlags;
     std::list<std::string> sSectionBreakFlags;
-    std::list<QStringList> enclosures;
+    std::list<std::vector<std::string>> enclosures;
     std::map<std::string, QBrush> brushes;
 
     explicit MainWindow(QWidget *parent = 0);
@@ -97,7 +97,7 @@ private:
     Ui::MainWindow *ui;
     void CompensateForEditorVersion();
 
-    QStringList m_ToDoFlags = {"TODO","FIXME"};
+    std::vector<std::string> m_ToDoFlags = {"TODO","FIXME"};
     std::string m_Error = "Error";
     std::string m_Warning = "Warning";
     std::string m_CommentToken = "//";
@@ -124,7 +124,7 @@ private:
     int iErrors = 0;
     int iWarnings = 0;
     int iTODOs = 0;
-    QStringList m_Files;
+    std::vector<std::string> m_Files;
 };
 
 #endif // MAINWINDOW_H
