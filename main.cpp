@@ -32,16 +32,16 @@ int main(int argc, char *argv[])
             int signIndex = findCS(qArg, "=", 0);
             if (signIndex>-1) {
                 int valueIndex = signIndex + 1;
-                string name = qArg.mid(2, signIndex-2);
-                window.settings->setValue(name, qArg.mid(valueIndex).trimmed());
+                string name = qArg.substr(2, signIndex-2);
+                window.settings->setValue(name, strip(qArg.substr(valueIndex)));
                 info("set " + name + " to '"
-                     + qArg.mid(valueIndex).trimmed() + "'");
+                     + strip(qArg.substr(valueIndex)) + "'");
             }
         }
     }
-    window.init(sErrorsListFileName.trimmed());
-    window.show();
+    window.init(strip(sErrorsListFileName));
+    // TODO: window.show();
     //app.setWindowIcon(QIcon("outputinspector-64.png"));
     //app.setWindowIcon(QIcon(ICON));
-    // return app.exec();
+    // TODO: return app.exec();
 }

@@ -15,6 +15,7 @@ int findCS(std::string haystack, std::string needle, int start);
 int findCI(std::string haystack, std::string needle, int start);
 bool inList(std::vector<std::string> haystack, std::string needle);
 std::string os_path_join(std::string p1, std::string p2);
+// std::string mid(std::string s, int start, int length);
 
 class OIColor
 {

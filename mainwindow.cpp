@@ -42,7 +42,7 @@ bool endswithCI(std::string const &haystack, std::string const &needle) {
 
 int findCI(std::string haystack, std::string needle, int start) {
     std::locale loc;
-    needle = needle.
+    needle = needle;
     std::size_t found = tolower(haystack, loc).find(tolower(needle, loc), start);
     return (found != std::string::npos) ? found : -1;
 }
@@ -59,6 +59,12 @@ bool inList(std::vector<std::string> haystack, string needle) {
 string os_path_join(string p1, string p2) {
     return p1 + "/" + p2;
 }
+
+/*
+std::string mid(std::string s, int start, int length) {
+    return s.substr(start, length);
+}
+*/
 
 string OIWidget::text();
 
@@ -131,11 +137,11 @@ string MainWindow::unmangledPath(string path)
         // int start = match.capturedStart(0);
         int end = match.capturedEnd(0);
         std::list<int> tryOffsets = std::list<int>();
-        tryOffsets.append(-2);
-        tryOffsets.append(1);
-        tryOffsets.append(0);
+        tryOffsets.push_back(-2);
+        tryOffsets.push_back(1);
+        tryOffsets.push_back(0);
         for (auto tryOffset : tryOffsets) {
-            string tryPath = path.mid(end+tryOffset);
+            string tryPath = path.substr(end+tryOffset);
             if (QFile(tryPath).exists()) {
                 if (verbose) {
                     MainWindow::info(
@@ -478,8 +484,8 @@ void MainWindow::init(string errorsListFileName)
     // QTextStream err(stderr);  // avoid quotes and escapes caused by qWarning().noquote() being derived from qDebug()--alternative to qWarning().noquote().noquote()<<
 
     QFile qfileTest(errorsListFileName);
-    // this->m_ToDoFlags.append("TODO");
-    // this->m_ToDoFlags.append("FIXME");
+    // this->m_ToDoFlags.push_back("TODO");
+    // this->m_ToDoFlags.push_back("FIXME");
     // int cutToDoCount = 2;
     // ui->mainListWidget is a std::listWidget
     // setCentralWidget(ui->mainListWidget);
@@ -557,10 +563,10 @@ void MainWindow::init(string errorsListFileName)
             // this->addLine(title + ":" + msg, true);
         }
     }
-    this->inTimer = new QTimer(this);
-    this->inTimer->setInterval(500);  // milliseconds
-    connect(this->inTimer, SIGNAL(timeout()), this, SLOT(readInput()));
-    this->inTimer->start();
+    // this->inTimer = new QTimer(this);
+    // this->inTimer->setInterval(500);  // milliseconds
+    // TODO: read standard input (in case on right of pipe): connect(this->inTimer, SIGNAL(timeout()), this, SLOT(readInput()));
+    // this->inTimer->start();
 } // end init
 
 /**
@@ -581,7 +587,7 @@ void MainWindow::addLine(string line, bool enablePush)
     // TODO: debug performance of new and delete
     std::map<string, string>* info = new std::map<string, string>;
     if (line.length() > 0) {
-        if (line.trimmed().length() > 0)
+        if (strip(line).length() > 0)
             this->m_NonBlankLineCount++;
         if (isFatalSourceError(line)) {
             ui->mainListWidget->addItem(new OIListWidgetItem(line + " <your compiler (or other tool) recorded this fatal or summary error before outputinspector ran>", ui->mainListWidget));
@@ -653,7 +659,7 @@ void MainWindow::addLine(string line, bool enablePush)
                     iErrors++;
             }
             if (this->settings->getBool("ShowWarningsLast") && isWarning)
-                this->lwiWarnings.append(lwi);
+                this->lwiWarnings.push_back(lwi);
             else
                 ui->mainListWidget->addItem(lwi);
 
@@ -672,15 +678,15 @@ void MainWindow::addLine(string line, bool enablePush)
 
             //if ((is_jshint && endswithCI((*info)["file"],".js")) || findCI(line, this->m_Error, 0) > -1) {
             //  // TODO?: if (is_jshint|| findCI(line, "previous error", 0)<0) iErrors++;
-            //  // if (this->config->getBool("ShowWarningsLast")) this->m_Errors.append(line);
+            //  // if (this->config->getBool("ShowWarningsLast")) this->m_Errors.push_back(line);
             //}
 
             if (this->settings->getBool("FindTODOs")) {
                 if (info->at("good") == "true") {
                     string sFileX;// = unmangledPath(info->at("file"));
-                    sFileX = absPathOrSame(sFileX); // =line.mid(0,findCI(line, "(", 0));
+                    sFileX = absPathOrSame(sFileX); // =line.substr(0,findCI(line, "(", 0));
                     if (!inList(this->m_Files, sFileX)) {
-                        this->m_Files.append(sFileX);
+                        this->m_Files.push_back(sFileX);
                         QFile qfileSource(sFileX);
                         if (this->m_Verbose)
                             MainWindow::debug("outputinspector trying to open '" + sFileX + "'...");
@@ -707,7 +713,7 @@ void MainWindow::addLine(string line, bool enablePush)
                                     string sNumPos;
                                     int processedCol = iToDoFound;
                                     for (int citedI = 0; citedI < sSourceLine.length(); citedI++) {
-                                        if (sSourceLine.mid(citedI, 1) == "\t")
+                                        if (sSourceLine.substr(citedI, 1) == "\t")
                                             processedCol += (this->settings->getInt("CompilerTabWidth") - 1);
                                         else
                                             break;
@@ -715,7 +721,7 @@ void MainWindow::addLine(string line, bool enablePush)
                                     processedCol += 1; // start numbering at 1 to mimic compiler
                                     processedCol += 2; // +2 to start after slashes
                                     sNumPos.setNum(processedCol, 10);
-                                    string sLineToDo = sFileX + "(" + sNumLine + "," + sNumPos + ") " + sSourceLine.mid(iToDoFound);
+                                    string sLineToDo = sFileX + "(" + sNumLine + "," + sNumPos + ") " + sSourceLine.substr(iToDoFound);
                                     OIListWidgetItem* lwi = new OIListWidgetItem(sLineToDo);
                                     lwi->setData(ROLE_ROW, sNumLine);
                                     lwi->setData(ROLE_COL, sNumPos);
@@ -728,7 +734,7 @@ void MainWindow::addLine(string line, bool enablePush)
                                     } else {
                                         lwi->setForeground(brushes["ToDo"]);
                                     }
-                                    this->lwiToDos.append(lwi);
+                                    this->lwiToDos.push_back(lwi);
                                     iTODOs++;
                                 }
                             } // end while not at end of source file
@@ -761,8 +767,8 @@ void MainWindow::CompensateForEditorVersion()
     bool isFound = false;
     std::vector<std::string> sVersionArgs;
     string sFileTemp = "/tmp/outputinspector.using.kate.version.tmp";
-    sVersionArgs.append("--version");
-    sVersionArgs.append(" > " + sFileTemp);
+    sVersionArgs.push_back("--version");
+    sVersionArgs.push_back(" > " + sFileTemp);
     // QProcess::execute(IniString("editor"), sVersionArgs);
     system((char*)string(this->settings->getString("editor") + " --version > " + sFileTemp).toLocal8Bit().data());
     OutputInspectorSleepThread::msleep(125);
@@ -782,7 +788,7 @@ void MainWindow::CompensateForEditorVersion()
                 if (iDot > -1) {
                     bool ok;
                     isFound = true;
-                    this->m_KateMajorVer = string(line.mid(6, iDot - 6)).toInt(&ok, 10);
+                    this->m_KateMajorVer = string(line.substr(6, iDot - 6)).toInt(&ok, 10);
                 }
             }
         }
@@ -876,7 +882,7 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
                         paramAToken, fileTokenI + fileToken.length()
                     );
                     if (paramATokenI >=0) {
-                        if (!line.mid(paramATokenI+paramAToken.length(), 1).contains(numOrMoreRE)) {
+                        if (!line.substr(paramATokenI+paramAToken.length(), 1).contains(numOrMoreRE)) {
                             // Don't allow the opener if the next character is
                             // not a digit.
                             paramATokenI = -1;
@@ -985,29 +991,29 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
 
         string filePath;
         if (paramATokenI > fileI)
-            filePath = line.mid(fileI, paramATokenI - fileI);
+            filePath = line.substr(fileI, paramATokenI - fileI);
         else
-            filePath = line.mid(fileI, endParamsTokenI - fileI);
+            filePath = line.substr(fileI, endParamsTokenI - fileI);
 
-        filePath = filePath.trimmed();
+        filePath = strip(filePath);
         if (filePath.length() >= 2) {
             if ((startswithCS(filePath, '"') && endswithCS(filePath, '"')) || (startswithCS(filePath, '\'') && endswithCS(filePath, '\''))) {
-                filePath = filePath.mid(1, filePath.length() - 2);
+                filePath = filePath.substr(1, filePath.length() - 2);
             }
         }
         MainWindow::debug("[outputinspector][debug] file path before unmangling: \"" + filePath + "\"");
         filePath = unmangledPath(filePath);
         (*info)["file"] = filePath;
-        (*info)["row"] = line.mid(paramAI, paramBTokenI - paramAI);
+        (*info)["row"] = line.substr(paramAI, paramBTokenI - paramAI);
         if (paramBToken.length() > 0)
-            (*info)["column"] = line.mid(paramBI, endParamsTokenI - paramBI);
+            (*info)["column"] = line.substr(paramBI, endParamsTokenI - paramBI);
         else
             (*info)["column"] = "";
-        if (this->m_VerboseParsing) MainWindow::info("        file '" + line.mid(fileI, paramATokenI - fileI) + "'");
-        // if (this->m_VerboseParsing) MainWindow::info("        row '" + line.mid(paramAI, paramBTokenI - paramAI) + "'");
+        if (this->m_VerboseParsing) MainWindow::info("        file '" + line.substr(fileI, paramATokenI - fileI) + "'");
+        // if (this->m_VerboseParsing) MainWindow::info("        row '" + line.substr(paramAI, paramBTokenI - paramAI) + "'");
         if (this->m_VerboseParsing) MainWindow::info("        row '" + to_string((*info)["row"]) + "'");
         if (this->m_VerboseParsing) MainWindow::info("          length " + to_string(paramBTokenI) + "-" to_string(paramAI);
-        //if (this->m_VerboseParsing) qInfo().noquote() << "        col '" + line.mid(paramBI, endParamsTokenI - paramBI) + "'";
+        //if (this->m_VerboseParsing) qInfo().noquote() << "        col '" + line.substr(paramBI, endParamsTokenI - paramBI) + "'";
         if (this->m_VerboseParsing) MainWindow::info("        col '" + to_string((*info)["column"]) + "'");
         if (this->m_VerboseParsing) MainWindow::info("          length " + to_string(endParamsTokenI) + "-" + to_string(paramBI));
 
@@ -1129,7 +1135,7 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(OIWidget* item)
                         int tabCount = 0;
                         // TODO: Use regex for finding the tab.
                         for (int tryTabI = 0; tryTabI < line.length(); tryTabI++) {
-                            if (line.mid(tryTabI, 1) == "\t")
+                            if (line.substr(tryTabI, 1) == "\t")
                                 tabCount++;
                             else
                                 break;
@@ -1207,22 +1213,22 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(OIWidget* item)
             std::vector<std::string> qslistArgs;
             // NOTE: -u is not needed at least as of kate 16.12.3 which does not create additional
             // instances of kate
-            // qslistArgs.append("-u");
+            // qslistArgs.push_back("-u");
             // commandMsg+=" -u";
-            // qslistArgs.append("\""+absFilePath+"\"");
-            qslistArgs.append(absFilePath);
+            // qslistArgs.push_back("\""+absFilePath+"\"");
+            qslistArgs.push_back(absFilePath);
             commandMsg += " " + absFilePath;
-            qslistArgs.append("--line"); // split into separate arg, otherwise geany complains that
+            qslistArgs.push_back("--line"); // split into separate arg, otherwise geany complains that
                                          // it doesn't understand the arg "--line 1"
-            qslistArgs.append(citedRowS);
+            qslistArgs.push_back(citedRowS);
             commandMsg += " --line " + citedRowS;
-            // qslistArgs.append(citedRowS);
-            qslistArgs.append("--column"); // NOTE: -c is column in kate, but alternate config dir
+            // qslistArgs.push_back(citedRowS);
+            qslistArgs.push_back("--column"); // NOTE: -c is column in kate, but alternate config dir
                                            // in geany, so use --column
-            qslistArgs.append(citedColS); // NOTE: -c is column in kate, but alternate config dir
+            qslistArgs.push_back(citedColS); // NOTE: -c is column in kate, but alternate config dir
                                              // in geany, so use --column
             commandMsg += " --column " + citedColS;
-            // qslistArgs.append(citedColS);
+            // qslistArgs.push_back(citedColS);
             // qWarning().noquote() << "qslistArgs: " << qslistArgs;
             QProcess::startDetached( this->settings->getString("editor"), qslistArgs);
             if (!QFile::exists(this->settings->getString("editor"))) {

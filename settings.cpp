@@ -56,12 +56,12 @@ bool Settings::getBool(string key)
         if (this->qs->contains(key)) {
             if (!checkedKeys.contains(key)) {
                 this->sDebug += key + ":" + this->qs->value(key).toString() + ".  ";
-                checkedKeys.append(key);
+                checkedKeys.push_back(key);
             }
             return is_truthy(this->qs->value(key).toString());
         } else if (!checkedKeys.contains(key)) {
             this->sDebug += "No " + key + " line is in " + this->qs->fileName() + ".  ";
-            checkedKeys.append(key);
+            checkedKeys.push_back(key);
         }
     }
     */
@@ -82,7 +82,7 @@ int Settings::getInt(string key)
         if (this->qs->contains(key)) {
             if (!checkedKeys.contains(key)) {
                 this->sDebug += key + ":" + this->qs->value(key).toString() + ".  ";
-                checkedKeys.append(key);
+                checkedKeys.push_back(key);
             }
             bool ok;
             value = this->qs->value(key).toInt(&ok);
@@ -91,7 +91,7 @@ int Settings::getInt(string key)
                                 + this->qs->value(key).toString() + "') failed.";
         } else if (!inList.contains(key)) {
             this->sDebug += "No " + key + " line is in " + this->qs->fileName() + ".  ";
-            checkedKeys.append(key);
+            checkedKeys.push_back(key);
         }
     }
     */
