@@ -2,6 +2,7 @@
 #define SETTINGS_H
 
 #include <string>
+#include <vector>
 
 // region CC BY-SA 4.0 https://stackoverflow.com/a/217605/4541104
 
@@ -76,10 +77,9 @@ public:
     bool getBool(std::string key);
     int getInt(std::string key);
     std::string getString(std::string key);
-    void setValue(std::string key, QVariant value);
-    bool setIfMissing(std::string key, QVariant value);
+    void setValue(std::string key, std::string value);
+    bool setIfMissing(std::string key, std::string value);
     void remove(std::string key);
-    // QVariant value(std::string key);
 
     bool contains(std::string key);
     std::string fileName();

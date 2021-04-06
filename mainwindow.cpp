@@ -1,7 +1,8 @@
 #include "mainwindow.h"
-#include "ui_mainwindow.h"
+// #include "ui_mainwindow.h"
 
 #include <iostream>//this is a trailing comment with no space before or after slashes (for clang-format test)
+#include <vector>
 
 #include "settings.h"
 
@@ -558,14 +559,14 @@ void MainWindow::addLine(string line, bool enablePush)
             // do not specify ui->mainListWidget on new, otherwise will be added automatically
             QListWidgetItem* lwi = new QListWidgetItem(line);
             if (this->m_ActualJumpRow.length() > 0) {
-                lwi->setData(ROLE_ROW, QVariant(this->m_ActualJumpRow));
-                lwi->setData(ROLE_COL, QVariant(this->m_ActualJumpColumn));
+                lwi->setData(ROLE_ROW, this->m_ActualJumpRow);
+                lwi->setData(ROLE_COL, this->m_ActualJumpColumn);
             } else {
-                lwi->setData(ROLE_ROW, QVariant(info->at("row")));
-                lwi->setData(ROLE_COL, QVariant(info->at("column")));
+                lwi->setData(ROLE_ROW, info->at("row"));
+                lwi->setData(ROLE_COL, info->at("column"));
             }
             if (this->m_ActualJump.length() > 0) {
-                lwi->setData(ROLE_COLLECTED_FILE, QVariant(this->m_ActualJump));
+                lwi->setData(ROLE_COLLECTED_FILE, this->m_ActualJump);
                 if (info->at("lower") == "true")
                     lwi->setForeground(brushes["TracebackNotTop"]);
                 else if (info->at("good") == "true")
@@ -573,7 +574,7 @@ void MainWindow::addLine(string line, bool enablePush)
                 else
                     lwi->setForeground(brushes[sColorPrefix + "Details"]);
             } else {
-                lwi->setData(ROLE_COLLECTED_FILE, QVariant(info->at("file")));
+                lwi->setData(ROLE_COLLECTED_FILE, info->at("file"));
                 if (info->at("good") == "true")
                     lwi->setForeground(brushes[sColorPrefix]);
                 else
@@ -582,9 +583,9 @@ void MainWindow::addLine(string line, bool enablePush)
             if (qcontains_any<string>(this->m_MasterLine, this->sInternalFlags)) {
                 lwi->setForeground(brushes["Internal"]);
             }
-            lwi->setData(ROLE_COLLECTED_LINE, QVariant(this->m_MasterLine));
-            lwi->setData(ROLE_DETAILS, QVariant(line != this->m_MasterLine));
-            lwi->setData(ROLE_LOWER, QVariant(info->at("lower")));
+            lwi->setData(ROLE_COLLECTED_LINE, this->m_MasterLine);
+            lwi->setData(ROLE_DETAILS, (line != this->m_MasterLine)? "true" : "false");
+            lwi->setData(ROLE_LOWER, info->at("lower"));
             if (info->at("good") == "true") {
                 if (isWarning)
                     iWarnings++;
@@ -656,12 +657,12 @@ void MainWindow::addLine(string line, bool enablePush)
                                     sNumPos.setNum(processedCol, 10);
                                     string sLineToDo = sFileX + "(" + sNumLine + "," + sNumPos + ") " + sSourceLine.mid(iToDoFound);
                                     QListWidgetItem* lwi = new QListWidgetItem(sLineToDo);
-                                    lwi->setData(ROLE_ROW, QVariant(sNumLine));
-                                    lwi->setData(ROLE_COL, QVariant(sNumPos));
-                                    lwi->setData(ROLE_COLLECTED_FILE, QVariant(sFileX));
-                                    lwi->setData(ROLE_LOWER, QVariant("false"));
-                                    lwi->setData(ROLE_COLLECTED_LINE, QVariant(sLineToDo));
-                                    lwi->setData(ROLE_DETAILS, QVariant("false"));
+                                    lwi->setData(ROLE_ROW, sNumLine);
+                                    lwi->setData(ROLE_COL, sNumPos);
+                                    lwi->setData(ROLE_COLLECTED_FILE, sFileX);
+                                    lwi->setData(ROLE_LOWER, "false");
+                                    lwi->setData(ROLE_COLLECTED_LINE, sLineToDo);
+                                    lwi->setData(ROLE_DETAILS, "false");
                                     if (qcontains_any<string>(this->m_MasterLine, this->sInternalFlags)) {
                                         lwi->setForeground(brushes["Internal"]);
                                     } else {

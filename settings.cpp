@@ -1,6 +1,9 @@
 #include "settings.h"
+
 #include <string>
-using namespace std
+#include <vector>
+
+using namespace std;
 
 std::vector<std::string> Settings::trues = { "true", "1", "on", "yes"};
 
@@ -98,7 +101,7 @@ string Settings::getString(string key)
     return "";
 }
 
-void Settings::setValue(string key, QVariant value)
+void Settings::setValue(string key, string value)
 {
     if (this->qs != nullptr) {
         this->qs->setValue(key, value);
@@ -111,7 +114,7 @@ void Settings::setValue(string key, QVariant value)
  * @param value the new value
  * @return whether the value was actually changed (check sDebug for issues)
  */
-bool Settings::setIfMissing(string key, QVariant value)
+bool Settings::setIfMissing(string key, string value)
 {
     bool changed = false;
     if (this->qs != nullptr) {
@@ -135,13 +138,6 @@ void Settings::remove(string key)
     else this->sDebug += "remove tried to remove " + key
             + "before qs was ready.";
 }
-
-/*
-QVariant Settings::value(string key)
-{
-    return this->qs->value(key);
-}
-*/
 
 bool Settings::contains(string key)
 {

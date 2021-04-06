@@ -3,6 +3,8 @@
 
 #include "settings.h"
 // #include <map>
+#include <vector>
+#include <list>
 
 namespace Ui {
 class MainWindow;
