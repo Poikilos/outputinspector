@@ -19,6 +19,7 @@ Settings::Settings(string filePath)
 
 Settings::~Settings()
 {
+    /*
     if (this->qs != nullptr) {
         this->qs->sync();
         delete this->qs;
@@ -26,16 +27,19 @@ Settings::~Settings()
     else {
         cerr << "WARNING: The QSettings object was not initialized before the Settings object was deleted.";
     }
+    */
 }
 
 bool Settings::readIni(string filePath)
 {
     this->filePath = filePath;
+    /*
     if (this->qs != nullptr) {
         delete this->qs;
     } else { //if (this->qs == nullptr) {
     }
-    this->qs = new QSettings(filePath, QSettings::IniFormat);
+    */
+    // this->qs = new QSettings(filePath, QSettings::IniFormat);
     return true;
 }
 
@@ -47,6 +51,7 @@ bool Settings::readIni(string filePath)
 bool Settings::getBool(string key)
 {
     static const string bad="<%outputinspector(missing)%>";
+    /*
     if (this->qs != nullptr) {
         if (this->qs->contains(key)) {
             if (!checkedKeys.contains(key)) {
@@ -59,12 +64,20 @@ bool Settings::getBool(string key)
             checkedKeys.append(key);
         }
     }
+    */
+    if (this->contains(key)) {
+        return Settings::is_truthy(this->dat[key]);
+    }
+    else {
+        this->sDebug += "No " + key + " line is in " + this->fileName() + ".  ";
+    }
     return false;
 }
 
 int Settings::getInt(string key)
 {
     int value = 0;
+    /*
     if (this->qs != nullptr) {
         if (this->qs->contains(key)) {
             if (!checkedKeys.contains(key)) {
@@ -81,31 +94,36 @@ int Settings::getInt(string key)
             checkedKeys.append(key);
         }
     }
+    */
+    if (this->contains(key)) {
+        std::string::size_type sz;   // alias of size_t
+        value = std::stoi(this->dat[key], &sz);
+    }
+    else {
+        this->sDebug += "No " + key + " line is in " + this->fileName() + ".  ";
+    }
     return value;
 }
 
 string Settings::getString(string key)
 {
-    if (this->qs != nullptr) {
-        if (this->qs->contains(key)) {
-            if (!checkedKeys.contains(key)) {
-                this->sDebug += key + ":" + this->qs->value(key).toString() + ".  ";
-                checkedKeys.append(key);
-            }
-            return this->qs->value(key).toString();
-        } else if (!checkedKeys.contains(key)) {
-            this->sDebug += "No " + key + " line is in " + this->qs->fileName() + ".  ";
-            checkedKeys.append(key);
-        }
+    if (this->contains(key)) {
+        return this->dat[key];
+    }
+    else {
+        this->sDebug += "No " + key + " line is in " + this->fileName() + ".  ";
     }
     return "";
 }
 
 void Settings::setValue(string key, string value)
 {
+    this->dat[key] = value;
+    /*
     if (this->qs != nullptr) {
         this->qs->setValue(key, value);
     }
+    */
 }
 
 /**
@@ -117,19 +135,22 @@ void Settings::setValue(string key, string value)
 bool Settings::setIfMissing(string key, string value)
 {
     bool changed = false;
-    if (this->qs != nullptr) {
-        if (!this->qs->contains(key)) {
-            this->qs->setValue(key, value);
-            changed = true;
-        }
+    if (!this->contains(key)) {
+        this->dat[key] = value;
+        changed = true;
     }
-    else this->sDebug += "setIfMissing tried to set " + key
-            + "before qs was ready.";
     return changed;
 }
 
 void Settings::remove(string key)
 {
+    std::map<string, string>::iterator it;
+    it = this->dat.find(key);
+    if (it != this->dat.end()) {
+        this->dat.erase(it);
+    }
+
+    /*
     if (this->qs != nullptr) {
         if (!this->qs->contains(key)) {
             this->qs->remove(key);
@@ -137,32 +158,35 @@ void Settings::remove(string key)
     }
     else this->sDebug += "remove tried to remove " + key
             + "before qs was ready.";
+    */
 }
 
 bool Settings::contains(string key)
 {
+    /*
     if (this->qs != nullptr) {
         return this->qs->contains(key);
     }
-    return false;
+    */
+    return dat.find(key) != dat.end();
 }
 
 string Settings::fileName()
 {
-    if (this->qs != nullptr) {
-        return this->qs->fileName();
-    }
+    return this->_fileName;
     return "";
 }
 
 void Settings::sync()
 {
+    /*
     if (this->qs != nullptr) {
         this->qs->sync();
     }
     else {
         cerr << "WARNING: [outputinspector] Saving settings with sync() failed because the QSettings object was not initialized.";
     }
+    */
 }
 
 /**
@@ -172,9 +196,5 @@ void Settings::sync()
  */
 bool Settings::is_truthy(string value)
 {
-    for (auto s : Settings::trues) {
-        if (value.toLower()==s)
-            return true;
-    }
-    return false;
+    return std::find(Settings::trues.begin(), Settings::trues.end(), value) != Settings::trues.end();
 }

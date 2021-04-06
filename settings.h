@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 // region CC BY-SA 4.0 https://stackoverflow.com/a/217605/4541104
 
@@ -64,6 +65,7 @@ private:
                                   qsettings-give-error-on-the-position-of-ini-
                                   file-in-linux-kubuntu/3>). */
 public:
+    std::map<std::string, std::string> dat;
     std::string filePath;
     std::vector<std::string> checkedKeys;
 
@@ -82,6 +84,7 @@ public:
     void remove(std::string key);
 
     bool contains(std::string key);
+    std::string _fileName;
     std::string fileName();
     void sync();
     std::string sDebug;

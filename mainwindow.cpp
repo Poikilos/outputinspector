@@ -6,6 +6,8 @@
 
 #include "settings.h"
 
+ std::string OIWidget::text();
+
 // endregion scripting
 
 /**
@@ -105,9 +107,7 @@ string MainWindow::unmangledPath(string path)
     return path;
 }
 
-MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+MainWindow::MainWindow()
 {
     ui->setupUi(this);
     // QDir configDir = QStandardPaths::StandardLocation(QStandardPaths::ConfigLocation());
@@ -1023,7 +1023,7 @@ string MainWindow::absPathOrSame(string filePath)
     return absFilePath;
 }
 
-void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
+void MainWindow::on_mainListWidget_itemDoubleClicked(OIWidget* item)
 {
     string line = item->text();
     string actualJump = item->data(ROLE_COLLECTED_FILE).toString(); // item->toolTip();

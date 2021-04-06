@@ -6,14 +6,30 @@
 #include <vector>
 #include <list>
 
+class QBrush
+{
+
+};
+
+class OIWidget
+{
+    std::string text();
+    std::vector<std::string> data;
+};
+
+class OIListWidgetItem
+{
+
+};
+
+const int OI_USER_ROLES_START = 1000;
+
 namespace Ui {
 class MainWindow;
 }
 
-class MainWindow : public QMainWindow
+class MainWindow
 {
-    Q_OBJECT
-
 public:
     static std::string unmangledPath(std::string path);
     bool verbose = false; // This is manually set to true for debug only.
@@ -56,27 +72,27 @@ public:
                                           describes the parser mode (def)
                                           in a human-readable way.*/
     const int PARSE_PARTS_COUNT = 7;
-    const int ROLE_COLLECTED_FILE = Qt::UserRole;
-    const int ROLE_ROW = Qt::UserRole + 1;
-    const int ROLE_COL = Qt::UserRole + 2;
-    const int ROLE_LOWER = Qt::UserRole + 3;
-    const int ROLE_COLLECTED_LINE = Qt::UserRole + 4;
-    const int ROLE_DETAILS = Qt::UserRole + 5;
+    const int ROLE_COLLECTED_FILE = OI_USER_ROLES_START;
+    const int ROLE_ROW = OI_USER_ROLES_START + 1;
+    const int ROLE_COL = OI_USER_ROLES_START + 2;
+    const int ROLE_LOWER = OI_USER_ROLES_START + 3;
+    const int ROLE_COLLECTED_LINE = OI_USER_ROLES_START + 4;
+    const int ROLE_DETAILS = OI_USER_ROLES_START + 5;
     std::list<std::string> sInternalFlags;
     std::list<std::string> sSectionBreakFlags;
     std::list<std::vector<std::string>> enclosures;
     std::map<std::string, QBrush> brushes;
 
-    explicit MainWindow(QWidget *parent = 0);
+    MainWindow();
     ~MainWindow();
     void addLine(std::string, bool);
     void init(std::string);
     bool isFatalSourceError(std::string);
     std::map<std::string, std::string>* lineInfo(const std::string line, const std::string actualJump, const std::string actualJumpLine, bool isPrevCallPrevLine);
     void lineInfo(std::map<std::string, std::string>* info, const std::string sLineOriginal, const std::string actualJump, const std::string actualJumpLine, bool isPrevCallPrevLine);
-    void debug(string msg);
-    void warn(string msg);
-    void info(string msg);
+    void debug(std::string msg);
+    void warn(std::string msg);
+    void info(std::string msg);
     std::string absPathOrSame(std::string filePath);
     Settings* settings = nullptr;
     bool m_EnableTabDebugMsg = false;
@@ -91,8 +107,8 @@ public:
     bool m_Verbose = false;
     bool m_VerboseParsing = false;
     #endif
-private slots:
-    void on_mainListWidget_itemDoubleClicked(QListWidgetItem *item);
+private:
+    void on_mainListWidget_itemDoubleClicked(OIWidget* item);
     void readInput();
 
 private:
@@ -104,8 +120,8 @@ private:
     std::string m_Warning = "Warning";
     std::string m_CommentToken = "//";
 
-    QList<QListWidgetItem*> lwiWarnings;
-    QList<QListWidgetItem*> lwiToDos;
+    std::list<OIListWidgetItem*> lwiWarnings;
+    std::list<OIListWidgetItem*> lwiToDos;
     int m_LineCount = 0;
     int m_NonBlankLineCount = 0;
     std::string m_ActualJump; /**< Store the jump in case the file & line# are on
@@ -121,7 +137,7 @@ private:
 
     void pushWarnings(); /**< Push warnings to the GUI. */
 
-    QTimer* inTimer; /**< Read standard input lines regularly **/
+    // QTimer* inTimer; /**< Read standard input lines regularly **/
 
     int iErrors = 0;
     int iWarnings = 0;
