@@ -13,6 +13,7 @@ bool endswithCS(std::string haystack, std::string needle);
 bool endswithCI(std::string haystack, std::string needle);
 int findCS(std::string haystack, std::string needle, int start);
 int findCI(std::string haystack, std::string needle, int start);
+bool inList(std::vector<std::string> haystack, std::string needle);
 std::string os_path_join(std::string p1, std::string p2);
 
 class OIColor
@@ -31,6 +32,9 @@ public:
     OIColor _color;
 };
 
+OIColor OI_lightGray = OIColor::fromRgb(192, 192, 192);
+OIColor OI_darkGreen = OIColor::fromRgb(0, 64, 0);
+OIColor OI_black = OIColor::fromRgb(0, 0, 0);
 
 class OIWidget
 {
@@ -111,9 +115,9 @@ public:
     bool isFatalSourceError(std::string);
     std::map<std::string, std::string>* lineInfo(const std::string line, const std::string actualJump, const std::string actualJumpLine, bool isPrevCallPrevLine);
     void lineInfo(std::map<std::string, std::string>* info, const std::string sLineOriginal, const std::string actualJump, const std::string actualJumpLine, bool isPrevCallPrevLine);
-    void debug(std::string msg);
-    void warn(std::string msg);
-    void info(std::string msg);
+    static void debug(std::string msg);
+    static void warn(std::string msg);
+    static void info(std::string msg);
     std::string absPathOrSame(std::string filePath);
     Settings* settings = nullptr;
     bool m_EnableTabDebugMsg = false;

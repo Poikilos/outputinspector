@@ -89,7 +89,7 @@ int Settings::getInt(string key)
             if (!ok)
                 this->sDebug += "Converting " + key + "(value '"
                                 + this->qs->value(key).toString() + "') failed.";
-        } else if (!checkedKeys.contains(key)) {
+        } else if (!inList.contains(key)) {
             this->sDebug += "No " + key + " line is in " + this->qs->fileName() + ".  ";
             checkedKeys.append(key);
         }
