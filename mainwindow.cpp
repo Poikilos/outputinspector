@@ -4,15 +4,53 @@
 #include <iostream>//this is a trailing comment with no space before or after slashes (for clang-format test)
 #include <vector>
 #include <cstddef>
+#include <string>
 
 #include "settings.h"
 
 using namespace std;
 
 
-bool startswith(std::string haystack, std::string needle) {
+bool startswithCS(std::string haystack, std::string needle) {
     return haystack.rfind(needle, 0) == 0;
 }
+
+bool startswithCI(std::string haystack, std::string needle) {
+    std::locale loc;
+    return tolower(haystack, loc).rfind(tolower(needle, loc), 0) == 0;
+}
+
+bool endswithCS(std::string const &haystack, std::string const &needle) {
+    if (haystack.length() >= needle.length()) {
+        return (0 == haystack.compare(haystack.length()-needle.length(), needle.length(), needle));
+    }
+    else {
+        return false;
+    }
+}
+
+bool endswithCI(std::string const &haystack, std::string const &needle) {
+    if (haystack.length() >= needle.length()) {
+        std::locale loc;
+        return (0 == tolower(haystack, loc).compare(haystack.length()-needle.length(), needle.length(), tolower(needle, loc)));
+    }
+    else {
+        return false;
+    }
+}
+
+int findCI(std::string haystack, std::string needle, int start) {
+    std::locale loc;
+    needle = needle.
+    std::size_t found = tolower(haystack, loc).find(tolower(needle, loc), start);
+    return (found != std::string::npos) ? found : -1;
+}
+int findCS(std::string haystack, std::string needle, int start) {
+    std::locale loc;
+    std::size_t found = haystack.find(needle, start);
+    return (found != std::string::npos) ? found : -1;
+}
+
 
 string os_path_join(string p1, string p2) {
     return p1 + "/" + p2;
@@ -423,10 +461,10 @@ MainWindow::MainWindow()
 bool MainWindow::isFatalSourceError(string line)
 {
     return (
-        line.indexOf("Can't open", 0, Qt::CaseInsensitive) > -1 //jshint could not find a source file
-        || line.indexOf("Too many errors", 0, Qt::CaseInsensitive) > -1 //jshint already showed the error for this line, but can't display more errors
-        || line.indexOf("could not be found", 0, Qt::CaseInsensitive) > -1 //mcs could not find a source file
-        || line.indexOf("compilation failed", 0, Qt::CaseInsensitive) > -1 //mcs could not compile the sources
+        findCI(line, "Can't open", 0) > -1 //jshint could not find a source file
+        || findCI(line, "Too many errors", 0) > -1 //jshint already showed the error for this line, but can't display more errors
+        || findCI(line, "could not be found", 0) > -1 //mcs could not find a source file
+        || findCI(line, "compilation failed", 0) > -1 //mcs could not compile the sources
     );
 }
 
@@ -586,7 +624,7 @@ void MainWindow::addLine(string line, bool enablePush)
             if (this->m_ActualJump.length() > 0) {
                 this->m_MasterLine = this->m_ActualJumpLine;
             }
-            if (this->m_MasterLine.indexOf(this->m_Warning, 0, Qt::CaseInsensitive) > -1) {
+            if (findCI(this->m_MasterLine, this->m_Warning, 0) > -1) {
                 isWarning = true;
                 sColorPrefix = "Warning";
             }
@@ -644,15 +682,15 @@ void MainWindow::addLine(string line, bool enablePush)
                 }
             }
 
-            //if ((is_jshint && (*info)["file"].endsWith(".js")) || line.indexOf(this->m_Error, 0, Qt::CaseInsensitive) > -1) {
-            //  // TODO?: if (is_jshint|| line.indexOf("previous error",0,Qt::CaseInsensitive)<0) iErrors++;
+            //if ((is_jshint && endswithCI((*info)["file"],".js")) || findCI(line, this->m_Error, 0) > -1) {
+            //  // TODO?: if (is_jshint|| findCI(line, "previous error", 0)<0) iErrors++;
             //  // if (this->config->getBool("ShowWarningsLast")) this->m_Errors.append(line);
             //}
 
             if (this->settings->getBool("FindTODOs")) {
                 if (info->at("good") == "true") {
                     string sFileX;// = unmangledPath(info->at("file"));
-                    sFileX = absPathOrSame(sFileX); // =line.mid(0,line.indexOf("("));
+                    sFileX = absPathOrSame(sFileX); // =line.mid(0,findCI(line, "(", 0));
                     if (!this->m_Files.contains(sFileX, Qt::CaseSensitive)) {
                         this->m_Files.append(sFileX);
                         QFile qfileSource(sFileX);
@@ -667,10 +705,10 @@ void MainWindow::addLine(string line, bool enablePush)
                                 string sSourceLine = qtextSource.readLine(0);
                                 iSourceLineFindToDo++; // Increment this now since the compiler's line numbering starts with 1.
                                 int iToDoFound = -1;
-                                int iCommentFound = sSourceLine.indexOf(this->m_CommentToken, 0, Qt::CaseInsensitive);
+                                int iCommentFound = findCI(sSourceLine, this->m_CommentToken, 0);
                                 if (iCommentFound > -1) {
                                     for (int i=0; i<this->m_ToDoFlags.length(); i++) {
-                                        iToDoFound = sSourceLine.indexOf(this->m_ToDoFlags[i], iCommentFound + 1, Qt::CaseInsensitive);
+                                        iToDoFound = findCI(sSourceLine, this->m_ToDoFlags[i], iCommentFound + 1);
                                         if (iToDoFound > -1)
                                             break;
                                     }
@@ -751,8 +789,8 @@ void MainWindow::CompensateForEditorVersion()
             line = qtextNow.readLine(0); // does trim off newline characters
             if (this->m_Verbose)
                 QMessageBox::information(this, "Output Inspector - Finding Kate version...", line);
-            if (line.startsWith(sKateOpener, Qt::CaseInsensitive)) {
-                int iDot = line.indexOf(".", 0);
+            if (startswithCI(line, sKateOpener)) {
+                int iDot = findCS(line, ".", 0);
                 if (iDot > -1) {
                     bool ok;
                     isFound = true;
@@ -836,7 +874,7 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
             paramBToken = (*itList)[TOKEN_PARAM_B]; // coordinate delimiter (blank if no column)
             endParamsToken = (*itList)[TOKEN_END_PARAMS]; // what is after last coord ("\n" if line ends)
             if (fileToken.length() != 0)
-                fileTokenI = line.indexOf(fileToken);
+                fileTokenI = findCS(line, fileToken);
             else
                 fileTokenI = 0; // if file path at begining of line
             if (fileTokenI > -1) {
@@ -846,7 +884,7 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
                 }
 
                 if (paramAToken.length() > 0) {
-                    paramATokenI = line.indexOf(
+                    paramATokenI = findCS(line
                         paramAToken, fileTokenI + fileToken.length()
                     );
                     if (paramATokenI >=0) {
@@ -857,7 +895,7 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
                         }
                     }
                 } else if (endParamsToken.length() > 0) {
-                    paramATokenI = line.indexOf(endParamsToken);
+                    paramATokenI = findCS(line, endParamsToken);
                     if (paramATokenI < 0) {
                         paramATokenI = line.length();
                     }
@@ -877,7 +915,7 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
                     if (paramBToken.length() > 0) {
                         // There should be no B if there is no A, so failing
                         // in that case is OK.
-                        paramBTokenI = line.indexOf(paramBToken, paramAI);
+                        paramBTokenI = findCS(line, paramBToken, paramAI);
                     }
                     else {
                         paramBTokenI = paramAI;
@@ -901,7 +939,7 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
                                 this->info("  using paramBI for endParamsTokenI: " + to_string(paramBI));
                             }
                         } else if (endParamsToken != "\n") {
-                            endParamsTokenI = line.indexOf(endParamsToken, paramBI);
+                            endParamsTokenI = findCS(line, endParamsToken, paramBI);
                         } else {
                             endParamsTokenI = line.length();
                             // endParamsToken = "<forced token=\"" + endParamsToken.replace("\"", "\\\"").replace("\n", "\\n") + "\">";
@@ -965,7 +1003,7 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
 
         filePath = filePath.trimmed();
         if (filePath.length() >= 2) {
-            if ((filePath.startsWith('"') && filePath.endsWith('"')) || (filePath.startsWith('\'') && filePath.endsWith('\''))) {
+            if ((startswithCS(filePath, '"') && endswithCS(filePath, '"')) || (startswithCS(filePath, '\'') && endswithCS(filePath, '\''))) {
                 filePath = filePath.mid(1, filePath.length() - 2);
             }
         }
@@ -985,29 +1023,29 @@ void MainWindow::lineInfo(std::map<string, string>* info, const string originalL
         if (this->m_VerboseParsing) this->info("        col '" + to_string((*info)["column"]) + "'");
         if (this->m_VerboseParsing) this->info("          length " + to_string(endParamsTokenI) + "-" + to_string(paramBI));
 
-        if (filePath.endsWith(".py", Qt::CaseSensitive))
+        if (endswithCS(filePath, ".py"))
             (*info)["language"] = "python";
-        else if (filePath.endsWith(".pyw", Qt::CaseSensitive))
+        else if (endswithCS(filePath, ".pyw"))
             (*info)["language"] = "python";
-        else if (filePath.endsWith(".cpp", Qt::CaseSensitive))
+        else if (endswithCS(filePath, ".cpp"))
             (*info)["language"] = "c++";
-        else if (filePath.endsWith(".h", Qt::CaseSensitive))
+        else if (endswithCS(filePath, ".h"))
             (*info)["language"] = "c++";
-        else if (filePath.endsWith(".hpp", Qt::CaseSensitive))
+        else if (endswithCS(filePath, ".hpp"))
             (*info)["language"] = "c++";
-        else if (filePath.endsWith(".c", Qt::CaseSensitive))
+        else if (endswithCS(filePath, ".c"))
             (*info)["language"] = "c";
-        else if (filePath.endsWith(".js", Qt::CaseSensitive))
+        else if (endswithCS(filePath, ".js"))
             (*info)["language"] = "js";
-        else if (filePath.endsWith(".java", Qt::CaseSensitive))
+        else if (endswithCS(filePath, ".java"))
             (*info)["language"] = "java";
-        else if (filePath.endsWith(".bat", Qt::CaseSensitive))
+        else if (endswithCS(filePath, ".bat"))
             (*info)["language"] = "bat";
-        else if (filePath.endsWith(".sh", Qt::CaseSensitive))
+        else if (endswithCS(filePath, ".sh"))
             (*info)["language"] = "sh";
-        else if (filePath.endsWith(".command", Qt::CaseSensitive))
+        else if (endswithCS(filePath, ".command"))
             (*info)["language"] = "sh";
-        else if (filePath.endsWith(".php", Qt::CaseSensitive))
+        else if (endswithCS(filePath, ".php"))
             (*info)["language"] = "php";
         this->debug("  detected file: '" + filePath + "'");
         (*info)["good"] = "true";
@@ -1051,7 +1089,7 @@ string MainWindow::absPathOrSame(string filePath)
     string setuptoolsTryPkgPath = QDir::cleanPath(sCwd + QDir::separator() + cwDir.dirName());
     if (this->m_Verbose)
         this->info("setuptoolsTryPkgPath:" + setuptoolsTryPkgPath);
-    absFilePath = filePath.startsWith("/", Qt::CaseInsensitive) ? filePath : (sCwd + "/" + filePath);
+    absFilePath = startswithCS(filePath, "/") ? filePath : (sCwd + "/" + filePath);
     if (!QFile(absFilePath).exists() && QDir(setuptoolsTryPkgPath).exists())
         absFilePath = QDir::cleanPath(setuptoolsTryPkgPath + QDir::separator() + filePath);
     return absFilePath;

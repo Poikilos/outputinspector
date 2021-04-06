@@ -25,11 +25,11 @@ int main(int argc, char *argv[])
     // start at 1 since qArgs[0] is self:
     for (int i=0; i<qArgs.size(); i++) {
         string qArg = qArgs[i];
-        if (!qArg.startsWith("--")) {
+        if (!startswithCS(qArg, "--")) {
             sErrorsListFileName = qArg;
         }
         else {
-            int signIndex = qArg.indexOf("=");
+            int signIndex = findCS(qArg, "=", 0);
             if (signIndex>-1) {
                 int valueIndex = signIndex + 1;
                 string name = qArg.mid(2, signIndex-2);

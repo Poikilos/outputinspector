@@ -7,7 +7,12 @@
 #include <list>
 #include <cstddef>
 
-bool startswith(std::string haystack, std::string needle);
+bool startswithCS(std::string haystack, std::string needle);
+bool startswithCI(std::string haystack, std::string needle);
+bool endswithCS(std::string haystack, std::string needle);
+bool endswithCI(std::string haystack, std::string needle);
+int findCS(std::string haystack, std::string needle, int start);
+int findCI(std::string haystack, std::string needle, int start);
 std::string os_path_join(std::string p1, std::string p2);
 
 class OIColor
