@@ -7,6 +7,9 @@
 #include <list>
 #include <cstddef>
 
+bool os_path_isdir(std::string path);
+bool os_path_is_file(std::string path);
+std::string dirname(std::string path);
 bool startswithCS(std::string haystack, std::string needle);
 bool startswithCI(std::string haystack, std::string needle);
 bool endswithCS(std::string haystack, std::string needle);

@@ -8,9 +8,34 @@
 // #include <cstddef>
 #include <string>
 #include <cassert>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 using namespace std;
 
+
+bool os_path_isdir(std::string path) {
+    // See https://stackoverflow.com/a/18101042/4541104
+    // works on linux &  Windows
+    // requires <sys/types.h>, <sys/stat.h>
+    struct stat info;
+
+    if( stat( path, &info ) != 0 )
+        printf( "cannot access %s\n", path );
+    else if( info.st_mode & S_IFDIR )  // S_ISDIR() doesn't exist on my windows
+        return true;
+    else
+        return false;
+    return false; // TODO: finish this
+}
+
+bool os_path_is_file(std::string path) {
+}
+
+std::string dirname(std::string path) {
+    // TODO: finish this: return os.path.split(path)[1]
+    return path;
+}
 
 bool startswithCS(std::string haystack, std::string needle) {
     return haystack.rfind(needle, 0) == 0;
@@ -160,7 +185,7 @@ string MainWindow::unmangledPath(string path)
         tryOffsets.push_back(0);
         for (auto tryOffset : tryOffsets) {
             string tryPath = path.substr(end+tryOffset);
-            if (QFile(tryPath).exists()) {
+            if (os_path_exists(tryPath)) {
                 if (this->_verbosity > 1) {
                     MainWindow::info(
                         "[outputinspector] transformed *.../dir into ../dir: \""
@@ -197,22 +222,11 @@ MainWindow::MainWindow()
     //   how-to-get-a-settings-storage-path-in-a-cross-platform-way-in-qt>
     auto path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     if (path.isEmpty()) cerr << "FATAL: Cannot determine settings storage location" << endl;
-    QDir d{path};
-    if (!d.exists()) {
-        d.mkpath(d.absolutePath());
+    if (!os_path_isdir(path)) {
+        // TODO: os.makedirs(path)
     }
-    string filePath = QDir::cleanPath(d.absolutePath() + QDir::separator() + "settings.txt");
-    QFile f{filePath};
-    /// TODO: fill this in or remove it (and the comments).
-    if (d.exists()) {
-        if (!f.exists()) {
-            // if (f.open(QIODevice::WriteOnly | QIODevice::Truncate))
-            //     f.write("Hello, World");
-        }
-        else {
-
-        }
-    }
+    string filePath = os_path_join(path, "settings.txt"); // TODO: os.path.abspath(path)
+    // TODO: check os_path_isfile(filePath)
     // MainWindow::info("Creating settings: " + this->filePath());
     this->settings = new Settings(filePath);
     MainWindow::info(
@@ -492,7 +506,7 @@ void MainWindow::init(string errorsListFileName)
         CompensateForEditorVersion();
     if (errorsListFileName.length() == 0) {
         string tryPath = "debug.txt";
-        if (QFile(tryPath).exists()) {
+        if (os_path_exists(tryPath)) {
             errorsListFileName = tryPath;
             MainWindow::info("[outputinspector] detected \"" + tryPath + "\"...examining...");
         }
@@ -501,7 +515,7 @@ void MainWindow::init(string errorsListFileName)
     }
     // QTextStream err(stderr);  // avoid quotes and escapes caused by qWarning().noquote() being derived from qDebug()--alternative to qWarning().noquote().noquote()<<
 
-    QFile qfileTest(errorsListFileName);
+    // TODO: QFile qfileTest(errorsListFileName);
     // this->m_ToDoFlags.push_back("TODO");
     // this->m_ToDoFlags.push_back("FIXME");
     // int cutToDoCount = 2;
@@ -516,7 +530,7 @@ void MainWindow::init(string errorsListFileName)
                    + "...skipping \"" + errorsListFileName + "\"...");
     }
     else if (qfileTest.exists()) {
-        if (qfileTest.open(QFile::ReadOnly)) { //| QFile::Translate
+        if (true) { // TODO: qfileTest.open(QFile::ReadOnly)) { //| QFile::Translate
             QTextStream qtextNow(&qfileTest);
             while (!qtextNow.atEnd()) {
                 // NOTE: Readline trims off newline characters.
@@ -705,7 +719,7 @@ void MainWindow::addLine(string line, bool enablePush)
                     sFileX = absPathOrSame(sFileX); // =line.substr(0,findCI(line, "(", 0));
                     if (!inList(this->m_Files, sFileX)) {
                         this->m_Files.push_back(sFileX);
-                        QFile qfileSource(sFileX);
+                        // TODO: QFile qfileSource(sFileX);
                         if (this->_verbosity)
                             MainWindow::debug("outputinspector trying to open '" + sFileX + "'...");
                         // if (!qfileSource.open(QFile::ReadOnly)) {
@@ -764,7 +778,7 @@ void MainWindow::addLine(string line, bool enablePush)
                             qfileSource.close();
                         } // end if could open sourcecode
                         else {
-                            qWarning().noquote() << "[outputinspector] did not scan a file that is cited by the log but that is not present: '" + sFileX + "'";
+                            MainWindow::warn("[outputinspector] did not scan a file that is cited by the log but that is not present: '" + sFileX + "'");
                         }
                     } // end if list does not already contain this file
                 } // end if found filename ender
@@ -792,11 +806,11 @@ void MainWindow::CompensateForEditorVersion()
     system((char*)string(this->settings->getString("editor") + " --version > " + sFileTemp).toLocal8Bit().data());
     OutputInspectorSleepThread::msleep(125);
 
-    QFile qfileTmp(sFileTemp);
+    // TODO: QFile qfileTmp(sFileTemp);
     string line;
-    if (qfileTmp.open(QFile::ReadOnly)) { // | QFile::Translate
+    if (true) { //TODO: qfileTmp.open(QFile::ReadOnly)) { // | QFile::Translate
         // detect Kate version using output of Kate command above
-        QTextStream qtextNow(&qfileTmp);
+        OITextStream qtextNow; //TODO: (&qfileTmp);
         string sKateOpener = "Kate: ";
         while (!qtextNow.atEnd()) {
             line = qtextNow.readLine(0); // does trim off newline characters
@@ -1096,15 +1110,14 @@ void MainWindow::warn(string msg) {
 string MainWindow::absPathOrSame(string filePath)
 {
     string absFilePath;
-    string sCwd = QDir::currentPath(); // current() returns a QDir object
+    string sCwd; // TODO: get cwd
     // Don't use QDir::separator(), since this only is detectable on *nix & bsd-like OS:
-    QDir cwDir = QDir(sCwd);
-    string setuptoolsTryPkgPath = QDir::cleanPath(sCwd + QDir::separator() + cwDir.dirName());
+    string setuptoolsTryPkgPath = os_path_join(sCwd, dirname(sCwd));
     if (this->_verbosity)
-        MainWindow::info("setuptoolsTryPkgPath:" + setuptoolsTryPkgPath);
+        this->info("setuptoolsTryPkgPath:" + setuptoolsTryPkgPath);
     absFilePath = startswithCS(filePath, "/") ? filePath : (sCwd + "/" + filePath);
-    if (!QFile(absFilePath).exists() && QDir(setuptoolsTryPkgPath).exists())
-        absFilePath = QDir::cleanPath(setuptoolsTryPkgPath + QDir::separator() + filePath);
+    if (!os_path_isfile(absFilePath) && os_path_isdir(setuptoolsTryPkgPath))
+        absFilePath = os_path_join(setuptoolsTryPkgPath, filePath);
     return absFilePath;
 }
 
@@ -1142,12 +1155,12 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(OIWidget* item)
         citedColS.setNum(citedCol, 10);
         // endregion only for Kate <= 2
         if (this->m_CompensateForKateTabDifferences) {
-            QFile qfileSource(absFilePath);
+            // TODO: QFile qfileSource(absFilePath);
             string line;
             int readCitedI = 0; /**< This is the current line number while the
                                      loop reads the entire cited file. */
-            if (qfileSource.open(QFile::ReadOnly)) { //| QFile::Translate
-                QTextStream qtextNow(&qfileSource);
+            if (true) { //TODO: qfileSource.open(QFile::ReadOnly)) { //| QFile::Translate
+                OITextStream qtextNow; // TODO: (&qfileSource);
                 while (!qtextNow.atEnd()) {
                     line = qtextNow.readLine(0); //does trim off newline characters
                     if (readCitedI == ((citedRow - yEditorOffset) - 1)) {
@@ -1221,13 +1234,13 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(OIWidget* item)
                 qfileSource.close();
             } // end if can open source file
             else {
-                errorMsg = "Specified file '" + filePath + "' does not exist or is not accessible (if path looks right, try running from the location where it exists instead of '" + QDir::currentPath() + "')";
+                errorMsg = "Specified file '" + filePath + "' does not exist or is not accessible (if path looks right, try running from the location where it exists instead of current path')"; // TODO: show the current path
             }
         } // end if this->m_CompensateForKateTabDifferences
         // string sArgs="-u "+absFilePath+" -l "+citedRowS+" -c "+citedColS;
         // QProcess qprocNow(this->config->getString("editor")+sArgs);
         // qprocNow
-        if (QFile(absFilePath).exists()) {
+        if (os_path_exists(absFilePath)) {
             string commandMsg = this->settings->getString("editor");
             std::vector<std::string> qslistArgs;
             // NOTE: -u is not needed at least as of kate 16.12.3 which does not create additional
@@ -1250,7 +1263,7 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(OIWidget* item)
             // qslistArgs.push_back(citedColS);
             // qWarning().noquote() << "qslistArgs: " << qslistArgs;
             QProcess::startDetached( this->settings->getString("editor"), qslistArgs);
-            if (!QFile::exists(this->settings->getString("editor"))) {
+            if (!os_path_exists(this->settings->getString("editor"))) {
                 // ok to run anyway for fault tolerance, since may be in system path
                 QMessageBox::information(this, "Output Inspector - Configuration", this->settings->getString("editor") + " cannot be accessed.  Try setting the value after editor= in " + this->settings->fileName());
             }
