@@ -2,7 +2,7 @@
 #define MAINWINDOW_H
 
 #include "settings.h"
-// #include <map>
+#include <map>
 #include <vector>
 #include <list>
 #include <cstddef>
@@ -39,26 +39,36 @@ OIColor OI_black = OIColor::fromRgb(0, 0, 0);
 
 class OIWidget
 {
+    std::string _text;
     std::string text();
     std::vector<std::string> data;
 };
 
 class OIListWidgetItem
 {
-
+    std::map<int, std::string> _data;
+    OIBrush _background;
+    OIBrush _foreground;
+public:
+    void setForeground(OIBrush brush);
+    void setBackground(OIBrush brush);
+    void setData(int role, std::string value);
 };
 
-const int OI_USER_ROLES_START = 1000;
+class OITextStream
+{
+public:
+    bool atEnd();
+};
 
-namespace Ui {
-class MainWindow;
-}
+
+
+const int OI_USER_ROLES_START = 1000;
 
 class MainWindow
 {
 public:
     static std::string unmangledPath(std::string path);
-    bool verbose = false; // This is manually set to true for debug only.
     bool m_DebugBadHints = true;
     const std::string COLLECT_REUSE = "REUSE"; /**< The target in the analyzed
                                                 output should be also used as
@@ -115,7 +125,7 @@ public:
     void init(std::string);
     bool isFatalSourceError(std::string);
     std::map<std::string, std::string>* lineInfo(const std::string line, const std::string actualJump, const std::string actualJumpLine, bool isPrevCallPrevLine);
-    void lineInfo(std::map<std::string, std::string>* info, const std::string sLineOriginal, const std::string actualJump, const std::string actualJumpLine, bool isPrevCallPrevLine);
+    void lineInfoByRef(std::map<std::string, std::string>* info, const std::string sLineOriginal, const std::string actualJump, const std::string actualJumpLine, bool isPrevCallPrevLine);
     static void debug(std::string msg);
     static void warn(std::string msg);
     static void info(std::string msg);
@@ -126,19 +136,14 @@ public:
     int m_KateMajorVer = 0; /**< Use 2 to represent the 2.5.9 (kde3
                                      version); and 3 for 3.0.3 (kde4 version),
                                      etc. */
-    #ifdef QT_DEBUG
-    bool m_Verbose = true;
-    bool m_VerboseParsing = true; /**< Enable line-by-line parser output */
-    #else
-    bool m_Verbose = false;
-    bool m_VerboseParsing = false;
-    #endif
+    int _verbosity = 0;
+    bool _verbosityParsing = false;
 private:
     void on_mainListWidget_itemDoubleClicked(OIWidget* item);
     void readInput();
 
 private:
-    Ui::MainWindow *ui;
+    void *ui;
     void CompensateForEditorVersion();
 
     std::vector<std::string> m_ToDoFlags = {"TODO","FIXME"};

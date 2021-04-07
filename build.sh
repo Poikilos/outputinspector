@@ -80,7 +80,8 @@ if [ -f "$$OUT_BIN" ]; then
         exit 1
     fi
 fi
-g++  -o $OUT_BIN $OBJDIR/main.o $OBJDIR/mainwindow.o $OBJDIR/settings.o -lstdc++fs
+g++  -o $OUT_BIN $OBJDIR/main.o $OBJDIR/mainwindow.o $OBJDIR/settings.o
+# -lstdc++fs
 if [ $? -ne 0 ]; then
     cat <<END
 Error: Linking failed. Ensure you have installed:
