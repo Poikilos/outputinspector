@@ -936,7 +936,7 @@ void MainWindow::lineInfo(std::map<QString, QString>* info, const QString origin
     // qInfo().noquote() << "paramAToken: " << paramAToken;
     // qInfo().noquote() << "paramBToken: " << paramBToken;
     // qInfo().noquote() << "endParamsToken: " << endParamsToken;
-    if (fileI >= 0 && (paramATokenI > fileI || endParamsToken > fileI)) {
+    if (fileI >= 0 && (paramATokenI > fileI || endParamsTokenI > fileI)) {
         // Even if closer is not present,
         // endParamsTokenI is set to length() IF applicable to this enclosure
 
@@ -1110,7 +1110,7 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(QListWidgetItem* item)
                                     tabDebugMsg += "; citedCol-StartAt1-rel-to-nontab:" + citedColS;
                                     // citedCol now starts at 1 starting from the first text after tabs
                                     int regeneratedCol = 1;
-                                    tabDebugMsg += "; skips:";                                    
+                                    tabDebugMsg += "; skips:";
                                     // This approximates how Kate 2 traverses tabs (the 'c' argument actually can't reach certain positions directly after the tabs):
                                     if (tabCount > 2)
                                         citedCol += tabCount - 2;
