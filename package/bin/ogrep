@@ -51,6 +51,14 @@ if profile is not None:
         dt_runner = 'gtk-launch'
         if distutils.spawn.find_executable(dt_runner):
             cmd_parts = [dt_runner, try_dt, tmp_path]
+        else:
+            print("* The desktop runner is not known on your OS ({} is"
+                  " not present). The program will run directly using"
+                  " the default icon.".format(dt_runner))
+    else:
+        print("* The desktop file is not installed ({} is"
+              " not present). The program will run directly using"
+              " the default icon.".format(try_dt))
 subprocess.call(cmd_parts)
 
 if os.path.isfile(tmp_path):
