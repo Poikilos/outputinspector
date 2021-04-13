@@ -31,7 +31,7 @@ static inline void trim(std::string &s) {
     rtrim(s);
 }
 
-std::string strip(std::string s) {
+static inline std::string strip(std::string s) {
     trim(s);
     return s;
 }

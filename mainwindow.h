@@ -7,13 +7,15 @@
 #include <list>
 #include <cstddef>
 
-bool os_path_isdir(std::string path);
-bool os_path_is_file(std::string path);
+bool os_path_isdir(const std::string& path);
+bool os_path_isfile(const std::string& path);
+bool os_path_exists(const std::string& path);
+std::string ReplaceAll(std::string str, const std::string& from, const std::string& to);
 std::string dirname(std::string path);
-bool startswithCS(std::string haystack, std::string needle);
-bool startswithCI(std::string haystack, std::string needle);
-bool endswithCS(std::string haystack, std::string needle);
-bool endswithCI(std::string haystack, std::string needle);
+bool startswithCS(std::string const haystack, std::string const needle);
+bool startswithCI(std::string const haystack, std::string const needle);
+bool endswithCS(std::string const haystack, std::string const needle);
+bool endswithCI(std::string const haystack, std::string const needle);
 int findCS(std::string haystack, std::string needle, int start);
 int findCI(std::string haystack, std::string needle, int start);
 bool inList(std::vector<std::string> haystack, std::string needle);
@@ -32,17 +34,15 @@ public:
 class OIBrush
 {
 public:
+    OIBrush();
     OIBrush(OIColor color);
     OIColor _color;
 };
 
-OIColor OI_lightGray = OIColor::fromRgb(192, 192, 192);
-OIColor OI_darkGreen = OIColor::fromRgb(0, 64, 0);
-OIColor OI_black = OIColor::fromRgb(0, 0, 0);
-
 class OIWidget
 {
     std::string _text;
+public:
     std::string text();
     std::vector<std::string> data;
 };
@@ -53,6 +53,7 @@ class OIListWidgetItem
     OIBrush _background;
     OIBrush _foreground;
 public:
+    OIListWidgetItem(std::string text);
     void setForeground(OIBrush brush);
     void setBackground(OIBrush brush);
     void setData(int role, std::string value);
@@ -60,14 +61,44 @@ public:
 
 class OITextStream
 {
+    std::string _path;
 public:
+    OITextStream(std::string path);
+    std::string readLine(int i) {
+        return "";
+    }
     bool atEnd();
 };
 
+/*
+class OIRegularExpressionMatch
+{
+public:
+    OIRegularExpressionMatch() {
+    }
+    bool hasMatch() {
+        return false;
+    }
+    bool capturedEnd() {
+        return false;
+    }
+};
+
+class OIRegularExpression
+{
+    std::string pattern;
+public:
+    OIRegularExpression(std::string pattern) {
+        this->pattern = pattern;
+    }
+    OIRegularExpressionMatch match(std::string subject) {
+        return OIRegularExpressionMatch();
+    }
+};
+*/
 
 
 const int OI_USER_ROLES_START = 1000;
-
 class MainWindow
 {
 public:
@@ -132,6 +163,7 @@ public:
     static void debug(std::string msg);
     static void warn(std::string msg);
     static void info(std::string msg);
+    void infoPopup(const std::string& msg, std::string title);
     std::string absPathOrSame(std::string filePath);
     Settings* settings = nullptr;
     bool m_EnableTabDebugMsg = false;
@@ -139,8 +171,9 @@ public:
     int m_KateMajorVer = 0; /**< Use 2 to represent the 2.5.9 (kde3
                                      version); and 3 for 3.0.3 (kde4 version),
                                      etc. */
-    int _verbosity = 0;
-    bool _verbosityParsing = false;
+    static int _verbosity;
+    bool _verboseParsing = false;
+    void setStatus(std::string msg);
 private:
     void on_mainListWidget_itemDoubleClicked(OIWidget* item);
     void readInput();
