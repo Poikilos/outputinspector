@@ -31,7 +31,7 @@ bool os_path_isdir(const std::string& path) {
         return true;
     else
         return false;
-    return false; // TODO: finish this
+    return false;
 }
 
 bool os_path_isfile(const std::string& path) {
@@ -56,8 +56,37 @@ std::string ReplaceAll(std::string str, const std::string& from, const std::stri
 }
 
 std::string dirname(std::string path) {
+    // This is based on the QDir dirname function which returns a child NAME
+    // not a parent path like os.path.dirname in Python does!
     // TODO: finish this: return os.path.split(path)[1]
-    return path;
+    std::string dirsep = "/";
+    int slashes = 0;
+    int backslashes = 0;
+    for (int i = 0; i < path.size(); i++) {
+        if (path[i] == '/') slashes++;
+        else if (path[i] == '\\') backslashes++;
+    }
+    if (backslashes > slashes) dirsep = "\\"; // debug guessing the directory separator character
+    size_t lastDirsepPos = path.rfind(dirsep);
+    if (lastDirsepPos == (path.length() - 1)) {
+        if (path.length() > 1) {
+            // strip the trailing slash and try again.
+            path = path.substr(0, lastDirsepPos);
+            lastDirsepPos = path.rfind(dirsep);
+        }
+        else {
+            if (dirsep.compare("\\") == 0) {
+                // TODO: throw an exception ("\"\\\" is not a valid path")
+                return "";
+            }
+            return ""; // got "/"
+        }
+    }
+    if (lastDirsepPos == std::string::npos) {
+        return path;
+    }
+
+    return path.substr(lastDirsepPos+1);
 }
 
 bool startswithCS(std::string const haystack, std::string const needle) {
@@ -225,6 +254,10 @@ bool contains_any(T haystack, std::list<T>& needles)
     return false;
 }
 
+void MainWindow::_addItem(OIListWidgetItem* lwi) {
+    // TODO: finish this
+}
+
 string MainWindow::unmangledPath(string path)
 {
     std::regex literalDotsRE("\\.\\.\\.+"); /**< Match 2 dots followed by more. */
@@ -283,6 +316,7 @@ MainWindow::MainWindow()
     // TODO: check os_path_isfile(filePath)
     // MainWindow::info("Creating settings: " + this->filePath());
     this->settings = new Settings(filePath);
+    cerr << "* Settings was created from \"" << filePath << "\" with " << this->settings->dat.size() << " entry(ies)." << std::endl;
     MainWindow::info(
         "[outputinspector] used the settings file \"" + this->settings->fileName() + "\""
     );
@@ -295,8 +329,8 @@ MainWindow::MainWindow()
     this->settings->setIfMissing("Kate2TabWidth", "8");
     this->settings->setIfMissing("CompilerTabWidth", "6");
     this->settings->setIfMissing("ShowWarningsLast", "false");
-    /// TODO: Implement ShowWarningsLast (but ignore it and behave as if it were
-    /// false if there is anything in stdin).
+    // TODO: (optional) Implement ShowWarningsLast (but ignore it and behave as if it were
+    //       false if there is anything in stdin).
     this->settings->setIfMissing("FindTODOs", "true");
     if (this->settings->contains("kate")) {
         bool changed = this->settings->setIfMissing("editor", this->settings->getString("kate"));
@@ -409,7 +443,7 @@ MainWindow::MainWindow()
         std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.push_back("");
-        // TODO: change to "WARNING\[Server\].* accessed at " (requires:
+        // TODO: (optional) change to "WARNING\[Server\].* accessed at " (requires:
         // implementing regex)
         def[TOKEN_FILE] = " accessed at ";
         def[TOKEN_PARAM_A] = ":";
@@ -424,7 +458,7 @@ MainWindow::MainWindow()
         std::vector<std::string> def;
         for (int i = 0; i < PARSE_PARTS_COUNT; i++)
             def.push_back("");
-        /// TODO: change to "WARNING\[Server\].* accessed at " (requires:
+        // TODO: (optional) change to "WARNING\[Server\].* accessed at " (requires:
         // implementing regex)
         def[TOKEN_FILE] = " inside a function at ";
         def[TOKEN_PARAM_A] = ":";
@@ -552,7 +586,7 @@ MainWindow::~MainWindow()
 {
     // delete this->inTimer;
     delete this->settings;
-    delete ui;
+    // TODO: delete ui;
 }
 void MainWindow::init(string errorsListFileName)
 {
@@ -583,8 +617,8 @@ void MainWindow::init(string errorsListFileName)
                    + string(" detected standard input (such as from a console pipe)")
                    + "...skipping \"" + errorsListFileName + "\"...");
     }
-    else if (true) { // TODO: qfileTest.exists()) {
-        if (os_path_isfile(errorsListFileName)) {
+    else if (os_path_isfile(errorsListFileName)) { // TODO: qfileTest.exists()) {
+        if (os_path_isfile(errorsListFileName)) { // if (qfileTest.open(QFile::ReadOnly)) { //| QFile::Translate
             OITextStream qtextNow(errorsListFileName);
             while (!qtextNow.atEnd()) {
                 // NOTE: Readline trims off newline characters.
@@ -600,18 +634,18 @@ void MainWindow::init(string errorsListFileName)
             pushWarnings();
             if (this->settings->getBool("FindTODOs")) {
                 for (auto it = this->lwiToDos.begin(); it != this->lwiToDos.end(); ++it) {
-                    // TODO: ui->mainListWidget->addItem(*it);
+                    this->_addItem(*it);
                 }
             }
             if (!this->settings->getBool("ExitOnNoErrors")) {
                 if (this->m_LineCount == 0) {
                     OIListWidgetItem* lwiNew = new OIListWidgetItem("#" + errorsListFileName + ": INFO (generated by outputinspector) 0 lines in file");
                     lwiNew->setForeground(brushes["Default"]);
-                    // TODO: ui->mainListWidget->addItem(lwiNew);
+                    this->_addItem(lwiNew);
                 } else if (this->m_NonBlankLineCount == 0) {
                     OIListWidgetItem* lwiNew = new OIListWidgetItem("#" + errorsListFileName + ": INFO (generated by outputinspector) 0 non-blank lines in file");
                     lwiNew->setForeground(brushes["Default"]);
-                    // TODO: ui->mainListWidget->addItem(lwiNew);
+                    this->_addItem(lwiNew);
                 }
             }
             // else hide errors since will exit anyway if no errors
@@ -635,7 +669,7 @@ void MainWindow::init(string errorsListFileName)
                 string my_path = "."; // TODO: string my_path = QCoreApplication::applicationFilePath();
                 string title = "Output Inspector - Help";
                 string msg = my_path + ": Output Inspector cannot read the output file due to permissions or other read error (tried \"./" + errorsListFileName + "\").";
-                // TODO: this->infoPopup(title, msg);
+                this->infoPopup(title, msg);
                 // this->addLine(title + ":" + msg, true);
             }
         }
@@ -645,13 +679,13 @@ void MainWindow::init(string errorsListFileName)
             string my_path = "."; // TODO: string my_path = QCoreApplication::applicationFilePath();
             string title = "Output Inspector - Help";
             string msg = my_path + ": Output Inspector cannot find the output file to process (tried \"./" + errorsListFileName + "\").";
-            // TODO: this->infoPopup(title, msg);
+            this->infoPopup(title, msg);
             // this->addLine(title + ":" + msg, true);
         }
     }
     // this->inTimer = new QTimer(this);
     // this->inTimer->setInterval(500);  // milliseconds
-    // TODO: read standard input (in case on right of pipe): connect(this->inTimer, SIGNAL(timeout()), this, SLOT(readInput()));
+    // TODO: (optional) read standard input (in case on right of pipe): connect(this->inTimer, SIGNAL(timeout()), this, SLOT(readInput()));
     // this->inTimer->start();
 } // end init
 
@@ -670,13 +704,13 @@ void MainWindow::addLine(string line, bool enablePush)
     this->m_LineCount++;
     string originalLine = line;
     this->m_MasterLine = line;
-    // TODO: debug performance of new and delete
+    // TODO: (optional) debug performance of new and delete
     std::map<string, string>* info = new std::map<string, string>;
     if (line.length() > 0) {
         if (strip(line).length() > 0)
             this->m_NonBlankLineCount++;
         if (isFatalSourceError(line)) {
-            // TODO: ui->mainListWidget->addItem(new OIListWidgetItem(line + " <your compiler (or other tool) recorded this fatal or summary error before outputinspector ran>", ui->mainListWidget));
+            this->_addItem(new OIListWidgetItem(line + " <your compiler (or other tool) recorded this fatal or summary error before outputinspector ran>")); // TODO: pass the parent to the constructor if necessary
         } else if (contains_any<string>(line, sSectionBreakFlags)) {
             this->m_ActualJump = "";
             this->m_ActualJumpLine = "";
@@ -684,7 +718,7 @@ void MainWindow::addLine(string line, bool enablePush)
             this->m_ActualJumpColumn = "";
             OIListWidgetItem* lwi = new OIListWidgetItem(line);
             lwi->setForeground(brushes["Regular"]);
-            // TODO: ui->mainListWidget->addItem(lwi);
+            this->_addItem(lwi);
         } else {
             // lineInfo does the actual parsing:
             lineInfoByRef(info, line, this->m_ActualJump, this->m_ActualJumpLine, true);
@@ -747,7 +781,7 @@ void MainWindow::addLine(string line, bool enablePush)
             if (this->settings->getBool("ShowWarningsLast") && isWarning)
                 this->lwiWarnings.push_back(lwi);
             else {
-                // TODO: ui->mainListWidget->addItem(lwi);
+                this->_addItem(lwi);
             }
 
             string sTargetLanguage = (*info)["language"];
@@ -774,7 +808,7 @@ void MainWindow::addLine(string line, bool enablePush)
                     sFileX = absPathOrSame(sFileX); // =line.substr(0,findCI(line, "(", 0));
                     if (!inList(this->m_Files, sFileX)) {
                         this->m_Files.push_back(sFileX);
-                        // TODO: QFile qfileSource(sFileX);
+                        // QFile qfileSource(sFileX);
                         if (MainWindow::_verbosity)
                             MainWindow::debug("outputinspector trying to open '" + sFileX + "'...");
                         // if (!qfileSource.open(QFile::ReadOnly)) {
@@ -852,6 +886,7 @@ void MainWindow::addLine(string line, bool enablePush)
 
 void MainWindow::CompensateForEditorVersion()
 {
+    this->m_KateMajorVer = 0;
     bool isFound = false;
     std::vector<std::string> sVersionArgs;
     string sFileTemp = "/tmp/outputinspector.using.kate.version.tmp";
@@ -863,10 +898,10 @@ void MainWindow::CompensateForEditorVersion()
 
     // TODO: QFile qfileTmp(sFileTemp);
     string line;
-    if (true) { //TODO: qfileTmp.open(QFile::ReadOnly)) { // | QFile::Translate
+    if (true) { // TODO: qfileTmp.open(QFile::ReadOnly)) { // | QFile::Translate
         // TODO: detect Kate version using output of Kate command above
         /*
-        OITextStream qtextNow; //TODO: (&qfileTmp);
+        OITextStream qtextNow; // TODO: (&qfileTmp);
         string sKateOpener = "Kate: ";
         while (!qtextNow.atEnd()) {
             line = qtextNow.readLine(0); // does trim off newline characters
@@ -890,14 +925,14 @@ void MainWindow::CompensateForEditorVersion()
         // TODO: this->infoPopup("Output Inspector - Kate Version", isFound ? ("Detected Kate " + sRevisionMajor) : "Could not detect Kate version.");
     }
     if (this->m_KateMajorVer > 2) {
-        this->settings->setValue("xEditorOffset", 0);
-        this->settings->setValue("yEditorOffset", 0);
+        this->settings->setValue("xEditorOffset", "0");
+        this->settings->setValue("yEditorOffset", "0");
     } else {
-        this->settings->setValue("xEditorOffset", 0);
-        this->settings->setValue("yEditorOffset", 0);
+        this->settings->setValue("xEditorOffset", "0");
+        this->settings->setValue("yEditorOffset", "0");
         // NOTE: The values are no longer necessary.
-        // this->config->setValue("xEditorOffset", -1);
-        // this->config->setValue("yEditorOffset", -1);
+        // this->config->setValue("xEditorOffset", "-1");
+        // this->config->setValue("yEditorOffset", "-1");
     }
 }
 
@@ -905,7 +940,7 @@ void MainWindow::pushWarnings()
 {
     if (this->lwiWarnings.size() > 0) {
         for (auto it = this->lwiWarnings.begin(); it != this->lwiWarnings.end(); ++it) {
-            // TODO: ui->mainListWidget->addItem(*it);
+            this->_addItem(*it);
         }
         this->lwiWarnings.clear();
     }
@@ -1223,17 +1258,17 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(OIWidget* item)
         citedColS = to_string(citedCol);
         // endregion only for Kate <= 2
         if (this->m_CompensateForKateTabDifferences) {
-            // TODO: QFile qfileSource(absFilePath);
+            // QFile qfileSource(absFilePath);
             string line;
             int readCitedI = 0; /**< This is the current line number while the
                                      loop reads the entire cited file. */
-            if (true) { //TODO: qfileSource.open(QFile::ReadOnly)) { //| QFile::Translate
-                OITextStream qtextNow(absFilePath); // TODO: (&qfileSource);
+            if (true) { // TODO: qfileSource.open(QFile::ReadOnly)) { //| QFile::Translate
+                OITextStream qtextNow(absFilePath);
                 while (!qtextNow.atEnd()) {
                     line = qtextNow.readLine(0); //does trim off newline characters
                     if (readCitedI == ((citedRow - yEditorOffset) - 1)) {
                         int tabCount = 0;
-                        // TODO: Use regex for finding the tab.
+                        // TODO: (optional) Use regex for finding the tab.
                         for (int tryTabI = 0; tryTabI < line.length(); tryTabI++) {
                             if (line.substr(tryTabI, 1) == "\t")
                                 tabCount++;
@@ -1292,11 +1327,8 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(OIWidget* item)
                             // else kate 3+, which handles tabs as absolute positions
                             citedColS = to_string(citedCol);
                             tabDebugMsg += "; citedColS-new:" + citedColS;
-                            /*
-                            // TODO:
                             if (this->m_EnableTabDebugMsg)
                                 this->infoPopup("Output Inspector - Debug tab compensation", tabDebugMsg);
-                            */
                         } // end if tabCount>0
                         break;
                     } // if correct line found
@@ -1341,7 +1373,7 @@ void MainWindow::on_mainListWidget_itemDoubleClicked(OIWidget* item)
             // if (MainWindow::_verbosity)
             this->setStatus(commandMsg);
             // system(sCmd);//stdlib
-            // TODO: this->infoPopup("test", sCmd);
+            // this->infoPopup("test", sCmd);
         } else {
             // errorMsg = "Specified file '" + absFilePath + "' does not exist (try a different line, or try running from the location where it exists instead of '" + QDir::currentPath() + "')";
             errorMsg = "[Output Inspector] No file exists here: '" + absFilePath + "'\n";

@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 using namespace std;
 
@@ -118,6 +119,7 @@ string Settings::getString(string key)
 
 void Settings::setValue(string key, string value)
 {
+    // std::cerr << "setValue(" << key << ", " << value << ")" << std::endl;
     this->dat[key] = value;
     /*
     if (this->qs != nullptr) {

@@ -174,6 +174,7 @@ public:
     static int _verbosity;
     bool _verboseParsing = false;
     void setStatus(std::string msg);
+    void _addItem(OIListWidgetItem* lwi);
 private:
     void on_mainListWidget_itemDoubleClicked(OIWidget* item);
     void readInput();

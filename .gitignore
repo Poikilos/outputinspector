@@ -57,3 +57,4 @@ echo
 /outputinspector.depend
 /bin/Debug/outputinspector
 /bin/Release/outputinspector
+/build/outputinspector
