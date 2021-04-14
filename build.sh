@@ -61,11 +61,12 @@ fi
 # gcc -o build/$package_name main.cpp Debug.cpp Engine.cpp EventHandler.cpp settings.cpp  UserInterface.cpp  Utility.cpp  View.cpp
 
 # based on qtcreator's build after clean (see contributing.md; some options are unclear):
-g++ -c -pipe $OPTION1 $OPTION2 $OPTION3 -fPIC -I$REPO_PATH -o $OBJDIR/main.o $REPO_PATH/main.cpp
+# or -std=c++14
+g++ -c -std=gnu++11 -pipe $OPTION1 $OPTION2 $OPTION3 -fPIC -I$REPO_PATH -o $OBJDIR/main.o $REPO_PATH/main.cpp
 if [ $? -ne 0 ]; then echo "Error: building main failed."; exit 1; fi
-g++ -c -pipe $OPTION1 $OPTION2 $OPTION3 -fPIC -I$REPO_PATH -o $OBJDIR/mainwindow.o $REPO_PATH/mainwindow.cpp
+g++ -c -std=gnu++11 -pipe $OPTION1 $OPTION2 $OPTION3 -fPIC -I$REPO_PATH -o $OBJDIR/mainwindow.o $REPO_PATH/mainwindow.cpp
 if [ $? -ne 0 ]; then echo "Error: building mainwindow failed."; exit 1; fi
-g++ -c -pipe $OPTION1 $OPTION2 $OPTION3 -fPIC -I$REPO_PATH -o $OBJDIR/settings.o $REPO_PATH/settings.cpp
+g++ -c -std=gnu++11 -pipe $OPTION1 $OPTION2 $OPTION3 -fPIC -I$REPO_PATH -o $OBJDIR/settings.o $REPO_PATH/settings.cpp
 if [ $? -ne 0 ]; then echo "Error: building settings failed."; exit 1; fi
 #-w: suppress warning
 # -I.: include the current directory (suppresses errors when using include < instead of include "
