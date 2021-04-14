@@ -26,7 +26,7 @@ bool os_path_isdir(const std::string& path) {
     struct stat info;
 
     if( stat( path.c_str(), &info ) != 0 )
-        printf( "cannot access %s\n", path );
+        printf( "cannot access %s\n", path.c_str() );
     else if( info.st_mode & S_IFDIR )  // S_ISDIR() doesn't exist on my windows
         return true;
     else
