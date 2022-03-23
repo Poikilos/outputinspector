@@ -18,6 +18,7 @@ a popular IDE. This becomes possible for any scenario now, so you do
 not have to work with an IDE you don't like for some language you are
 using if all you want is fast code navigation during debugging.
 
+
 ## Primary Features
 * Double-click an error to go to where the error occurs in your code.
 * Color code lines in your output (red: error; orange: warning; yellow:
@@ -206,79 +207,9 @@ transformed correctly to something like
 ## Changes
 See [changelog.md](changelog.md).
 
-## Compiling
+The program was formerly maintained in C++ but now in Python.
 
-
-## Developer Notes
-### Compiling
-* Ensure that qt is installed, not just Qt designer
-  - On Linux: install a package such as `qt-devel` on Fedora
-    (and possibly `qt5-devel` if it is not installed automatically,
-    which should pull in `qt5-qtbase-devel`) or `qtbase5-dev` on Debian
-    or Ubuntu as per Henk van der Laak's Nov 20, 2014 answer on
-    <https://askubuntu.com/questions/508503/whats-the-development-package-for-qt5-in-14-04>.
-    Also, possibly for other projects but not this one,
-    `qtdeclarative5-dev` as per AlexGreg's  Aug 8, 2014 answer there.
-  - On Windows: Go to Apps & Features, Qt, Change, and check the latest
-    Qt (it will install required components such as MinGW compiler).
-    - Static building (`windows-build-qt-static.ps1`) is not working
-      until
-      [Issue #20](https://github.com/poikilos/outputinspector/issues/20)
-      is resolved (but feel free to try it on your system--you may have
-      to modify it to download the version of Qt matching your Qt
-      Creator installation (See doc\development\windeployqt_exe.png
-      for examples using Qt 5.15.2).
-* Open "Qt Creator"
-* Right-click the downloaded zip file, then click Extract Here
-* Open the `outputinspector.pro` in QT Creator.
-* Push the F7 key.  When it is finished compiling, exit.
-* Install
-  * Windows:
-    The Windows build (even regular not static) isn't working right now
-    since it only runs when you push "Run" not when you double click it
-    and instead shows an error--until [Issue
-    #21](https://github.com/poikilos/outputinspector/issues/21)
-    is resolved.
-    - Tried: Find your version of windeployqt.exe that matches your
-      configuration, and run it on the built exe.
-      For example, if you are using MinGW 64-bit and you made a release
-      build , run:
-      `C:\Qt\5.15.2\mingw81_64\bin\windeployqt.exe C:\Users\Jatlivecom\GitHub\build-outputinspector-Desktop_Qt_5_15_2_MinGW_64_bit-Release\release\outputinspector.exe`
-  * Linux: Open a terminal and enter the following:
-```
-# If you are not named root, the default PREFIX is ~/.local
-# (you can also set the PREFIX environment variable manually).
-cd outputinspector
-# or
-cd outputinspector-master
-# If you want to install to /usr/local,
-# then do `su root` before attempting install below (or use
-# sudo ./install.sh instead).
-./install.sh
-```
-
-### coding style
-cd to project dir, then
-```bash
-clang-format -style=file mainwindow.cpp > mainwindow.cpp.tmp
-meld mainwindow.cpp mainwindow.cpp.tmp
-```
-
-#### clang first-time setup
-```bash
-dnf -y install clang  # includes clang-format
-dnf -y install meld
-```
-
-#### deciding on coding style
-"$HOME/ownCloud/Documents/Programming/coding style/1.Coding Style poikilos.md" on main poikilos' computer
-
-~~## Notes that only applied to qt4 version~~
-~~* Compile First (if desired, but there is a binary built on Ubuntu Hardy):~~
-~~* Build using qdevelop  (formerly required: qt4 libqt4-dev qdevelop):~~
-~~`qdevelop outputinspector.pro`~~
-~~* Install:~~
-~~    Requires: qt4 libqt4 libqt4-gui libqt4-core~~
+See [formerly-C++.md](formerly-C++.md).
 
 ### Backward Compatibility
 * Remember to edit `$HOME/.local/share/outputinspector/settings.txt`
@@ -298,3 +229,8 @@ dnf -y install meld
 * If the `editor` setting is not present but the `kate` setting is, the
   program will copy the setting to the new `editor` variable in the conf
   file.
+
+## References
+- Urban, M., & Murach, J. (2016). Murach’s Python Programming
+  [VitalSource Bookshelf]. Retrieved from
+  https://bookshelf.vitalsource.com/#/books/9781943872152-

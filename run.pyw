@@ -1,37 +1,50 @@
 #!/usr/bin/env python
-from outputinspector.mainwindow import MainWindow
 
-def main(self, argc, *argv[]):
-    std.cin.sync_with_stdio(False); '''*< Stop in_avail from always being 0
-                                          (See <https:#stackoverflow.com/
-                                            questions/17474252/
-        why-does-in-avail-output-zero-even-if-the-stream-has-some-char) '''
-    QApplication app(argc, argv)
+from outputinspector import (
+    MainWindow,
+)
+
+from outputinspector.reporting import (
+    pinfo,
+)
+
+root = None
+window = None
+
+def main(self):
+    global root
+    global window
+    root = tk.Tk()
+    root.title("outputinspector")
     # app.setOrganizationDomain("poikilos.org")
-    app.setApplicationName("outputinspector")
-    MainWindow window
-    QString sErrorsListFileName; #reverts to err.txt if left blank
-    qArgs = QCoreApplication.arguments()
+    window = MainWindow(root)
+    sErrorsListFileName = ""  # reverts to err.txt if left blank
+    qArgs = []
+    i = 0
     # start at 1 since qArgs[0] is self:
-    for (int i=1; i<qArgs.length(); i++)
+    while i < len(qArgs):
+        i += 1
         qArg = qArgs[i]
-        if not qArg.startsWith("--"):
+        if not qArg.startswith("--"):
             sErrorsListFileName = qArg
-
         else:
-            signIndex = qArg.indexOf("=")
-            if signIndex>-1:
+            signIndex = qArg.find("=")
+            if signIndex > -1:
                 valueIndex = signIndex + 1
-                name = qArg.mid(2, signIndex-2)
-                window.settings.setValue(name, qArg.mid(valueIndex).trimmed())
-                qInfo() << "set " + name + " to '"
-                        + qArg.mid(valueIndex).trimmed() + "'"
-
-
-
-    window.init(sErrorsListFileName.trimmed())
-    window.show()
-    #app.setWindowIcon(QIcon("outputinspector-64.png"))
-    #app.setWindowIcon(QIcon(ICON))
-    return app.exec()
+                nameLen = signIndex - 2
+                name = qArg[2:signIndex]
+                value = qArg[valueIndex:].strip()
+                window.settings.setValue(name, value)
+                pinfo("set {} to {}"
+                      "".format(name, value))
+    window.init(sErrorsListFileName.strip())
+    root.mainloop()
+    # (Urban & Murach, 2016, p. 515)
+    session.stop()
+    if session.save():
+        print("Save completed.")
+    else:
+        print("Save failed.")
+    # TODO: app.setWindowIcon(QIcon("outputinspector-64.png"))
+    return 0
 
