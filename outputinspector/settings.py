@@ -56,7 +56,11 @@ class Settings:
         # public:
         self.filePath = ""
         self.checkedKeys = []
-        self.readIni(path)
+        if path is not None:
+            if os.path.isfile(path):
+                self.readIni(path)
+        else:
+            error("The Settings object has no path.")
 
     def __del__(self):
         if self.data is not None:
@@ -103,15 +107,15 @@ class Settings:
         # ^ formerly static bad (was unused)
         if self.data is not None:
             if key in self.data.keys():
-                if not checkedKeys.contains(key):
+                if not self.checkedKeys.contains(key):
                     self.sDebug += key + ":" + self.data[key] + ".  "
-                    checkedKeys.append(key)
+                    self.checkedKeys.append(key)
 
                 return is_truthy(self.data[key])
 
-            elif not checkedKeys.contains(key):
+            elif not self.checkedKeys.contains(key):
                 self.sDebug += "No " + key + " line is in " + self.path + ".  "
-                checkedKeys.append(key)
+                self.checkedKeys.append(key)
 
 
         return False
@@ -123,29 +127,29 @@ class Settings:
             return 0
 
         if key in self.data.keys():
-            if not checkedKeys.contains(key):
+            if not self.checkedKeys.contains(key):
                 self.sDebug += key + ":{}.  ".format(self.data[key])
-                checkedKeys.append(key)
+                self.checkedKeys.append(key)
             value = int(self.data[key])
 
-        elif not checkedKeys.contains(key):
+        elif not self.checkedKeys.contains(key):
             self.sDebug += "No " + key + " line is in " + self.path + ".  "
-            checkedKeys.append(key)
+            self.checkedKeys.append(key)
         return value
 
     def getString(self, key):
         if self.data is None:
             return ""
         if key in self.data.keys():
-            if not checkedKeys.contains(key):
+            if not self.checkedKeys.contains(key):
                 self.sDebug += key + ":{}.  ".format(self.data[key])
-                checkedKeys.append(key)
+                self.checkedKeys.append(key)
 
             return self.data[key]
 
-        elif not checkedKeys.contains(key):
+        elif not self.checkedKeys.contains(key):
             self.sDebug += "No " + key + " line is in " + self.path + ".  "
-            checkedKeys.append(key)
+            self.checkedKeys.append(key)
         return ""
 
 
