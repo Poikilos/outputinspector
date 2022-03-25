@@ -6,6 +6,8 @@ in many IDEs independently of an IDE. Output Inspector will even look
 for TODOs in comments for various source code files cited by the log!
 Output Inspector parses your parser output.
 
+![Screenshot](doc/images/screenshot.jpg)
+
 On Linux, you can examine output in near-realtime (or non-realtime on
 Windows) using pipes instead of a log file. You can use the included
 "passthrough-outputinspector" script to automatically run
