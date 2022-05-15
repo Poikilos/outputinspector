@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [git] - 2022-05-15
+### Fixed
+- Rename "dist" to "usr" so it isn't excluded by .gitignore.
 
 ## [new new-python branch in git] - 2020-03-21
 ### Changed
