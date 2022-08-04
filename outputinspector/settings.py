@@ -1,55 +1,81 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import sys
+import os
 
-from outputinspector.reporting import (
+MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
+REPO_DIR = os.path.dirname(MODULE_DIR)
+
+try:
+    import outputinspector
+except ImportError as ex:
+    if (("No module named 'outputinspector'" in str(ex))  # Python 3
+            or ("No module named outputinspector" in str(ex))):  # Python 2
+        sys.path.insert(0, REPO_DIR)
+    else:
+        raise ex
+'''
+from outputinspector import (
     warn,
-    error,
-    debug,
-    critical,
-    fatal,
+    echo0,
+    # echo1,
+    # critical,
+    # fatal,
 )
+'''
+# ^ Nothing can be imported, since __init__ imports settings (otherwise
+#   an incomplete module initialization error occurs).
+
+def warn(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+
+def echo0(*args, **kwargs):  # formerly error
+    print(*args, file=sys.stderr, **kwargs)
+    return True
 
 _TRUTHIES = ["True", "1", "on", "yes"]
 
 
 def is_truthy(self, value):
     '''
-    @brief Check if the value is in a list of "Settings._TRUTHIES" (True yes, on, 1, ...).
+    @brief Check if the value is in a list of "Settings.
+    _TRUTHIES" (True yes, on, 1, ...).
     @param value
     @return
     '''
     for s in _TRUTHIES:
-        if value.lower() == s:
+        if value.lower() == s.lower():
             return True
 
     return False
 
 
 class Settings:
-    #@staticmethod
-    #def is_truthy(QString value)
+    # @staticmethod
+    # def is_truthy(QString value)
 
-    #Settings()
-    #Settings(QString filePath)
-    #~Settings()
-    #bool readIni(QString filePath)
+    # Settings()
+    # Settings(QString filePath)
+    # ~Settings()
+    # bool readIni(QString filePath)
 
-    #bool getBool(QString key)
-    #int getInt(QString key)
-    #QString getString(QString key)
-    #void setValue(QString key, value)
-    #bool setIfMissing(QString key, value)
-    #void remove(QString key)
+    # bool getBool(QString key)
+    # int getInt(QString key)
+    # QString getString(QString key)
+    # void setValue(QString key, value)
+    # bool setIfMissing(QString key, value)
+    # void remove(QString key)
     # QVariant value(QString key)
 
-    #bool contains(QString key)
-    #QString fileName()
-    #void sync()
-    #QString sDebug
+    # bool contains(QString key)
+    # QString fileName()
+    # void sync()
 
-    #endif # SETTINGS_H
+    # endif # SETTINGS_H
 
     def __init__(self, path):
+        self.sDebug = ""
         # path="outputinspector.conf"
         self.path = path
         self.data = None  # or {}
@@ -60,7 +86,7 @@ class Settings:
             if os.path.isfile(path):
                 self.readIni(path)
         else:
-            error("The Settings object has no path.")
+            echo0("The Settings object has no path.")
 
     def __del__(self):
         if self.data is not None:
@@ -88,7 +114,7 @@ class Settings:
 
                 signI = line.find("=")
                 if signI < 1:
-                    error("{}:{}: [outputinspector settings]"
+                    echo0("{}:{}: [outputinspector settings]"
                           " ERROR: Missing '='"
                           "".format(path, lineN))
                     continue
@@ -96,9 +122,9 @@ class Settings:
                 value = line[signI+1:].strip()
                 self.data[name] = value
 
-
     '''*
-     * @brief Instead of using qvariant.toBool, toString and custom Settings._TRUTHIES list.
+     * @brief Instead of using qvariant.toBool, toString and custom
+     Settings._TRUTHIES list.
      * @param name
      * @return
      '''
@@ -117,9 +143,7 @@ class Settings:
                 self.sDebug += "No " + key + " line is in " + self.path + ".  "
                 self.checkedKeys.append(key)
 
-
         return False
-
 
     def getInt(self, key):
         value = 0
@@ -152,15 +176,12 @@ class Settings:
             self.checkedKeys.append(key)
         return ""
 
-
     def setValue(self, key, value):
         if self.data is None:
-            error("self.data is None in setValue")
+            echo0("self.data is None in setValue")
             return False
         self.data[key] = value
         return True
-
-
 
     def setIfMissing(self, key, value):
         '''
@@ -180,7 +201,6 @@ class Settings:
                             + "before Settings.data was ready.")
         return changed
 
-
     def remove(self, key):
         if self.data is not None:
             if key in self.data.keys():
@@ -188,7 +208,6 @@ class Settings:
         else:
             self.sDebug += ("remove tried to remove " + key
                             + "before Settings.data was ready.")
-
 
     '''
     def value(self, key):
@@ -212,7 +231,3 @@ class Settings:
             for k, v in self.data.items():
                 outs.write("{}={}\n".format(k, v))
         return True
-
-
-
-

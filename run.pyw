@@ -1,21 +1,34 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+from __future__ import print_function
+import sys
+if sys.version_info.major >= 3:
+    import tkinter as tk
+    from tkinter import ttk
+    from tkinter import messagebox
+else:
+    import Tkinter as tk
+    import ttk
+    import tkMessageBox as messagebox
 
-from outputinspector import (
+from outputinspector.mainwindow import (
     MainWindow,
 )
 
-from outputinspector.reporting import (
+from outputinspector import (
     pinfo,
+    echo0,  # error,
+    echo1,  # debug,
 )
 
 root = None
 window = None
 
-def main(self):
+
+def main():
     global root
     global window
     root = tk.Tk()
-    root.title("outputinspector")
+    root.title("Output Inspector")
     # app.setOrganizationDomain("poikilos.org")
     window = MainWindow(root)
     sErrorsListFileName = ""  # reverts to err.txt if left blank
@@ -48,3 +61,6 @@ def main(self):
     # TODO: app.setWindowIcon(QIcon("outputinspector-64.png"))
     return 0
 
+
+if __name__ == "__main__":
+    sys.exit(main())
