@@ -12,6 +12,9 @@ else:
     import ttk
     import tkMessageBox as messagebox
 
+root = None
+window = None
+
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_DIR = os.path.dirname(MODULE_DIR)
 
@@ -27,6 +30,8 @@ except ImportError as ex:
 from outputinspector import (
     OutputInspector,
     pinfo,
+    echo0,  # error,
+    echo1,  # debug,
 )
 
 from outputinspector.noqt import (
@@ -63,9 +68,44 @@ class MainWindow(OutputInspector, ttk.Frame):
         # from mainwindow.ui:
         self.statusBar = QStatusBar(self)
         self.statusBar.pack(side=tk.BOTTOM, fill=tk.Y)
+        self.root.geometry("1200x400")
+
 
     def showinfo(self, title, msg):
         messagebox.showinfo(title, msg)
 
     def showerror(self, title, msg):
         messagebox.showerror(title, msg)
+
+
+def main():
+    global root
+    global window
+    root = tk.Tk()
+    root.title("Output Inspector")
+    # TODO: app.setWindowIcon(QIcon("outputinspector-64.png"))
+    # app.setOrganizationDomain("poikilos.org")
+    window = MainWindow(root)
+    sErrorsListFileName = ""  # reverts to err.txt if left blank
+    i = 0
+    # start at 1 since args[0] is self:
+    for i in range(1, len(sys.argv)):
+        arg = sys.argv[i]
+        if not arg.startswith("--"):
+            sErrorsListFileName = arg
+        else:
+            signIndex = arg.find("=")
+            if signIndex > -1:
+                valueIndex = signIndex + 1
+                nameLen = signIndex - 2
+                name = arg[2:signIndex]
+                value = arg[valueIndex:].strip()
+                window.settings.setValue(name, value)
+                pinfo("set {} to {}"
+                      "".format(name, value))
+    window.init(sErrorsListFileName.strip())
+    root.mainloop()
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
