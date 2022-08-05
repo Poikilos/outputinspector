@@ -32,21 +32,19 @@ def main():
     # app.setOrganizationDomain("poikilos.org")
     window = MainWindow(root)
     sErrorsListFileName = ""  # reverts to err.txt if left blank
-    qArgs = []
     i = 0
-    # start at 1 since qArgs[0] is self:
-    while i < len(qArgs):
-        i += 1
-        qArg = qArgs[i]
-        if not qArg.startswith("--"):
-            sErrorsListFileName = qArg
+    # start at 1 since args[0] is self:
+    for i in range(1, len(sys.argv)):
+        arg = sys.argv[i]
+        if not arg.startswith("--"):
+            sErrorsListFileName = arg
         else:
-            signIndex = qArg.find("=")
+            signIndex = arg.find("=")
             if signIndex > -1:
                 valueIndex = signIndex + 1
                 nameLen = signIndex - 2
-                name = qArg[2:signIndex]
-                value = qArg[valueIndex:].strip()
+                name = arg[2:signIndex]
+                value = arg[valueIndex:].strip()
                 window.settings.setValue(name, value)
                 pinfo("set {} to {}"
                       "".format(name, value))

@@ -133,13 +133,13 @@ class Settings:
         # ^ formerly static bad (was unused)
         if self.data is not None:
             if key in self.data.keys():
-                if not self.checkedKeys.contains(key):
+                if key not in self.checkedKeys:
                     self.sDebug += key + ":" + self.data[key] + ".  "
                     self.checkedKeys.append(key)
 
                 return is_truthy(self.data[key])
 
-            elif not self.checkedKeys.contains(key):
+            elif key not in self.checkedKeys:
                 self.sDebug += "No " + key + " line is in " + self.path + ".  "
                 self.checkedKeys.append(key)
 
@@ -151,12 +151,12 @@ class Settings:
             return 0
 
         if key in self.data.keys():
-            if not self.checkedKeys.contains(key):
+            if key not in self.checkedKeys:
                 self.sDebug += key + ":{}.  ".format(self.data[key])
                 self.checkedKeys.append(key)
             value = int(self.data[key])
 
-        elif not self.checkedKeys.contains(key):
+        elif key not in self.checkedKeys:
             self.sDebug += "No " + key + " line is in " + self.path + ".  "
             self.checkedKeys.append(key)
         return value
@@ -165,13 +165,13 @@ class Settings:
         if self.data is None:
             return ""
         if key in self.data.keys():
-            if not self.checkedKeys.contains(key):
+            if key not in self.checkedKeys:
                 self.sDebug += key + ":{}.  ".format(self.data[key])
                 self.checkedKeys.append(key)
 
             return self.data[key]
 
-        elif not self.checkedKeys.contains(key):
+        elif key not in self.checkedKeys:
             self.sDebug += "No " + key + " line is in " + self.path + ".  "
             self.checkedKeys.append(key)
         return ""

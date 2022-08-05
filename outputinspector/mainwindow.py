@@ -29,6 +29,11 @@ from outputinspector import (
     pinfo,
 )
 
+from outputinspector.noqt import (
+    QListView,
+    QStatusBar,
+)
+
 
 class MainWindow(OutputInspector, ttk.Frame):
 
@@ -47,11 +52,17 @@ class MainWindow(OutputInspector, ttk.Frame):
         # self.bV = tk.StringVar()
         ttk.Frame.__init__(self, parent)
         self.pack(fill=tk.BOTH, expand=True)
-        self.mainListWidget = tk.Listbox(  # There is no ttk Listbox
+        self.mainListWidget = QListView(  # There is no ttk Listbox
             self,
         )
-        #   textvariable=self.bV,
+        self._ui = self
+        # ^ _ui is only for graphical mode (must be set after
+        #   OutputInspector.__init__(self))
+        # textvariable = self.bV,
         self.mainListWidget.pack()
+        # from mainwindow.ui:
+        self.statusBar = QStatusBar(self)
+        self.statusBar.pack(side=tk.BOTTOM, fill=tk.Y)
 
     def showinfo(self, title, msg):
         messagebox.showinfo(title, msg)

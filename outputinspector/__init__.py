@@ -4,6 +4,7 @@ import sys
 import os
 import platform
 import time
+import re
 from subprocess import Popen, PIPE
 if sys.version_info.major >= 3:
     import tkinter as tk
@@ -16,6 +17,7 @@ else:
 
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_DIR = os.path.dirname(MODULE_DIR)
+my_path = os.path.realpath(__file__)
 
 try:
     import outputinspector
@@ -28,6 +30,12 @@ except ImportError as ex:
 
 from outputinspector.noqt import (
     QListWidgetItem,
+    QVariant,
+    QBrush,
+    QColor,
+    Qt,
+    QTimer,
+    connect,
 )
 
 verbosity = 2
@@ -121,28 +129,28 @@ STACK_LOWER = "LOWER"
 '''*< The code reference is further down in the call stack, it is
 probably not pointing to the relevant code.'''
 TOKEN_FILE = 0
-'''*< linelinedef[TOKEN_FILE] is the opener for the file path (blank if
+'''*< linedef[TOKEN_FILE] is the opener for the file path (blank if
 the file path starts at the begginning of the line). '''
 TOKEN_PARAM_A = 1
-'''*< linelinedef[TOKEN_PARAM_A] is the first coordinate token (blank
+'''*< linedef[TOKEN_PARAM_A] is the first coordinate token (blank
 if none, as grep-- -n is automatically added if you use the included
 ogrep script). '''
 TOKEN_PARAM_B = 2
-'''*< linelinedef[TOKEN_PARAM_B] is the second coordinate delimiter
+'''*< linedef[TOKEN_PARAM_B] is the second coordinate delimiter
 (blank if no column). '''
 TOKEN_END_PARAMS = 3;
-'''*< linelinedef[TOKEN_END_PARAMS] ParamsEnder (what is after last
+'''*< linedef[TOKEN_END_PARAMS] ParamsEnder (what is after last
 coord). '''
 PARSE_COLLECT = 4;
-'''*< linelinedef[PARSE_COLLECT] determines the mode for connecting
+'''*< linedef[PARSE_COLLECT] determines the mode for connecting
 lines. For possible values and their behaviors, the documentation for
 COLLECT_REUSE (or future COLLECT_* constants). '''
 PARSE_STACK = 5
-'''*< linelinedef[PARSE_STACK] flags a pattern as being for a
+'''*< linedef[PARSE_STACK] flags a pattern as being for a
 callstack, such as to connect it to a previous error (see documentation
 for STACK_LOWER or for any later-added STACK_* constants). '''
 PARSE_DESCRIPTION = 5
-'''*< linelinedef[PARSE_STACK] describes the parser mode (linedef) in a
+'''*< linedef[PARSE_STACK] describes the parser mode (linedef) in a
 human-readable way.'''
 PARSE_PARTS_COUNT = 7
 UserRole = 1
@@ -157,12 +165,14 @@ ROLE_DETAILS = UserRole + 5
 class OutputInspector:
 
     def __init__(self):
+        self._ui = None
+        echo0("* outputinspector init...")
         # public:
         # static QString unmangledPath(QString path)
 
         self.m_DebugBadHints = True
         self.sInternalFlags = []
-        self.sSectionBreakFlags = ""
+        self.sSectionBreakFlags = []
         self.enclosures = []
         self.brushes = {}
 
@@ -245,13 +255,14 @@ class OutputInspector:
         else:
             pass
 
+        echo0("* outputinspector init...settings...")
         # pinfo("Creating settings: {}".format(filePath))
         self.settings = Settings(filePath)
         pinfo("[outputinspector] used the settings file \"{}\""
               "".format(self.settings.fileName()))
-        # if QFile("/etc/outputinspector.conf").exists():
+        # if os.path.isfile("/etc/outputinspector.conf"):
         #     self.config = Settings("/etc/outputinspector.conf")
-        # elif QFile("/etc/outputinspector.conf").exists():
+        # elif os.path.isfile("/etc/outputinspector.conf"):
         #     self.config = Settings("/etc/outputinspector.conf")
 
         self.settings.setIfMissing("Kate2TabWidth", 8)
@@ -280,57 +291,11 @@ class OutputInspector:
                 )
 
         self.settings.setIfMissing("editor", "/usr/bin/geany")
+        # echo0("* outputinspector init...done")
 
-    @staticmethod
-    def unmangledPath(self, path):
-        # QRegularExpression literalDotsRE("\\.\\.\\.+") '''*< Match 2 dots followed by more. '''
-        # FIXME: make below act like above
-        literalDotsRE = re.compile("\\.\\.\\.+")  #*< Match 2 dots followed by more.
-        match = literalDotsRE.match(path)
-        verbose = False  # This is manually set to True for debug only.
-        if match.hasMatch():
-            # start = match.capturedStart(0)
-            end = match.capturedEnd(0)
-            tryOffsets = []
-            tryOffsets.append(-2)
-            tryOffsets.append(1)
-            tryOffsets.append(0)
-            for tryOffset in tryOffsets:
-                tryPath = path[end+tryOffset:]
-                if QFile(tryPath).exists():
-                    if verbose:
-                        pinfo("[outputinspector] transformed *.../dir"
-                              " into ../dir: \"{}\""
-                              "".format(tryPath))
 
-                    return tryPath
 
-                else:
-                    if verbose:
-                        pinfo("[outputinspector] There is no \"{}\""
-                              " in the current directory (\"{}\")"
-                              "".format(tryPath, os.getcwd()))
-        else:
-            if (verbose):
-                pinfo("[outputinspector] There is no \"...\""
-                      " in the cited path: \"{}\""
-                      "".format(path))
-
-        return path
-
-    def showinfo(self, title, msg):
-        '''
-        Override this if your subclass provides a GUI.
-        '''
-        pinfo("[{}] {}".format(title, msg))
-
-    def showerror(self, title, msg):
-        '''
-        Override this if your subclass provides a GUI.
-        '''
-        echo0("[{}] {}".format(title, msg))
-
-    def init(self, errorsListFileName):
+        # def init(self, errorsListFileName):
         '''
         formats with "\n" at end must be AFTER other single-param formats that have
         same TOKEN_FILE and PARSE_PARAM_A, because "\n" is forced
@@ -338,38 +303,38 @@ class OutputInspector:
         '''
         linedef = []
         for i in range(PARSE_PARTS_COUNT):
-            linelinedef.append("")
-        linelinedef[TOKEN_FILE] = "  File "
-        linelinedef[TOKEN_PARAM_A] = ", line "
-        linelinedef[TOKEN_PARAM_B] = ")"
-        linelinedef[TOKEN_END_PARAMS] = ""
-        linelinedef[PARSE_COLLECT] = ""
-        linelinedef[PARSE_STACK] = ""
-        linelinedef[PARSE_DESCRIPTION] = "Nose error"
+            linedef.append("")
+        linedef[TOKEN_FILE] = "  File "
+        linedef[TOKEN_PARAM_A] = ", line "
+        linedef[TOKEN_PARAM_B] = ")"
+        linedef[TOKEN_END_PARAMS] = ""
+        linedef[PARSE_COLLECT] = ""
+        linedef[PARSE_STACK] = ""
+        linedef[PARSE_DESCRIPTION] = "Nose error"
         self.enclosures.append(linedef)
 
         linedef = []
         for i in range(PARSE_PARTS_COUNT):
-            linelinedef.append("")
-        linelinedef[TOKEN_FILE] = "  File "
-        linelinedef[TOKEN_PARAM_A] = ", line "
-        linelinedef[TOKEN_PARAM_B] = ""
-        linelinedef[TOKEN_END_PARAMS] = ","
-        linelinedef[PARSE_COLLECT] = COLLECT_REUSE
-        linelinedef[PARSE_STACK] = STACK_LOWER
-        linelinedef[PARSE_DESCRIPTION] = "Nose lower traceback"
+            linedef.append("")
+        linedef[TOKEN_FILE] = "  File "
+        linedef[TOKEN_PARAM_A] = ", line "
+        linedef[TOKEN_PARAM_B] = ""
+        linedef[TOKEN_END_PARAMS] = ","
+        linedef[PARSE_COLLECT] = COLLECT_REUSE
+        linedef[PARSE_STACK] = STACK_LOWER
+        linedef[PARSE_DESCRIPTION] = "Nose lower traceback"
         self.enclosures.append(linedef)
 
         linedef = []
         for i in range(PARSE_PARTS_COUNT):
-            linelinedef.append("")
-        linelinedef[TOKEN_FILE] = "ERROR: Failure: SyntaxError (invalid syntax ("
-        linelinedef[TOKEN_PARAM_A] = ", line "
-        linelinedef[TOKEN_PARAM_B] = ""
-        linelinedef[TOKEN_END_PARAMS] = ")"
-        linelinedef[PARSE_COLLECT] = ""
-        linelinedef[PARSE_STACK] = ""
-        linelinedef[PARSE_DESCRIPTION] = "Nose syntax error"
+            linedef.append("")
+        linedef[TOKEN_FILE] = "ERROR: Failure: SyntaxError (invalid syntax ("
+        linedef[TOKEN_PARAM_A] = ", line "
+        linedef[TOKEN_PARAM_B] = ""
+        linedef[TOKEN_END_PARAMS] = ")"
+        linedef[PARSE_COLLECT] = ""
+        linedef[PARSE_STACK] = ""
+        linedef[PARSE_DESCRIPTION] = "Nose syntax error"
         self.enclosures.append(linedef)
 
         linedef = []
@@ -503,6 +468,7 @@ class OutputInspector:
         self.brushes["ErrorDetails"] = QBrush(QColor.fromRgb(160, 80, 80))
         self.brushes["ToDo"] = QBrush(Qt.darkGreen)
         self.brushes["Default"] = QBrush(Qt.black)
+        echo0("* initialized brushes")
 
         self.sInternalFlags.append("/site-packages/")
         internalS = "/usr/lib/python2.7/site-packages/nose/importer.py"
@@ -529,6 +495,65 @@ class OutputInspector:
             # pinfo("  items.size(): {}".format(itList.size()))
             if self.m_Verbose:
                 pinfo("  items: ['" + "', '".join(itList) + "']")
+        return 0
+
+
+    @staticmethod
+    def unmangledPath(path):
+        # QRegularExpression literalDotsRE("\\.\\.\\.+") '''*< Match 2 dots followed by more. '''
+        # FIXME: make below act like above
+        literalDotsRE = re.compile("\\.\\.\\.+")  #*< Match 2 dots followed by more.
+        match = literalDotsRE.match(path)
+        # TODO: capturedEnd technically uses the last element in:
+        '''
+        matches = list(match.finditer())
+        if matches is not None:
+            match = matches[-1]
+        '''
+        verbose = False  # This is manually set to True for debug only.
+        if match is not None:
+            # start = match.capturedStart(0)
+            # echo0("match={}".format(match))
+            end = match.end(0)
+            tryOffsets = []
+            tryOffsets.append(-2)
+            tryOffsets.append(1)
+            tryOffsets.append(0)
+            for tryOffset in tryOffsets:
+                tryPath = path[end+tryOffset:]
+                if os.path.isfile(tryPath):
+                    # TODO: ^ originally exists(). Is isfile always ok?
+                    if verbose:
+                        pinfo("[outputinspector] transformed *.../dir"
+                              " into ../dir: \"{}\""
+                              "".format(tryPath))
+
+                    return tryPath
+
+                else:
+                    if verbose:
+                        pinfo("[outputinspector] There is no \"{}\""
+                              " in the current directory (\"{}\")"
+                              "".format(tryPath, os.getcwd()))
+        else:
+            if (verbose):
+                pinfo("[outputinspector] There is no \"...\""
+                      " in the cited path: \"{}\""
+                      "".format(path))
+
+        return path
+
+    def showinfo(self, title, msg):
+        '''
+        Override this if your subclass provides a GUI.
+        '''
+        pinfo("[{}] {}".format(title, msg))
+
+    def showerror(self, title, msg):
+        '''
+        Override this if your subclass provides a GUI.
+        '''
+        echo0("[{}] {}".format(title, msg))
 
     def isFatalSourceError(self, line):
         '''
@@ -551,20 +576,22 @@ class OutputInspector:
     def init(self, errorsListFileName):
         if not (self.settings.contains("xEditorOffset") or self.settings.contains("yEditorOffset")):
             self.CompensateForEditorVersion()
-        if len(errorsListFileName) == 0:
+        output_names = ["err.txt", "out.txt"]
+        if (errorsListFileName is None) or (len(errorsListFileName) == 0):
+            echo0("* detecting any of {}...".format(output_names))
             tryPath = "debug.txt"
-            if QFile(tryPath).exists():
+            if os.path.isfile(tryPath):
                 errorsListFileName = tryPath
                 pinfo("[outputinspector] detected \"{}\"...examining..."
                       "".format(tryPath))
 
             else:
                 errorsListFileName = "err.txt"
-
-        self.load_stdin_or_file()
+        self.lineCount = 0
+        self.load_stdin_or_file(errorsListFileName)
         self.inTimer = QTimer(self)
         self.inTimer.setInterval(500);  # milliseconds
-        self.inTimer.timeout.connect(self.readInput)
+        connect(self.inTimer, self.inTimer.timeout, self, self.readInput)
         self.inTimer.start()
         # end init
 
@@ -580,7 +607,8 @@ class OutputInspector:
                   "".format(errorsListFileName))
         '''
 
-    def load_stdin_or_file(self):
+    def load_stdin_or_file(self, errorsListFileName):
+        self.lineCount = 0
         # QFile qfileTest(errorsListFileName)
         # self.m_ToDoFlags.append("TODO")
         # self.m_ToDoFlags.append("FIXME")
@@ -589,20 +617,20 @@ class OutputInspector:
         # setCentralWidget(self._ui.mainListWidget)
         # self._ui.mainListWidget.setSizePolicy(QSizePolicy.)
         # OutputInspectorSleepThread.msleep(150); # wait for stdin (doesn't work)
-        if has_stdin():
+        if self.has_stdin():
             return True
         if not os.path.isfile(errorsListFileName):
             # if std.cin.rdbuf().in_avail() < 1:
-            my_path = QCoreApplication.applicationFilePath()
             title = "Output Inspector - Help"
             msg = my_path + ": Output Inspector cannot read the output file due to permissions or other read error (tried \"./" + errorsListFileName + "\")."
             self.showinfo(title, msg)
             # self.addLine(title + ":" + msg, True)
 
 
+        echo0('* reading "{}"'.format(errorsListFileName))
         with open(errorsListFileName, 'r') as qtextNow:
             for rawL in qtextNow:
-                lineCount += 1
+                self.lineCount += 1
                 line = rawL.rstrip()
                 self.addLine(line, False)
             # end while not at end of file named errorsListFileName
@@ -759,7 +787,7 @@ class OutputInspector:
                     elif sTargetLanguage == "bat":
                         self.m_CommentToken = "rem "
 
-                # if ((is_jshint and info["file"].endsWith(".js"))
+                # if ((is_jshint and info["file"].endswith(".js"))
                 #         or self.m_Error in line):
                 #  # ^ TODO?:
                 #  #   if (is_jshint or "previous error" not in line):
@@ -885,7 +913,7 @@ class OutputInspector:
                         "Output Inspector - Finding Kate version...",
                         line
                     )
-                if line.startsWith(sKateOpener, Qt.CaseInsensitive):
+                if line.startswith(sKateOpener, Qt.CaseInsensitive):
                     iDot = line.find(".")
                     if iDot > -1:
                         isFound = True
@@ -909,7 +937,7 @@ class OutputInspector:
             # self.config.setValue("yEditorOffset", -1)
 
     def pushWarnings(self):
-        if len(lwiWarnings) > 0:
+        if len(self.lwiWarnings) > 0:
             for it in self.lwiWarnings:
                 self._ui.mainListWidget.addItem(it)
 
@@ -952,8 +980,8 @@ class OutputInspector:
         paramBTokenI = -1
         paramBI = -1
         endParamsTokenI = -1
-        nonDigitRE = re.compile("\\D")
-        nOrZRE = re.compile("\\d*")
+        # nonDigitRE = re.compile("\\D")
+        # nOrZRE = re.compile("\\d*")
         # ^ a digit (\d), or more times (*)
         numOrMoreRE = re.compile("\\d+")
         # ^ a digit (\d), or more times (+)
@@ -961,8 +989,8 @@ class OutputInspector:
             pinfo("`{}`:".format(originalLine))
 
         for itList in self.enclosures:
-            if ((len((itList[TOKEN_FILE]) == 0)
-                    or line.contains(itList[TOKEN_FILE])):
+            if ((len(itList[TOKEN_FILE]) == 0)
+                    or (itList[TOKEN_FILE] in line)):
                 fileToken = itList[TOKEN_FILE]
                 if self.m_VerboseParsing:
                     if len(fileToken) > 0:
@@ -989,9 +1017,10 @@ class OutputInspector:
                             fileTokenI + len(fileToken),
                         )
                         if paramATokenI >= 0:
-                            if not line[paramATokenI+len(paramAToken)].contains(numOrMoreRE):
+                            if not numOrMoreRE.match(line[paramATokenI+len(paramAToken)]):
                                 # Don't allow the opener if the next
                                 # character is not a digit.
+                                # - `not` works since None if no match
                                 paramATokenI = -1
                     elif len(endParamsToken) > 0:
                         paramATokenI = line.find(endParamsToken)
@@ -1146,16 +1175,16 @@ class OutputInspector:
 
             filePath = filePath.strip()
             if len(filePath) >= 2:
-                if ((filePath.startsWith('"')
-                     and filePath.endsWith('"'))
-                    or (filePath.startsWith('\'')
-                        and filePath.endsWith('\''))):
+                if ((filePath.startswith('"')
+                     and filePath.endswith('"'))
+                    or (filePath.startswith('\'')
+                        and filePath.endswith('\''))):
                     filePath = filePath[1:-1]
 
             echo1("[outputinspector] [debug]"
                   " file path before unmangling: \"{}\""
                   "".format(filePath))
-            filePath = unmangledPath(filePath)
+            filePath = OutputInspector.unmangledPath(filePath)
             info["file"] = filePath
             info["row"] = line[paramAI:paramBTokenI]
             if len(paramBToken) > 0:
@@ -1182,30 +1211,30 @@ class OutputInspector:
             if self.m_VerboseParsing:
                 pinfo("          length {}-{}".format(endParamsTokenI,
                                                       paramBI))
-
-            if filePath.endsWith(".py", Qt.CaseSensitive):
+            filePathLower = filePath.lower()
+            if filePathLower.endswith(".py"):
                 info["language"] = "python"
-            elif filePath.endsWith(".pyw", Qt.CaseSensitive):
+            elif filePathLower.endswith(".pyw"):
                 info["language"] = "python"
-            elif filePath.endsWith(".cpp", Qt.CaseSensitive):
+            elif filePathLower.endswith(".cpp"):
                 info["language"] = "c++"
-            elif filePath.endsWith(".h", Qt.CaseSensitive):
+            elif filePathLower.endswith(".h"):
                 info["language"] = "c++"
-            elif filePath.endsWith(".hpp", Qt.CaseSensitive):
+            elif filePathLower.endswith(".hpp"):
                 info["language"] = "c++"
-            elif filePath.endsWith(".c", Qt.CaseSensitive):
+            elif filePathLower.endswith(".c"):
                 info["language"] = "c"
-            elif filePath.endsWith(".js", Qt.CaseSensitive):
+            elif filePathLower.endswith(".js"):
                 info["language"] = "js"
-            elif filePath.endsWith(".java", Qt.CaseSensitive):
+            elif filePathLower.endswith(".java"):
                 info["language"] = "java"
-            elif filePath.endsWith(".bat", Qt.CaseSensitive):
+            elif filePathLower.endswith(".bat"):
                 info["language"] = "bat"
-            elif filePath.endsWith(".sh", Qt.CaseSensitive):
+            elif filePathLower.endswith(".sh"):
                 info["language"] = "sh"
-            elif filePath.endsWith(".command", Qt.CaseSensitive):
+            elif filePathLower.endswith(".command"):
                 info["language"] = "sh"
-            elif filePath.endsWith(".php", Qt.CaseSensitive):
+            elif filePathLower.endswith(".php"):
                 info["language"] = "php"
             echo1("  detected file: '{}'"
                   "".format(filePath))
@@ -1219,7 +1248,7 @@ class OutputInspector:
             #       "".format(originalLine))
 
         if info["good"] == "True":
-            if lent(actualJump) > 0 and info["master"] == "False":
+            if (len(actualJump) > 0) and (info["master"] == "False"):
                 echo1("INFO: nosetests output was detected, the line is"
                       " not first line of a known multi-line error"
                       " format, flagging as details (must be"
@@ -1396,7 +1425,7 @@ class OutputInspector:
             # sArgs="-u "+absFilePath+" -l "+citedRowS+" -c "+citedColS
             # QProcess qprocNow(self.config.getString("editor")+sArgs)
             # qprocNow
-            if QFile(absFilePath).exists():
+            if os.path.isfile(absFilePath):
                 commandMsg = self.settings.getString("editor")
                 qslistArgs = []  # editor subprocess argument strings
                 # NOTE: -u is not needed at least as of kate 16.12.3
