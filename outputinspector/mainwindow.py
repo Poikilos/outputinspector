@@ -44,6 +44,7 @@ class MainWindow(OutputInspector, ttk.Frame):
 
     def __init__(self, root):
         OutputInspector.__init__(self)
+        ttk.Frame.__init__(self)
         self.root = root
         if root is not None:
             self._window_init(root)

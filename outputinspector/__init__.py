@@ -6,29 +6,14 @@ import platform
 import time
 import re
 from subprocess import Popen, PIPE
-if sys.version_info.major >= 3:
-    import tkinter as tk
-    from tkinter import ttk
-    from tkinter import messagebox
-else:
-    import Tkinter as tk
-    import ttk
-    import tkMessageBox as messagebox
 
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_DIR = os.path.dirname(MODULE_DIR)
 my_path = os.path.realpath(__file__)
+if __name__ == "__main__":
+    sys.path.insert(0, REPO_DIR)
 
-try:
-    import outputinspector
-except ImportError as ex:
-    if (("No module named 'outputinspector'" in str(ex))  # Python 3
-            or ("No module named outputinspector" in str(ex))):  # Python 2
-        sys.path.insert(0, REPO_DIR)
-    else:
-        raise ex
-
-from outputinspector.noqt import (
+from outputinspector.noqttk import (
     QListWidgetItem,
     QVariant,
     QBrush,
@@ -36,8 +21,10 @@ from outputinspector.noqt import (
     Qt,
     QTimer,
     connect,
+    # ALL of these have to be redefined in become_non_gui
+    #   if Tk is not initialized.
 )
-
+QMainWindow = None  # Only necessary for subclasses.
 verbosity = 2
 max_verbosity = 2
 TMP = "/tmp"
@@ -138,10 +125,10 @@ ogrep script). '''
 TOKEN_PARAM_B = 2
 '''*< linedef[TOKEN_PARAM_B] is the second coordinate delimiter
 (blank if no column). '''
-TOKEN_END_PARAMS = 3;
+TOKEN_END_PARAMS = 3
 '''*< linedef[TOKEN_END_PARAMS] ParamsEnder (what is after last
 coord). '''
-PARSE_COLLECT = 4;
+PARSE_COLLECT = 4
 '''*< linedef[PARSE_COLLECT] determines the mode for connecting
 lines. For possible values and their behaviors, the documentation for
 COLLECT_REUSE (or future COLLECT_* constants). '''
@@ -160,13 +147,78 @@ ROLE_COL = UserRole + 2
 ROLE_LOWER = UserRole + 3
 ROLE_COLLECTED_LINE = UserRole + 4
 ROLE_DETAILS = UserRole + 5
+QMainWindow = None
+def become_non_gui():
+    prefix = "[outputinspector] "
+    echo0(prefix+"Switching to non-gui mode."
+          " Make a subclass that inherits OutputInspector and tk.Frame"
+          " to use a GUI.")
+    global QListWidgetItem
+    global QVariant
+    global QBrush
+    global QColor
+    global Qt
+    global QTimer
+    global connect
+    import outputinspector.noqt as noqt
+    QListWidgetItem = noqt.QListWidgetItem
+    QVariant = noqt.QVariant
+    QBrush = noqt.QBrush
+    QColor = noqt.QColor
+    Qt = noqt.Qt
+    QTimer = noqt.QTimer
+    connect = noqt.connect
+    global QMainWindow
+    QMainWindow = noqt.QMainWindow
 
 
 class OutputInspector:
+    """Parse output from various compilers and linters.
+    
+    This class has some methods that are redundant to noqt and noqttk.
+    To allow either to be used, this class must behave like Widget but
+    avoid inheriting it so this class works as a secondary superclass
+    where primary superclass is either MainWindow which is already a
+    widget, usually a notqtk widget that is not CLI-compatible like
+    OutputInspector is if used directly instead of as a superclass.
+    """
+
+    def addChildWidget(self, widget):
+        if not hasattr(self, '_children'):
+            # Try to allow use while the class is still incomplete
+            #   (before __init__ is finished)
+            self._children = []
+        self._children.append(widget)
+
+    def addChildLayout(self, layout):
+        if not hasattr(self, '_layouts'):
+            # Try to allow use while the class is still incomplete
+            #   (before __init__ is finished)
+            self._layouts = []
+        self._layouts.append(layout)
 
     def __init__(self):
+        prefix = "[OutputInspector] "
         self._ui = None
+        # self.name = "inspector"
+        # leave out name to prevent _ui_subtree from constructing one
+        def parentWidget(self):
+            class UhOh:
+                pass
+            # Behave as a QWidget, but only to this extent.
+            #   This must be done here since the ui loader
+            #   will check for this during this constructor and
+            #   the class is still incomplete.
+            return UhOh()
+        setattr(self, 'parentWidget', parentWidget)
         echo0("* outputinspector init...")
+        if type(self).__name__ == "OutputInspector":
+            echo0(prefix+"Switching to non-gui operation.")
+            become_non_gui()
+            # Also, run QMainWindow.__init__ later
+            #   since this is not a subclass.
+            #   *see bottom* of __init__.
+        
         # public:
         # static QString unmangledPath(QString path)
 
@@ -214,6 +266,7 @@ class OutputInspector:
         self.lwiWarnings = []  # QListWidgetItem*[]
         self.lwiToDos = []  # QListWidgetItem*[]
         self.m_LineCount = 0
+        self.lineCount = 0  # TODO: eliminate this?
         self.m_NonBlankLineCount = 0
         self.m_ActualJump = ""
         '''*< Store the jump in case the file & line# are on
@@ -468,6 +521,8 @@ class OutputInspector:
         self.brushes["ErrorDetails"] = QBrush(QColor.fromRgb(160, 80, 80))
         self.brushes["ToDo"] = QBrush(Qt.darkGreen)
         self.brushes["Default"] = QBrush(Qt.black)
+        self.brushes["Regular"] = QBrush(Qt.black)
+
         echo0("* initialized brushes")
 
         self.sInternalFlags.append("/site-packages/")
@@ -495,11 +550,20 @@ class OutputInspector:
             # pinfo("  items.size(): {}".format(itList.size()))
             if self.m_Verbose:
                 pinfo("  items: ['" + "', '".join(itList) + "']")
-        return 0
-
+        if type(self).__name__ == "OutputInspector":
+            QMainWindow.__init__(
+                self,
+                ui_file=os.path.join(REPO_DIR, "mainwindow.ui")
+            )
+            # ^ set self._ui etc.
+        return
 
     @staticmethod
     def unmangledPath(path):
+        """Replace elipsis (3 or more dots) with the missing parts
+        if a similar file can be found.
+        """
+        # a.k.a. remove_elipsis
         # QRegularExpression literalDotsRE("\\.\\.\\.+") '''*< Match 2 dots followed by more. '''
         # FIXME: make below act like above
         literalDotsRE = re.compile("\\.\\.\\.+")  #*< Match 2 dots followed by more.
@@ -626,50 +690,13 @@ class OutputInspector:
             self.showinfo(title, msg)
             # self.addLine(title + ":" + msg, True)
 
-
         echo0('* reading "{}"'.format(errorsListFileName))
         with open(errorsListFileName, 'r') as qtextNow:
             for rawL in qtextNow:
-                self.lineCount += 1
                 line = rawL.rstrip()
                 self.addLine(line, False)
             # end while not at end of file named errorsListFileName
-
-            sNumErrors = str(self.iErrors)
-            sNumWarnings = str(self.iWarnings)
-            sNumTODOs = str(self.iTODOs)
-            self.pushWarnings()
-            if self.settings.getBool("FindTODOs"):
-                for it in self.lwiToDos:
-                    self._ui.mainListWidget.addItem(it)
-
-
-            if not self.settings.getBool("ExitOnNoErrors"):
-                if self.m_LineCount == 0:
-                    lwiNew = QListWidgetItem("#" + errorsListFileName + ": INFO (generated by outputinspector) 0 lines in file")
-                    lwiNew.setForeground(self.brushes["Default"])
-                    self._ui.mainListWidget.addItem(lwiNew)
-
-                elif self.m_NonBlankLineCount == 0:
-                    lwiNew = QListWidgetItem("#" + errorsListFileName + ": INFO (generated by outputinspector) 0 non-blank lines in file")
-                    lwiNew.setForeground(self.brushes["Default"])
-                    self._ui.mainListWidget.addItem(lwiNew)
-
-
-            # else hide errors since will exit anyway if no errors
-            sMsg = "Errors: " + sNumErrors + "; Warnings:" + sNumWarnings
-            if self.settings.getBool("FindTODOs"):
-                sMsg += "; TODOs:" + sNumTODOs
-            self._ui.statusBar.showMessage(sMsg, 0)
-            if self.settings.getBool("ExitOnNoErrors"):
-                if self.iErrors < 1:
-                    pinfo("Closing since no errors...")
-                    # QCoreApplication.quit(); # doesn't work
-                    # aptr.exit(); # doesn't work (QApplication*)
-                    # aptr.quit(); # doesn't work
-                    # aptr.closeAllWindows(); # doesn't work
-                    # if the event loop is not running, function (QCoreApplication.exit()) does nothing
-                    exit(EXIT_FAILURE)
+            self.processAllAddedLines()
 
         # end if could open file named errorsListFileName
         # else:
@@ -680,6 +707,41 @@ class OutputInspector:
         #         self.showinfo(title, msg)
         #         # self.addLine(title + ":" + msg, True)
 
+    def processAllAddedLines(self):
+        sNumErrors = str(self.iErrors)
+        sNumWarnings = str(self.iWarnings)
+        sNumTODOs = str(self.iTODOs)
+        self.pushWarnings()
+        if self.settings.getBool("FindTODOs"):
+            for it in self.lwiToDos:
+                self._ui.mainListWidget.addItem(it)
+
+        if not self.settings.getBool("ExitOnNoErrors"):
+            if self.m_LineCount == 0:
+                lwiNew = QListWidgetItem("#" + errorsListFileName + ": INFO (generated by outputinspector) 0 lines in file")
+                lwiNew.setForeground(self.brushes["Default"])
+                self._ui.mainListWidget.addItem(lwiNew)
+
+            elif self.m_NonBlankLineCount == 0:
+                lwiNew = QListWidgetItem("#" + errorsListFileName + ": INFO (generated by outputinspector) 0 non-blank lines in file")
+                lwiNew.setForeground(self.brushes["Default"])
+                self._ui.mainListWidget.addItem(lwiNew)
+
+
+        # else hide errors since will exit anyway if no errors
+        sMsg = "Errors: " + sNumErrors + "; Warnings:" + sNumWarnings
+        if self.settings.getBool("FindTODOs"):
+            sMsg += "; TODOs:" + sNumTODOs
+        self._ui.statusBar.showMessage(sMsg, 0)
+        if self.settings.getBool("ExitOnNoErrors"):
+            if self.iErrors < 1:
+                pinfo("Closing since no errors...")
+                # QCoreApplication.quit(); # doesn't work
+                # aptr.exit(); # doesn't work (QApplication*)
+                # aptr.quit(); # doesn't work
+                # aptr.closeAllWindows(); # doesn't work
+                # if the event loop is not running, function (QCoreApplication.exit()) does nothing
+                sys.exit(1)
 
     def addLine(self, line, enablePush):
         '''
@@ -692,6 +754,8 @@ class OutputInspector:
         @param enablePush Push the line to the GUI right away (This is best for
                when reading information from standard input).
         '''
+        self.lineCount += 1  # TODO: eliminate this?
+
         self.m_LineCount += 1
         originalLine = line
         self.m_MasterLine = line
@@ -1017,7 +1081,8 @@ class OutputInspector:
                             fileTokenI + len(fileToken),
                         )
                         if paramATokenI >= 0:
-                            if not numOrMoreRE.match(line[paramATokenI+len(paramAToken)]):
+                            # if not numOrMoreRE.match(line[paramATokenI+len(paramAToken)]):
+                            if not numOrMoreRE.match(line[paramATokenI]):
                                 # Don't allow the opener if the next
                                 # character is not a digit.
                                 # - `not` works since None if no match
@@ -1549,3 +1614,12 @@ class OutputInspector:
                 break
 
             count += 1
+
+def main():
+    prefix = "[main (testing only, import instead)] "
+    inspector = OutputInspector()
+    echo0(prefix+"created a test OutputInspector")
+
+
+if __name__ == "__main__":
+    sys.exit(main())

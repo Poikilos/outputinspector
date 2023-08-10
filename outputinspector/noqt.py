@@ -13,39 +13,223 @@ from __future__ import print_function
 import sys
 import time
 import threading
+import os
+import platform
+import inspect
 
-if sys.version_info.major >= 3:
-    import tkinter as tk
-    from tkinter import ttk
-    from tkinter import messagebox
-else:
-    import Tkinter as tk
-    import ttk
-    import tkMessageBox as messagebox
+import xml.etree.ElementTree as ET
+
+MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
+REPO_DIR = os.path.dirname(MODULE_DIR)
+
+if __name__ == "__main__":
+    sys.path.insert(0, REPO_DIR)
+    # ^ allows importing REPO_DIR
+
+import outputinspector.notk as tk
+import outputinspector.nottk as ttk
+from outputinspector.notkinter import messagebox
 
 
+verbosity = 2
+max_verbosity = 2
+TMP = "/tmp"
+if platform.system() == "Windows":
+    TMP = os.environ['TEMP']
+
+def warn(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+
+def echo0(*args, **kwargs):  # formerly error
+    print(*args, file=sys.stderr, **kwargs)
+    return True
+
+
+def echo1(*args, **kwargs):  # formerly debug
+    '''
+    Only show the message if verbosity > 1 (See "set_verbosity").
+    '''
+    if verbosity > 1:
+        print(*args, file=sys.stderr, **kwargs)
+
+
+def echo2(*args, **kwargs):
+    if verbosity < 2:
+        return False
+    print(*args, file=sys.stderr, **kwargs)
+    return True
 from outputinspector.best_timer import best_timer as second_timer
 
 
 def noqt_tick():
     return int(second_timer() * 1000.0)
 
+class QLayoutItem(object):
+    def __init__(self, *args):
+        self._parent = None
+        self._alignment = None
+        if args:
+            if not isinstance(args[0], QtAlignment):
+                raise TypeError("Expected QtAlignment but got %s"
+                                % type(args[0]).__name__)
+            if len(args) > 1:
+                # If this looks familiar its also in
+                # QWidget and nottk (and maybe notk)
+                raise ValueError(
+                    "Expected either QtAlignment as 1st arg or no args but"
+                    " got more sequential args: %s"
+                    % (args[1:])
+                )
+            self._alignment = args[0]
+        self._children = []
 
-class QListView(tk.Listbox):
-    def __init__(self, parent, **kwargs):
-        tk.Listbox.__init__(self, **kwargs)
-        self.parent = parent
-        # self._items = []
+    def isEmpty():
+        return not self._children
 
+
+class QLayout(QLayoutItem):
+    def __init__(self, *args, f=None):
+        self._layouts = []
+        self._children = []
+        if args:
+            if len(args) > 1:
+                # If this looks familiar its also in
+                # QWidget and nottk (and maybe notk)
+                raise ValueError(
+                    "Expected either parent as 1st arg or no args but"
+                    " got more sequential args: %s"
+                    % (args[1:])
+                )
+            self._parent = args[0]
+
+    def addChildLayout(self, layout):
+        self._layouts.append(layout)
+
+    def addChildWidget(self, widget):
+        self._children.append(widget)
+
+
+class QBoxLayout(QLayout):
+
+    def addLayout(self, layout):
+        self._layouts.append(layout)
+
+    def insertLayout(self, index, layout, stretch=0):
+        # TODO: implement stretch
+        self._layouts.insert(index, layout)
+
+
+class QHBoxLayout(QBoxLayout):
+    pass
+
+
+class QSize(object):
+    def __init__(self, *args):
+        if args:
+            if len(args) != 2:
+                raise ValueError("Requires 2 or 0 args")
+            self.size = [args[0], args[1]]
+            return
+        self.size = [0, 0]
+
+
+class QWidget(object):
+    """
+    For full operation this:
+    - should be inherited by all widgets.
+    - should have all necessary properties as listed at
+      <https://doc.qt.io/qt-6/qwidget.html>
+    
+    (Do not use ttk.Widget--it isn't supposed to be instantiated)
+
+    Args:
+        f (Optional[WindowFlags]): reserved (here for compatibility)
+    """
+    def __init__(self, *args, f=None):
+        self._children = []
+        self._layout = None
+        self._size = QSize()
+        if args:
+            if len(args) > 1:
+                # If this looks familiar its also in
+                # QLayout and nottk (and maybe notk)
+                raise ValueError(
+                    "Expected either parent as 1st arg or no args but"
+                    " got more sequential args: %s"
+                    % (args[1:])
+                )
+            self._parent = args[0]
+
+    def setLayout(self, layout):
+        self._layout = layout
+
+    def parentWidget(self):
+        return self._parent
+    
+    def size(self):
+        return self._size
+
+
+class QMenuBar(QWidget):
+    pass
+    # def __init__(self, *args):
+    #     QWidget.__init__(self, *args)
+
+
+class QToolBar(QWidget):
+    pass
+    # def __init__(self, *args):
+    #     QWidget.__init__(self, *args)
+
+
+class QFrame(QWidget):
+    pass
+
+
+class QAbstractScrollArea(QFrame):
+    pass
+
+
+class QAbstractItemView(QAbstractScrollArea):
+    pass
+
+
+class QListView(QAbstractItemView, tk.Listbox):
+    def __init__(self, *args, **kwargs):
+        self._items = []
+        QAbstractItemView.__init__(self)  # set _size etc
+        if args and hasattr(args[0], "grid_columnconfigure"):
+            # It is really tk (or notk or nottk)
+            tk.Listbox.__init__(self, args[0], **kwargs)
+            # ^ sets _parent (get with parentWidget())
+        else:
+            tk.Listbox.__init__(self, **kwargs)
+            # ^ sets _parent (get with parentWidget())
+        self.bind('<<ListboxSelect>>', self._on_items_selected)
+    
     def addItem(self, qlistwidgetitem):
-        qlistwidgetitem.parent = self
-        qlistwidgetitem.index = self.size()
+        qlistwidgetitem._parent = self
+        # qlistwidgetitem.index = self._tk_size(self)  # maybe fancy this up better??
+        qlistwidgetitem.index = tk.Listbox.size(self)
         self.append(qlistwidgetitem)
         for key, value in qlistwidgetitem.queued_tk_args.items():
+            # tk.Listbox-like:
             self.itemconfig(qlistwidgetitem.index, {key: value})
 
-    def append(self, item):
-        self.insert(self.size(), item)
+    def _on_items_selected(self, event):
+        # print(event)
+        # ^ Not very useful--just shows "<VirtualEvent event x=0 y=0>"
+        # print(dir(event))
+        # print("num={}".format(event.num))  # just says "??"
+        # print("type={}".format(event.type))  # just says 35
+        # print("state={}".format(event.state))  # just says 0
+        for i in self.curselection():
+            print("curselection()[{}]={}".format(i, self.get(i)))
+
+
+class QListWidget(QListView):
+    pass
 
 
 no_listview_msg = (
@@ -58,8 +242,19 @@ no_listview_msg = (
 )
 
 
-class QListWidgetItem(tk.StringVar):
+class QListWidgetItem(QWidget, tk.StringVar):
     '''
+    Usually in Tkinter, there is only one StringVar for a listbox:
+    """
+    self.var = tk.StringVar(self._values)
+    Listbox(..., listvariable=self.var)
+    """
+    However, to make each list item able to be manipulated directly,
+    NoQt makes a Qt-like object for each list item. The item must
+    behave like a string, so the __str__ function must be overridden
+    (otherwise the listbox will show a series of internal IDs such as:
+    PY_VAR1, PY_VAR2, etc., one for each line).
+
     Attributes:
     queued_tk_args -- These values are automatically set. They exist
         since Qt stores colors etc in the QListItem but Tk stores them
@@ -70,28 +265,41 @@ class QListWidgetItem(tk.StringVar):
         noqt.QListWidgetItem is added to a noqt.QListView.
     '''
     def __init__(self, *args, **kwargs):
+        QWidget.__init__(self, *args, **kwargs)
+        # ^ sets self._parent
         self.role = None
         if len(args) > 0:
             kwargs['value'] = args[0]
         if len(args) > 1:
             raise ValueError("Too many args")
-        tk.StringVar.__init__(self, **kwargs)
-        self.parent = None
+        if args:
+            tk.StringVar.__init__(self, args[0], **kwargs)
+        else:
+            tk.StringVar.__init__(self, **kwargs)
+        # ^ will raise an exception if MainWindow (or tk.Tk) not initialized
         self.index = None
         self.queued_tk_args = {}
+
+    def __repr__(self):
+        return self.get()
 
     def setData(self, role, value):
         self.role = role
         self.set(value)
 
     def setForeground(self, qbrush):
-        if (self.parent is None) or (self.index is None):
+        if (self._parent is None) or (self.index is None):
+            # ^ self._parent should be set by QWidget constructor
+            #   which this subclass's constructor should call.  
             # raise RuntimeError(
             #     no_listview_msg.format(self.parent, self.index)
             # )
             self.queued_tk_args['fg'] = qbrush.toTkColor()
             return
         self.parent.itemconfig(self.index, {'fg': qbrush.toTkColor()})
+        # or (naming is inconsistent):
+        # self.parent.itemconfig(0, foreground="purple")
+        # self.parent.itemconfig(2, bg='green')
 
 
 class QColor:
@@ -108,10 +316,52 @@ class QColor:
         return '#%02x%02x%02x' % self.color
 
 
+class QtEnum(object):
+    """This is an enum that is better than Enum because type of value
+    is known when subclassed.
+    """
+    next_value = 0
+    used_values = set()  # or {value,}  # Pythonic init like dict but no pairs
+    def __init__(self, *args):
+        if args:
+            if len(args) > 1:
+                # If this looks familiar its also in
+                # QWidget and nottk (and maybe notk)
+                raise ValueError(
+                    "Expected either value as 1st arg or no args but"
+                    " got more sequential args: %s"
+                    % (args[1:])
+                )
+            if args[0] in QtAlignment.used_values:
+                raise ValueError("%s is already used." % args[0])
+            self.value = args[0]
+            QtAlignment.used_values.add(self.value)
+            return
+        while QtAlignment.next_value in QtAlignment.used_values:
+            QtAlignment.next_value += 1
+        self.value = QtAlignment.next_value
+        QtAlignment.used_values.add(self.value)
+        QtAlignment.next_value += 1
+
+class QtAlignment(QtEnum):
+    pass
+
 class Qt:
     lightGray = QColor.fromRgb(192, 192, 192)
     darkGreen = QColor.fromRgb(0, 128, 0)
     black = QColor.fromRgb(0, 0, 0)
+    assert(QtAlignment.next_value == 0)
+    AlignLeft = QtAlignment()
+    assert(QtAlignment.next_value != 0)
+    AlignRight = QtAlignment()
+    assert(AlignLeft.value != AlignRight.value)
+    AlignBottom = QtAlignment()
+    AlignTop = QtAlignment()
+    AlignCenter = QtAlignment()
+    AlignHCenter = QtAlignment()
+    AlignVCenter = QtAlignment()
+    # AlignJustify etc. were in Qt4.
+
 
 
 class QBrush:
@@ -201,11 +451,15 @@ class NoQtEventHandler:
 '''
 
 
+
+
 class QTimer:
     '''
     Attributes:
     timeout -- It mimics the SLOTS feature of Qt in a much simpler way:
-        It is just a list of signals (function handles).
+        It is just a list of slots (function references in this case)
+        for the timeout signal which is now a concept rather than a
+        construct (_on_timeout runs each function in the timeout list).
     '''
     def __init__(self, parent):
         self.parent = parent
@@ -242,3 +496,156 @@ class QTimer:
         if not self._singleShot:
             self.start()
             # threading.Timer can only be started once.
+
+
+
+def _ui_subtree(ui, parentWidget, parentNode, ui_file, indent=""):
+    """
+    Args:
+        ui (QWidget): Every widget will be added as a member to this,
+            even if outside of central widget or nested inside of
+            a layout.
+        parentWidget: (any QWidget or QLayout subclass)
+        parentNode: The xml node to traverse.
+        ui_file (string): Path to ui file, only for traceable errors
+    """
+    count = 0
+    prefix = "[outputinspector noqt _ui_subtree] " + indent
+    for node in parentNode:
+        if node.tag in ("widget", "layout", "item"):
+            if node.tag == "item":
+                className = "QLayout"
+                varName = None
+                thisType = QLayout
+                # QLayout because QLayoutItem has no
+                #   addChildLayout nor addChildWidget
+            else:
+                className = node.attrib["class"]
+                varName = node.attrib["name"]
+                thisType = globals()[className]
+                if className == "QMainWindow":
+                    raise RuntimeError(
+                        "QMainWindow should be the highest parentWidget"
+                        " under ui file's XML root but it was a child."
+                    )
+                if className not in globals():
+                    raise NotImplementedError(className)
+            echo0(prefix+"[%s] %s" % (node.tag, className))
+            subObj = thisType(parentWidget)
+            # ^ Should never call QMainWindow constructor--that was
+            #   already constructed (or constructor called this and
+            #   it is incomplete)
+            # ^ QLayoutItem only takes QtAlignment or nothing (don't
+            #   use it anyway, because it has no addChild* methods)
+            
+            subObj.name = varName
+            if node.tag == "widget":
+                echo0(prefix+"  parent adding %s = %s()  # %s"
+                        % (varName, className, node.tag))
+                if hasattr(parentWidget, "addChildWidget"):
+                    parentWidget.addChildWidget(subObj)
+                else:
+                    # It is a layout and instead has:
+                    parentWidget.addWidget(subObj)
+            else:
+                echo0(prefix+"  parent adding %s = %s()  # %s"
+                        % (varName, className, node.tag))
+                if hasattr(parentWidget, "addChildLayout"):
+                    parentWidget.addChildLayout(subObj)
+                elif hasattr(parentWidget, "addLayout"):
+                    # It is a layout and instead has:
+                    parentWidget.addLayout(subObj)
+                else:
+                    # It is a Widget and instead has:
+                    parentWidget.setLayout(subObj)
+            if varName is not None:
+                setattr(parentWidget, varName, subObj)
+                if node.tag == "widget":
+                    echo0(prefix+"  +Adding %s = %s()  # %s to ui"
+                          % (varName, className, node.tag))
+                    setattr(ui, varName, subObj)
+                    # ^ widget must always be a member of ui even if
+                    #   in a layout (which can in turn be inside
+                    #   QWidget centralWidget)
+                else:
+                    echo0(prefix+"  *not* adding %s = %s()  # %s to ui"
+                          % (varName, className, node.tag))
+            else:
+                echo0(prefix+"  *not* adding %s = %s()  # %s to ui"
+                        % (varName, className, node.tag))
+
+            sub_count = _ui_subtree(ui, subObj, node, ui_file,
+                                indent=indent+"  ")
+            count += 1
+            if sub_count == 0:
+                echo0(prefix+"[/ leaf] done %s = %s()  # %s"
+                      % (varName, className, node.tag))
+            else:
+                echo0(prefix+"[/ children=%s] done %s = %s()  # %s"
+                      % (sub_count, varName, className, node.tag))
+        elif node.tag == "property":
+            name = node.attrib.get('name')
+            echo0(prefix+"NotImplemented: %s  # %s in %s"
+                  % (node.tag, name, ui_file))
+        else:
+            parentName = parentNode.attrib.get('name')
+            if parentName is None:
+                parentName = "a " + parentNode.tag
+            echo0(prefix+'Unknown tag "%s"'
+                  ' under %s in %s'
+                  % (node.tag, parentName, ui_file))
+    return count
+
+def _ui_loader(self, ui, ui_file):
+    """
+    To behave like Qt, _ui (ui in Qt) must be equivalent to the centralWidget of
+    the ui file, even though _ui is inside of QMainWindow and the centralWidget
+    of the ui file is QMainWindow (usually or always (?)).
+    """
+    prefix = "[outputinspector noqt _ui_loader] "
+    echo0(prefix+"Loading %s in no-GUI mode." % ui_file)
+    xmltree = ET.parse(ui_file)
+    xmlroot = xmltree.getroot()  # such as <ui version="4.0">
+    self.className = type(self).__name__
+    for node in xmlroot:
+        if node.tag == "class":
+            self.className = node.text
+        elif node.tag == "widget":
+            _ui_subtree(ui, self, node, ui_file)
+        else:
+            echo0(prefix+"Unknown tag %s under %s in %s"
+                  % (node.tag, self.className, ui_file))
+
+
+
+class QMainWindow(QWidget):
+    def __init__(self, *args, ui_file=None):
+        if ui_file is None:
+            echo0("In this Python shim (noqt.py),"
+                  " the ui_file keyword argument is required.")
+        if args:
+            if not hasattr(args[0], "parentWidget"):
+                # ^ Every QWidget subclass has the parentWidget method
+                #   (This could check for any other QWidget attribute
+                #   or method, but not in OutputInspector because it
+                #   has a CLI mode so a subclass of OutputInspector
+                #   and QMainWindow is not always used--but
+                #   OutputInspector has the parentWidget method).
+                raise TypeError("Expected 1 parent widget"
+                                " (or no sequential args)"
+                                " but got a(n) %s."
+                                % type(args[0]).__name__)
+        if not isinstance(ui_file, str):
+            # We must be making self
+            return
+            # raise TypeError("Expected string (ui file path) but got a(n) %s"
+            #                 % type(ui_file).__name__)
+        if not os.path.isfile(ui_file):
+            raise FileNotFoundError(ui_file)
+        self._ui = QWidget(self)  # centralWidget type is QWidget
+        # but _ui is a special container that also contains
+        # widgets outside of centralWidget such as
+        # a QStatusBar
+        _ui_loader(self, self._ui, ui_file)
+        # ^ To behave like Qt, _ui (ui in Qt) must be
+        # equivalent to the centralWidget of the ui file.

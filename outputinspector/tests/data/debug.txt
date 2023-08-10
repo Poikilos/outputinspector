@@ -1,0 +1,15 @@
+
+
+-------------
+  Separator
+-------------
+
+2023-08-08 21:10:11: ERROR[Main]: Subgame specified in default_game [Bucket_Game] is invalid.
+2023-08-08 21:10:12: ERROR[Main]: GUIEngine: execution of menu script failed: Failed to load and run script from /home/owner/minetest-rsync/bin/../builtin/init.lua:
+2023-08-08 21:10:12: ERROR[Main]: ...er/minetest-rsync/bin/../builtin/mainmenu/tab_online.lua:105: ')' expected near '.'
+2023-08-08 21:10:12: ERROR[Main]: stack traceback:
+2023-08-08 21:10:12: ERROR[Main]: 	[C]: in function 'dofile'
+2023-08-08 21:10:12: ERROR[Main]: 	/home/owner/minetest-rsync/bin/../builtin/mainmenu/init.lua:63: in main chunk
+2023-08-08 21:10:12: ERROR[Main]: 	[C]: in function 'dofile'
+2023-08-08 21:10:12: ERROR[Main]: 	/home/owner/minetest-rsync/bin/../builtin/init.lua:46: in main chunk
+2023-08-08 21:10:12: ERROR[Main]: No future without main menu!

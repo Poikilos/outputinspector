@@ -2,6 +2,7 @@
 from __future__ import print_function
 import sys
 import os
+import inspect
 
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_DIR = os.path.dirname(MODULE_DIR)
@@ -89,10 +90,13 @@ class Settings:
             echo0("The Settings object has no path.")
 
     def __del__(self):
+        callerName = inspect.stack()[1][3]
+        # Python 3.5: inspect.stack()[1].function (namedtuple, so [3] still ok)
+        prefix = "[Settings __del__ via %s] " % callerName
         if self.data is not None:
             self.sync()
         else:
-            warn("The settings data was not initialized before `del`.")
+            warn(prefix+"The settings data was not initialized before `del`.")
 
     def readIni(self, path):
         lineN = 0
