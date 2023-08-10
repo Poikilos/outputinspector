@@ -4,6 +4,9 @@ import outputinspector.notk as tk
 
 """
 import sys
+
+END = "end"
+
 def echo0(*args):
     print(*args, file=sys.stderr)
 
@@ -65,7 +68,7 @@ class Listbox(Widget):
         """Bind a named action to a given callback
         Usage: bind("<<ListboxSelect>>", _on_items_clicked)
         """
-        prefix = "[Listbox bind]"
+        prefix = "[Listbox bind] "
         echo0(prefix+"Ignored bind %s since in console mode." % action)
 
     def append(self, item):
@@ -74,6 +77,8 @@ class Listbox(Widget):
         self.insert(Listbox.size(self), item)
     
     def insert(self, index, item):
+        prefix = "[Listbox insert]"
+        echo0(prefix+"into dummy CLI UI")
         self._items.insert(index, item)
     
     def itemconfig(self, index, options):

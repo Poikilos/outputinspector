@@ -26,10 +26,27 @@ if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
     # ^ allows importing REPO_DIR
 
-import outputinspector.notk as tk
-import outputinspector.nottk as ttk
-from outputinspector.notkinter import messagebox
+ENABLE_GUI = True
+for argi in range(len(sys.argv)):
+    arg = sys.argv[argi]
+    if arg == "--cli":
+        ENABLE_GUI = False
 
+if ENABLE_GUI:
+    print("[noqt] using GUI mode", file=sys.stderr)
+    if sys.version_info.major >= 3:
+        import tkinter as tk
+        from tkinter import ttk
+        from tkinter import messagebox
+    else:
+        import Tkinter as tk
+        import ttk
+        import tkMessageBox as messagebox
+else:
+    print("[noqt] using CLI mode", file=sys.stderr)
+    import outputinspector.notk as tk
+    import outputinspector.nottk as ttk
+    from outputinspector.notkinter import messagebox
 
 verbosity = 2
 max_verbosity = 2
@@ -70,14 +87,14 @@ class QLayoutItem(object):
         self._parent = None
         self._alignment = None
         if args:
-            if not isinstance(args[0], QtAlignment):
-                raise TypeError("Expected QtAlignment but got %s"
+            if not isinstance(args[0], Alignment):
+                raise TypeError("Expected Alignment but got %s"
                                 % type(args[0]).__name__)
             if len(args) > 1:
                 # If this looks familiar its also in
                 # QWidget and nottk (and maybe notk)
                 raise ValueError(
-                    "Expected either QtAlignment as 1st arg or no args but"
+                    "Expected either Alignment as 1st arg or no args but"
                     " got more sequential args: %s"
                     % (args[1:])
                 )
@@ -207,15 +224,6 @@ class QListView(QAbstractItemView, tk.Listbox):
             tk.Listbox.__init__(self, **kwargs)
             # ^ sets _parent (get with parentWidget())
         self.bind('<<ListboxSelect>>', self._on_items_selected)
-    
-    def addItem(self, qlistwidgetitem):
-        qlistwidgetitem._parent = self
-        # qlistwidgetitem.index = self._tk_size(self)  # maybe fancy this up better??
-        qlistwidgetitem.index = tk.Listbox.size(self)
-        self.append(qlistwidgetitem)
-        for key, value in qlistwidgetitem.queued_tk_args.items():
-            # tk.Listbox-like:
-            self.itemconfig(qlistwidgetitem.index, {key: value})
 
     def _on_items_selected(self, event):
         # print(event)
@@ -229,7 +237,24 @@ class QListView(QAbstractItemView, tk.Listbox):
 
 
 class QListWidget(QListView):
-    pass
+    def addItem(self, qlistwidgetitem):
+        """Add a QListWidgetItem to the QListWidget (inherits QListView but adds addItem)
+        Mimic Qt C++
+        """
+        prefix = "[noqt addItem] "
+        qlistwidgetitem._parent = self
+        # qlistwidgetitem.index = self._tk_size(self)  # maybe fancy this up better??
+        qlistwidgetitem.index = tk.Listbox.size(self)
+        # self.append(qlistwidgetitem)
+        echo0(prefix+"adding a %s from %s: %s" % (
+            type(qlistwidgetitem).__name__,
+            os.path.basename(inspect.getfile(type(qlistwidgetitem))),
+            qlistwidgetitem.get(),
+        ))
+        self.insert(tk.END, qlistwidgetitem)
+        for key, value in qlistwidgetitem.queued_tk_args.items():
+            # tk.Listbox-like:
+            self.itemconfig(qlistwidgetitem.index, {key: value})
 
 
 no_listview_msg = (
@@ -242,7 +267,7 @@ no_listview_msg = (
 )
 
 
-class QListWidgetItem(QWidget, tk.StringVar):
+class QListWidgetItem(tk.StringVar):  # TODO: also inherit from QWidget?
     '''
     Usually in Tkinter, there is only one StringVar for a listbox:
     """
@@ -265,9 +290,10 @@ class QListWidgetItem(QWidget, tk.StringVar):
         noqt.QListWidgetItem is added to a noqt.QListView.
     '''
     def __init__(self, *args, **kwargs):
+        echo0("WARNING: Using GUI-like QListWidgetItem in CLI\n")
         QWidget.__init__(self, *args, **kwargs)
         # ^ sets self._parent
-        self.role = None
+        self.roles = []
         if len(args) > 0:
             kwargs['value'] = args[0]
         if len(args) > 1:
@@ -283,9 +309,14 @@ class QListWidgetItem(QWidget, tk.StringVar):
     def __repr__(self):
         return self.get()
 
-    def setData(self, role, value):
-        self.role = role
-        self.set(value)
+    def setData(self, role, var):
+
+        if hasattr(var, "get"):
+            # Such as QVariant
+            value = var.get()
+        else:
+            value = var
+        
 
     def setForeground(self, qbrush):
         if (self._parent is None) or (self.index is None):
@@ -316,14 +347,18 @@ class QColor:
         return '#%02x%02x%02x' % self.color
 
 
-class QtEnum(object):
+class enum(object):
     """This is an enum that is better than Enum because type of value
     is known when subclassed.
     """
     next_value = 0
     used_values = set()  # or {value,}  # Pythonic init like dict but no pairs
-    def __init__(self, *args):
+    types = []
+    def __init__(self, *args, types=None):
+        cls = type(self)
         if args:
+            self.value = args[0]
+            cls.used_values.add(self.value)
             if len(args) > 1:
                 # If this looks familiar its also in
                 # QWidget and nottk (and maybe notk)
@@ -332,36 +367,115 @@ class QtEnum(object):
                     " got more sequential args: %s"
                     % (args[1:])
                 )
-            if args[0] in QtAlignment.used_values:
-                raise ValueError("%s is already used." % args[0])
-            self.value = args[0]
-            QtAlignment.used_values.add(self.value)
-            return
-        while QtAlignment.next_value in QtAlignment.used_values:
-            QtAlignment.next_value += 1
-        self.value = QtAlignment.next_value
-        QtAlignment.used_values.add(self.value)
-        QtAlignment.next_value += 1
 
-class QtAlignment(QtEnum):
+            if args[0] in cls.used_values:
+                raise ValueError("%s is already used." % args[0])
+            return
+        while cls.next_value in cls.used_values:
+            cls.next_value += 1
+
+
+        self.value = cls.next_value
+        cls.used_values.add(self.value)
+
+        if types:
+            if not isinstance(types, (list, tuple)):
+                raise TypeError("list or tuple is required")
+            cls.types = types
+
+        cls.next_value += 1
+
+class Alignment(enum):  # mimic Qt::Alignment
+    pass
+
+class ItemDataRole(enum):  # mimic Qt::ItemDataRole
+    pass
+
+class ItemFlag(enum):
+    pass
+
+class CheckState(enum):
+    pass
+
+class SortOrder(enum):
+    pass
+
+class SizeMode(enum):
+    pass
+
+class SizeHint(enum):
     pass
 
 class Qt:
     lightGray = QColor.fromRgb(192, 192, 192)
     darkGreen = QColor.fromRgb(0, 128, 0)
     black = QColor.fromRgb(0, 0, 0)
-    assert(QtAlignment.next_value == 0)
-    AlignLeft = QtAlignment()
-    assert(QtAlignment.next_value != 0)
-    AlignRight = QtAlignment()
+    assert(Alignment.next_value == 0)
+    AlignLeft = Alignment()
+    assert(Alignment.next_value != 0)
+    AlignRight = Alignment()
     assert(AlignLeft.value != AlignRight.value)
-    AlignBottom = QtAlignment()
-    AlignTop = QtAlignment()
-    AlignCenter = QtAlignment()
-    AlignHCenter = QtAlignment()
-    AlignVCenter = QtAlignment()
+    AlignBottom = Alignment()
+    AlignTop = Alignment()
+    AlignCenter = Alignment()
+    AlignHCenter = Alignment()
+    AlignVCenter = Alignment()
     # AlignJustify etc. were in Qt4.
 
+    # General purpose roles:
+    DisplayRole = ItemDataRole(types=["QString"])
+    echo0("DisplayRole.value = %s" % DisplayRole.value)
+    assert(DisplayRole.value == 0)
+    DecorationRole = ItemDataRole(1, types=["QColor", "QIcon", "QPixmap"])
+    EditRole = ItemDataRole(2, types=["QString"])
+    assert(DecorationRole.types == ["QColor", "QIcon", "QPixmap"])
+    ToolTipRole = ItemDataRole(3, types=["QString"])
+    StatusTipRole = ItemDataRole(4, types=["QString"])
+    WhatsThisRole = ItemDataRole(5, types=["QString"])
+    DisplayRole = ItemDataRole(6, types=["QString"])
+    SizeHintRole = ItemDataRole(13, types=["QSize"])
+
+    # appearance and meta data roles:
+    FontRole = ItemDataRole(6, types=["QFont"])
+    TextAlignmentRole = ItemDataRole(7, types=["Alignment"])
+    BackgroundRole = ItemDataRole(8, types=["QBrush"])
+    ForegroundRole = ItemDataRole(9, types=["QBrush"])
+    CheckStateRole = ItemDataRole(10, types=["Checkstate"])
+    InitialSortOrderRole = ItemDataRole(14, types=["SortOrder"])
+
+    # Accessibility roles:
+    AccessibleTextRole = ItemDataRole(11)
+    AccessibleDescriptionRole = ItemDataRole(12)
+
+    # User roles:
+    UserRole = ItemDataRole(0x0100)  # This & up can be used for application-specific purposes
+
+    NoItemFlags = ItemFlag(0)
+    ItemIsSelectable = ItemFlag(1)
+    ItemIsEditable = ItemFlag(2)
+    ItemIsDragEnabled = ItemFlag(4)
+    ItemIsDropEnabled = ItemFlag(8)
+    ItemIsUserCheckable = ItemFlag(16)
+    ItemIsEnabled = ItemFlag(32)
+    ItemIsAutoTristate = ItemFlag(64)
+    ItemNeverHasChildren = ItemFlag(128)
+    ItemIsUserTristate = ItemFlag(256)
+
+    Unchecked = CheckState(0)
+    PartiallyChecked = CheckState(1)
+    Checked = CheckState(2)
+
+    AscendingOrder = SortOrder(0)
+    DescendingOrder = SortOrder(1)
+
+    AbsoluteSize = SizeMode(0)
+    RelativeSize = SizeMode(1)
+
+    MinimumSize = SizeHint(0)
+    PreferredSize = SizeHint(1)
+    MaximumSize = SizeHint(2)
+    MinimumDescent = SizeHint(3)
+    
 
 
 class QBrush:
@@ -535,7 +649,7 @@ def _ui_subtree(ui, parentWidget, parentNode, ui_file, indent=""):
             # ^ Should never call QMainWindow constructor--that was
             #   already constructed (or constructor called this and
             #   it is incomplete)
-            # ^ QLayoutItem only takes QtAlignment or nothing (don't
+            # ^ QLayoutItem only takes Alignment or nothing (don't
             #   use it anyway, because it has no addChild* methods)
             
             subObj.name = varName
@@ -618,11 +732,18 @@ def _ui_loader(self, ui, ui_file):
 
 
 
-class QMainWindow(QWidget):
+class QMainWindow(QWidget, ttk.Frame):
     def __init__(self, *args, ui_file=None):
+        prefix = "[QMainWindow] "
+        echo0(prefix+"initializing")
+        ttk.Frame.__init__(self)
+        QWidget.__init__(self, *args)
         if ui_file is None:
-            echo0("In this Python shim (noqt.py),"
-                  " the ui_file keyword argument is required.")
+            raise ValueError(
+                prefix+"In this Python shim (noqt.py),"
+                " the ui_file keyword argument is required."
+            )
+            
         if args:
             if not hasattr(args[0], "parentWidget"):
                 # ^ Every QWidget subclass has the parentWidget method
@@ -649,3 +770,4 @@ class QMainWindow(QWidget):
         _ui_loader(self, self._ui, ui_file)
         # ^ To behave like Qt, _ui (ui in Qt) must be
         # equivalent to the centralWidget of the ui file.
+        

@@ -37,16 +37,27 @@ from outputinspector import (
 from outputinspector.noqt import (
     QListView,
     QStatusBar,
+    QMainWindow,
 )
 
 
-class MainWindow(OutputInspector, ttk.Frame):
+class MainWindow(OutputInspector, QMainWindow):  # ttk.Frame
 
     def __init__(self, root):
+        prefix = "[MainWindow] "
         OutputInspector.__init__(self)
-        ttk.Frame.__init__(self)
+        QMainWindow.__init__(
+            self,
+            ui_file=os.path.join(REPO_DIR, "mainwindow.ui"),
+        )
+        # ^ OutputInspector should detect if it is not an
+        #   OutputInspector to detect this case and not call that in
+        #   this case.
+        echo0(prefix+"initializing")
+        # ttk.Frame.__init__(self)
         self.root = root
         if root is not None:
+            # TODO: eliminate this? Old way of detecting GUI mode
             self._window_init(root)
         else:
             # Use console mode.
@@ -56,20 +67,20 @@ class MainWindow(OutputInspector, ttk.Frame):
 
     def _window_init(self, parent):
         # self.bV = tk.StringVar()
-        ttk.Frame.__init__(self, parent)
+        # ttk.Frame.__init__(self, parent)
         self.pack(fill=tk.BOTH, expand=True)
-        self.mainListWidget = QListView(  # There is no ttk Listbox
-            self,
-        )
-        self._ui = self
+
+        # self.mainListWidget = QListView(self)  # instead set in ui by noqt
+        # self._ui = self  # REMOVED since loses ones added by noqt ui loader
         # ^ _ui is only for graphical mode (must be set after
         #   OutputInspector.__init__(self))
         # textvariable = self.bV,
-        self.mainListWidget.pack()
+        self._ui.mainListWidget.pack()  # self.mainListWidget.pack()
         # from mainwindow.ui:
-        self.statusBar = QStatusBar(self)
-        self.statusBar.pack(side=tk.BOTTOM, fill=tk.Y)
+        # self.statusBar = QStatusBar(self)
+        self._ui.statusBar.pack(side=tk.BOTTOM, fill=tk.Y)  # self.statusBar.pack
         self.root.geometry("1200x400")
+        # ^ TODO: use noqt to call geometry from ui file
 
 
     def showinfo(self, title, msg):

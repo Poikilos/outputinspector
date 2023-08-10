@@ -32,7 +32,14 @@ if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
     # ^ allows importing REPO_DIR
 
-
+from outputinspector.noqt import (
+    Qt,
+    QtEnum,
+)
+# class Qt:
+#     lightGray = QColor.fromRgb(192, 192, 192)
+#     darkGreen = QColor.fromRgb(0, 128, 0)
+#     black = QColor.fromRgb(0, 0, 0)
 
 verbosity = 2
 max_verbosity = 2
@@ -76,6 +83,7 @@ class QListView(tk.Listbox):
         self.bind('<<ListboxSelect>>', self._on_items_selected)
 
     def addItem(self, qlistwidgetitem):
+        prefix = "[noqttk addItem] "
         qlistwidgetitem.parent = self
         qlistwidgetitem.index = self.size()
         self.append(qlistwidgetitem)
@@ -128,12 +136,16 @@ class QListWidgetItem(tk.StringVar):
         noqt.QListWidgetItem is added to a noqt.QListView.
     '''
     def __init__(self, *args, **kwargs):
-        self.role = None
+        prefix = "[noqttk QListWidgetItem] "
+        self.roles = []
+        self.roles.append("")
         if len(args) > 0:
+            echo0(prefix+"passed %s: %s" % (type(args[0]).__name__, args[0]))
             kwargs['value'] = args[0]
         if len(args) > 1:
             raise ValueError("Too many args")
         tk.StringVar.__init__(self, **kwargs)
+        echo0(prefix+"initialized to %s" % self.get())
         # ^ will raise an exception if MainWindow (or tk.Tk) not initialized
         self.parent = None
         self.index = None
@@ -142,9 +154,19 @@ class QListWidgetItem(tk.StringVar):
     def __repr__(self):
         return self.get()
 
-    def setData(self, role, value):
-        self.role = role
-        self.set(value)
+    def __str__(self):
+        # Required so it works as a list item in tk.Listbox
+        return self.get()
+
+    def setData(self, role, var):
+        prefix = "[noqttk QListWidgetItem setData] "
+        if hasattr(var, "get"):
+            # Such as QVariant
+            value = var.get()
+        else:
+            value = var
+        if role == Qt.DisplayRole:
+            self.set(value)
 
     def setForeground(self, qbrush):
         if (self.parent is None) or (self.index is None):
@@ -170,12 +192,6 @@ class QColor:
         # See <https://stackoverflow.com/a/3380739/4541104>
         # TODO: check bounds.
         return '#%02x%02x%02x' % self.color
-
-
-class Qt:
-    lightGray = QColor.fromRgb(192, 192, 192)
-    darkGreen = QColor.fromRgb(0, 128, 0)
-    black = QColor.fromRgb(0, 0, 0)
 
 
 class QBrush:

@@ -346,8 +346,6 @@ class OutputInspector:
         self.settings.setIfMissing("editor", "/usr/bin/geany")
         # echo0("* outputinspector init...done")
 
-
-
         # def init(self, errorsListFileName):
         '''
         formats with "\n" at end must be AFTER other single-param formats that have
@@ -550,12 +548,15 @@ class OutputInspector:
             # pinfo("  items.size(): {}".format(itList.size()))
             if self.m_Verbose:
                 pinfo("  items: ['" + "', '".join(itList) + "']")
+        
         if type(self).__name__ == "OutputInspector":
-            QMainWindow.__init__(
-                self,
-                ui_file=os.path.join(REPO_DIR, "mainwindow.ui")
-            )
-            # ^ set self._ui etc.
+            echo0("Using CLI mode.")
+            # noqt.set_cli()
+        QMainWindow.__init__(
+            self,
+            ui_file=os.path.join(REPO_DIR, "mainwindow.ui")
+        )
+        # ^ set self._ui etc.
         return
 
     @staticmethod
