@@ -179,3 +179,11 @@ echo
 /moc_predefs.h
 /.directory
 /err-ellipis.txt
+/.qmake.stash
+/Makefile
+/main.o
+/mainwindow.o
+/moc_mainwindow.cpp
+/moc_mainwindow.o
+/settings.o
+/ui_mainwindow.h
