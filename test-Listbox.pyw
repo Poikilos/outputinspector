@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
+from __future__ import print_function
+import sys
 
-try:
+if sys.version_info.major >= 3:
+    print("\nUsing Python %s" % sys.version, file=sys.stderr)
+    # sys.path.insert(0, "/usr/lib/python3.10")  # even this doesn't prevent
+    # VSCode linux "ModuleNotFoundError: No module named 'tkinter'"
+    # even though with or without that, the path above is in sys.path
+    # and has tkinter in it :(
+    print("PYTHON=%s" % (sys.executable))
+    print("PYTHONPATH=%s" % (sys.path))
     import tkinter as tk
     from tkinter import ttk
     from tkinter import messagebox
-except ImportError:
+else:
     # Python 2
+    print("\nUsing Python 2", file=sys.stderr)
     import Tkinter as tk
     import ttk
     import tkMessageBox as messagebox

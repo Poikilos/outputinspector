@@ -31,11 +31,23 @@ REPO_DIR = os.path.dirname(MODULE_DIR)
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
     # ^ allows importing REPO_DIR
-
+print("[noqttk] loading", file=sys.stderr)
+import outputinspector
+outputinspector.ENABLE_GUI = True  # set True *only* in noqttk. Defaults to False.
 from outputinspector.noqt import (
     Qt,
-    QtEnum,
+    enum,
+    QMainWindow as QMainWindowCLI,
 )
+
+class QMainWindow(QMainWindowCLI, ttk.Frame):
+    """Grab all the ttk.Frame methods.
+    
+    The subclass will do Frame.__init__ if not a CLI subclass.
+    """
+    pass
+    def is_gui(self):
+        return True
 # class Qt:
 #     lightGray = QColor.fromRgb(192, 192, 192)
 #     darkGreen = QColor.fromRgb(0, 128, 0)

@@ -5,6 +5,7 @@ import os
 import platform
 import time
 import re
+import inspect
 from subprocess import Popen, PIPE
 
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -12,7 +13,9 @@ REPO_DIR = os.path.dirname(MODULE_DIR)
 my_path = os.path.realpath(__file__)
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
-
+print("[outputinspector] loading", file=sys.stderr)
+ENABLE_GUI = False
+"""
 from outputinspector.noqttk import (
     QListWidgetItem,
     QVariant,
@@ -21,10 +24,10 @@ from outputinspector.noqttk import (
     Qt,
     QTimer,
     connect,
-    # ALL of these have to be redefined in become_non_gui
+    # ALL of these have to be redefined in set_ui_mode
     #   if Tk is not initialized.
 )
-QMainWindow = None  # Only necessary for subclasses.
+"""
 verbosity = 2
 max_verbosity = 2
 TMP = "/tmp"
@@ -147,12 +150,14 @@ ROLE_COL = UserRole + 2
 ROLE_LOWER = UserRole + 3
 ROLE_COLLECTED_LINE = UserRole + 4
 ROLE_DETAILS = UserRole + 5
-QMainWindow = None
-def become_non_gui():
+QMainWindow = None  # Only necessary for subclasses.
+def set_ui_mode(enable_gui):
     prefix = "[outputinspector] "
-    echo0(prefix+"Switching to non-gui mode."
-          " Make a subclass that inherits OutputInspector and tk.Frame"
+    mode_caption = "GUI" if enable_gui else "CLI"
+    echo0(prefix+"Switching to %s mode." % mode_caption)
+    echo0(prefix+"- Make a subclass that inherits OutputInspector and tk.Frame"
           " to use a GUI.")
+    echo0(prefix+"- To use CLI, only import OutputInspector.")
     global QListWidgetItem
     global QVariant
     global QBrush
@@ -160,7 +165,13 @@ def become_non_gui():
     global Qt
     global QTimer
     global connect
-    import outputinspector.noqt as noqt
+    global QMainWindow
+    global ENABLE_GUI
+    ENABLE_GUI = enable_gui
+    if enable_gui:
+        import outputinspector.noqttk as noqt
+    else:
+        import outputinspector.noqt as noqt
     QListWidgetItem = noqt.QListWidgetItem
     QVariant = noqt.QVariant
     QBrush = noqt.QBrush
@@ -168,8 +179,70 @@ def become_non_gui():
     Qt = noqt.Qt
     QTimer = noqt.QTimer
     connect = noqt.connect
-    global QMainWindow
     QMainWindow = noqt.QMainWindow
+
+
+def caller_info(skip=2):
+    """Get the name of a caller in the format module.class.method.
+    Copied from: https://gist.github.com/techtonik/2151727
+    :arguments:
+        - skip (integer): Specifies how many levels of stack
+                          to skip while getting caller name.
+                          skip=1 means "who calls me",
+                          skip=2 "who calls my caller" etc.
+    :returns:
+        - package (string): caller package.
+        - module (string): caller module.
+        - klass (string): caller classname if one otherwise None.
+        - caller (string): caller function or method (if a class exist).
+        - line (int): the line of the call.
+        - An empty string is returned if skipped levels exceed stack height.
+    """
+    stack = inspect.stack()
+    start = 0 + skip
+    if len(stack) < start + 1:
+        return ''
+    parentframe = stack[start][0]
+
+    # module and packagename.
+    module_info = inspect.getmodule(parentframe)
+    module = None
+    if module_info:
+        mod = module_info.__name__.split('.')
+        package = mod[0]
+        if len(mod) > 1:
+            module = mod[1]
+
+    # class name.
+    klass = None
+    if 'self' in parentframe.f_locals:
+        klass = parentframe.f_locals['self'].__class__.__name__
+
+    # method or function name.
+    caller = None
+    if parentframe.f_code.co_name != '<module>':  # top level usually
+        caller = parentframe.f_code.co_name
+
+    # call line.
+    line = parentframe.f_lineno
+
+    # Remove reference to frame
+    # See: https://docs.python.org/3/library/inspect.html#the-interpreter-stack
+    del parentframe
+
+    return package, module, klass, caller, line
+
+
+def caller_info_str(skip=2):
+    parts = caller_info(skip=skip+1)
+    # ^ +1 to skip caller_info_str
+    result = ""
+    sep = ""
+    for part in parts:
+        if part is not None:
+            result += "%s%s" % (sep, part)
+            sep = "."
+    return result
 
 
 class OutputInspector:
@@ -211,14 +284,18 @@ class OutputInspector:
             #   the class is still incomplete.
             return UhOh()
         setattr(self, 'parentWidget', parentWidget)
-        echo0("* outputinspector init...")
-        if type(self).__name__ == "OutputInspector":
-            echo0(prefix+"Switching to non-gui operation.")
-            become_non_gui()
+        echo0(prefix+"initializing")
+        # if type(self).__name__ == "OutputInspector":
+        if not hasattr(self, "is_gui") or not self.is_gui():
+            echo0(prefix+"detected CLI mode")
+            set_ui_mode(False)
+            # ^ Must be set before QMainWindow to signal it!
             # Also, run QMainWindow.__init__ later
             #   since this is not a subclass.
             #   *see bottom* of __init__.
-        
+        else:
+            set_ui_mode(True)
+            echo0(prefix+"detected GUI mode")
         # public:
         # static QString unmangledPath(QString path)
 
@@ -308,10 +385,10 @@ class OutputInspector:
         else:
             pass
 
-        echo0("* outputinspector init...settings...")
+        echo0(prefix+"initializing settings...")
         # pinfo("Creating settings: {}".format(filePath))
         self.settings = Settings(filePath)
-        pinfo("[outputinspector] used the settings file \"{}\""
+        pinfo(prefix+"used the settings file \"{}\""
               "".format(self.settings.fileName()))
         # if os.path.isfile("/etc/outputinspector.conf"):
         #     self.config = Settings("/etc/outputinspector.conf")
@@ -330,14 +407,14 @@ class OutputInspector:
             self.settings.sync()
             if changed:
                 pinfo(
-                    "[outputinspector] transferred the old setting"
+                    prefix+"transferred the old setting"
                     " 'kate={}' to 'editor={}'."
                     "".format(self.settings.getString("kate"),
                               self.settings.getString("editor"))
                 )
             else:
                 pinfo(
-                    "[outputinspector] ignored the deprecated setting"
+                    prefix+"ignored the deprecated setting"
                     " 'kate={}' in favor of 'editor={}'."
                     "".format(self.settings.getString("kate"),
                               self.settings.getString("editor"))
@@ -552,9 +629,10 @@ class OutputInspector:
         if type(self).__name__ == "OutputInspector":
             echo0("Using CLI mode.")
             # noqt.set_cli()
+        echo0("Using QMainWindow from %s" % inspect.getfile(QMainWindow))
         QMainWindow.__init__(
             self,
-            ui_file=os.path.join(REPO_DIR, "mainwindow.ui")
+            ui_file=os.path.join(REPO_DIR, "mainwindow.ui"),
         )
         # ^ set self._ui etc.
         return
@@ -564,6 +642,7 @@ class OutputInspector:
         """Replace elipsis (3 or more dots) with the missing parts
         if a similar file can be found.
         """
+        prefix = "[unmangledPath] "
         # a.k.a. remove_elipsis
         # QRegularExpression literalDotsRE("\\.\\.\\.+") '''*< Match 2 dots followed by more. '''
         # FIXME: make below act like above
@@ -589,7 +668,7 @@ class OutputInspector:
                 if os.path.isfile(tryPath):
                     # TODO: ^ originally exists(). Is isfile always ok?
                     if verbose:
-                        pinfo("[outputinspector] transformed *.../dir"
+                        pinfo(prefix+"transformed *.../dir"
                               " into ../dir: \"{}\""
                               "".format(tryPath))
 
@@ -597,12 +676,12 @@ class OutputInspector:
 
                 else:
                     if verbose:
-                        pinfo("[outputinspector] There is no \"{}\""
+                        pinfo(prefix+"There is no \"{}\""
                               " in the current directory (\"{}\")"
                               "".format(tryPath, os.getcwd()))
         else:
             if (verbose):
-                pinfo("[outputinspector] There is no \"...\""
+                pinfo(prefix+"There is no \"...\""
                       " in the cited path: \"{}\""
                       "".format(path))
 
@@ -639,6 +718,7 @@ class OutputInspector:
         # del self._ui
 
     def init(self, errorsListFileName):
+        prefix = "[init] "
         if not (self.settings.contains("xEditorOffset") or self.settings.contains("yEditorOffset")):
             self.CompensateForEditorVersion()
         output_names = ["err.txt", "out.txt"]
@@ -647,7 +727,7 @@ class OutputInspector:
             tryPath = "debug.txt"
             if os.path.isfile(tryPath):
                 errorsListFileName = tryPath
-                pinfo("[outputinspector] detected \"{}\"...examining..."
+                pinfo(prefix+"detected \"{}\"...examining..."
                       "".format(tryPath))
 
             else:
@@ -667,7 +747,7 @@ class OutputInspector:
         lineCount = 0
         if std.cin.rdbuf().in_avail() > 1:
             # TODO: fix self--self never happens (Issue #16)
-            pinfo("[outputinspector] detected standard input (such as"
+            pinfo(prefix+"detected standard input (such as"
                   " from a console pipe)...skipping \"{}\"..."
                   "".format(errorsListFileName))
         '''
@@ -755,6 +835,7 @@ class OutputInspector:
         @param enablePush Push the line to the GUI right away (This is best for
                when reading information from standard input).
         '''
+        prefix = "[addLine] "
         self.lineCount += 1  # TODO: eliminate this?
 
         self.m_LineCount += 1
@@ -873,7 +954,7 @@ class OutputInspector:
                                       " '{}'...".format(sFileX))
                             # if not qfileSource.open(QFile.ReadOnly):
                             if not os.path.isfile(sFileX):
-                                warn("[outputinspector] did not scan a"
+                                warn(prefix+"did not scan a"
                                      " file that is cited by the log"
                                      " but that is not present: '{}'"
                                      "".format(sFileX))
@@ -941,12 +1022,12 @@ class OutputInspector:
                             # file
                         # end if found filename ender
                     elif self.m_Verbose:
-                        echo1("[outputinspector] WARNING:"
+                        echo1(prefix+"WARNING:"
                               " filename ender in {}"
                               "".format(line))
                     # end if getIniBool("FindTODOs")
                 else:
-                    echo1("[outputinspector] [debug]"
+                    echo1(prefix+"[debug]"
                           " getIniBool(\"FindTODOs\") off"
                           " so parsing has been skipped in: {}"
                           "".format(line))
@@ -1021,6 +1102,7 @@ class OutputInspector:
         Sequential arguments:
         info -- a dictionary to modify
         '''
+        prefix = "[lineInfo] "
         info["file"] = ""
         # ^ same as info["file"]
         info["row"] = ""
@@ -1247,7 +1329,7 @@ class OutputInspector:
                         and filePath.endswith('\''))):
                     filePath = filePath[1:-1]
 
-            echo1("[outputinspector] [debug]"
+            echo1(prefix+"[debug]"
                   " file path before unmangling: \"{}\""
                   "".format(filePath))
             filePath = OutputInspector.unmangledPath(filePath)
@@ -1305,12 +1387,12 @@ class OutputInspector:
             echo1("  detected file: '{}'"
                   "".format(filePath))
             info["good"] = "True"
-            # pinfo("[outputinspector] found a good line"
+            # pinfo(prefix+"found a good line"
             #       " with the following filename: {}".format(filePath))
 
         else:
             info["good"] = "False"
-            # pinfo("[outputinspector] found a bad line: {}"
+            # pinfo(prefix+"found a bad line: {}"
             #       "".format(originalLine))
 
         if info["good"] == "True":
@@ -1615,6 +1697,7 @@ class OutputInspector:
                 break
 
             count += 1
+
 
 def main():
     prefix = "[main (testing only, import instead)] "

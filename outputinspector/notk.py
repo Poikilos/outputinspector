@@ -6,6 +6,8 @@ import outputinspector.notk as tk
 import sys
 
 END = "end"
+print("[notk] loading", file=sys.stderr)
+
 
 def echo0(*args):
     print(*args, file=sys.stderr)
@@ -78,7 +80,9 @@ class Listbox(Widget):
     
     def insert(self, index, item):
         prefix = "[Listbox insert]"
-        echo0(prefix+"into dummy CLI UI")
+        echo0(prefix+"into dummy UI for CLI")
+        if index == END:
+            index = len(self._items)
         self._items.insert(index, item)
     
     def itemconfig(self, index, options):
@@ -101,3 +105,15 @@ class StringVar:
 
     def set(self, value):
         self._value = str(value)
+
+
+class Frame:
+    def __init__(self, *args, **kwargs):
+        self._parent = None
+        if args:
+            if len(args) > 1:
+                raise ValueError("Expected parent or no args")
+            self._parent = args[0]
+        # TODO: filter by actual tk.Frame args:
+        for key, value in kwargs.items():
+            setattr(self, key, value)

@@ -41,6 +41,8 @@ else:
 
 class TestMainWindow(unittest.TestCase):
     def test_main(self):
+        import outputinspector
+        outputinspector.ENABLE_GUI = True
         mainwindow.main()
 
 
@@ -54,4 +56,5 @@ if __name__ == "__main__":
             fn()  # Look at def test_* for the code if tracebacks start here
     if count > 0:
         print("All {} test(s) passed".format(count))
+    sys.exit(0)
 

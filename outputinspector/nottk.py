@@ -4,6 +4,8 @@ import outputinspector.nottk as ttk
 
 There is no ttk Listbox. Use notk for that.
 """
+import sys
+print("[nottk] loading", file=sys.stderr)
 import outputinspector.notk
 
 class Widget(outputinspector.notk.Widget):
@@ -13,5 +15,5 @@ class Widget(outputinspector.notk.Widget):
 class Label(outputinspector.notk.Label):
     pass
 
-# class Frame(outputinspector.notk.Frame):
-#     pass
+class Frame(outputinspector.notk.Frame):
+    pass

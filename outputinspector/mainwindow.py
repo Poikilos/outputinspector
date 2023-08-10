@@ -17,6 +17,10 @@ window = None
 
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_DIR = os.path.dirname(MODULE_DIR)
+print("[mainwindow] loading", file=sys.stderr)
+
+# if __name__ == __main__:
+#     sys.path.insert(0, REPO_DIR)
 
 try:
     import outputinspector
@@ -24,8 +28,10 @@ except ImportError as ex:
     if (("No module named 'outputinspector'" in str(ex))  # Python 3
             or ("No module named outputinspector" in str(ex))):  # Python 2
         sys.path.insert(0, REPO_DIR)
+        import outputinspector
     else:
         raise ex
+outputinspector.ENABLE_GUI = True  # mainwindow is GUI subclass so force GUI
 
 from outputinspector import (
     OutputInspector,
@@ -34,36 +40,55 @@ from outputinspector import (
     echo1,  # debug,
 )
 
-from outputinspector.noqt import (
-    QListView,
-    QStatusBar,
-    QMainWindow,
-)
+if outputinspector.ENABLE_GUI:
+    echo0("[mainwindow] Using the GUI version of QMainWindow")
+    from outputinspector.noqttk import (
+        QListView,
+        QStatusBar,
+        QMainWindow,
+    )
+else:
+    echo0("[mainwindow] Using the CLI version of QMainWindow")
+    from outputinspector.noqt import (
+        QListView,
+        QStatusBar,
+        QMainWindow,
+    )
 
 
 class MainWindow(OutputInspector, QMainWindow):  # ttk.Frame
 
     def __init__(self, root):
         prefix = "[MainWindow] "
-        OutputInspector.__init__(self)
-        QMainWindow.__init__(
+        OutputInspector.__init__(
             self,
-            ui_file=os.path.join(REPO_DIR, "mainwindow.ui"),
+            # ui_file=os.path.join(REPO_DIR, "mainwindow.ui"),
+            # ^ ui_file is already done by OutputInspector
         )
-        # ^ OutputInspector should detect if it is not an
-        #   OutputInspector to detect this case and not call that in
-        #   this case.
+
+        # QMainWindow.__init__(  # already done by OutputInspector
+        #     self,
+        #     ui_file=os.path.join(REPO_DIR, "mainwindow.ui"),
+        # )
+        # ^ OutputInspector should detect if it is a QMainWindow subclass
+        #   OutputInspector to detect this case and not  in
+        #   this case (may call noqt's instead of noqttk's)
         echo0(prefix+"initializing")
         # ttk.Frame.__init__(self)
         self.root = root
         if root is not None:
             # TODO: eliminate this? Old way of detecting GUI mode
-            self._window_init(root)
+            # self._window_init(root)
+            # wait until ttk.Frame class is complete:
+            root.after(10, self._window_init_timed)
         else:
             # Use console mode.
             pinfo("")
             pinfo("Output Inspector")
             pinfo("----------------")
+    
+    def _window_init_timed(self):
+        self._window_init(self.root)
 
     def _window_init(self, parent):
         # self.bV = tk.StringVar()

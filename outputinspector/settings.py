@@ -6,15 +6,19 @@ import inspect
 
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_DIR = os.path.dirname(MODULE_DIR)
-
+print("[settings] loading", file=sys.stderr)
+"""
+DO NOT import! Avoid circular import: outputinspector/__init__.py imports this
 try:
     import outputinspector
 except ImportError as ex:
     if (("No module named 'outputinspector'" in str(ex))  # Python 3
             or ("No module named outputinspector" in str(ex))):  # Python 2
         sys.path.insert(0, REPO_DIR)
+        import outputinspector
     else:
         raise ex
+"""
 '''
 from outputinspector import (
     warn,

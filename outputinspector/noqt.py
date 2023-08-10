@@ -11,7 +11,7 @@ but do not have corresponding symbols in Qt.
 '''
 from __future__ import print_function
 import sys
-import time
+# import time
 import threading
 import os
 import platform
@@ -25,15 +25,13 @@ REPO_DIR = os.path.dirname(MODULE_DIR)
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
     # ^ allows importing REPO_DIR
+print("[noqt] loading", file=sys.stderr)
 
-ENABLE_GUI = True
-for argi in range(len(sys.argv)):
-    arg = sys.argv[argi]
-    if arg == "--cli":
-        ENABLE_GUI = False
+import outputinspector
 
-if ENABLE_GUI:
-    print("[noqt] using GUI mode", file=sys.stderr)
+if outputinspector.ENABLE_GUI:
+    print("[noqt] detected GUI mode (import noqttk for GUI)",
+          file=sys.stderr)
     if sys.version_info.major >= 3:
         import tkinter as tk
         from tkinter import ttk
@@ -43,7 +41,7 @@ if ENABLE_GUI:
         import ttk
         import tkMessageBox as messagebox
 else:
-    print("[noqt] using CLI mode", file=sys.stderr)
+    print("[noqt] detected CLI mode", file=sys.stderr)
     import outputinspector.notk as tk
     import outputinspector.nottk as ttk
     from outputinspector.notkinter import messagebox
@@ -101,7 +99,7 @@ class QLayoutItem(object):
             self._alignment = args[0]
         self._children = []
 
-    def isEmpty():
+    def isEmpty(self):
         return not self._children
 
 
@@ -293,7 +291,7 @@ class QListWidgetItem(tk.StringVar):  # TODO: also inherit from QWidget?
         echo0("WARNING: Using GUI-like QListWidgetItem in CLI\n")
         QWidget.__init__(self, *args, **kwargs)
         # ^ sets self._parent
-        self.roles = []
+        self.roles = {}
         if len(args) > 0:
             kwargs['value'] = args[0]
         if len(args) > 1:
@@ -351,14 +349,31 @@ class enum(object):
     """This is an enum that is better than Enum because type of value
     is known when subclassed.
     """
-    next_value = 0
-    used_values = set()  # or {value,}  # Pythonic init like dict but no pairs
-    types = []
-    def __init__(self, *args, types=None):
+    next_roles = {}
+    _typeNames = {}
+
+    def get_typeNames(self):
+        return enum._typeNames[type(self).__name__][self.value]
+
+    def set_typeNames(self, value):
+        enum._typeNames[type(self).__name__][self.value] = value
+
+    typeNames = property(get_typeNames, set_typeNames)
+
+    def __init__(self, *args, typeNames=None):
         cls = type(self)
+        className = cls.__name__
+        if className == "enum":
+            raise TypeError(
+                "You must subclass enum so each cls has its own typeNames"
+            )
+
+        if className not in enum._typeNames:
+            enum._typeNames[className] = {}
+            enum.next_roles[className] = 0
+
         if args:
             self.value = args[0]
-            cls.used_values.add(self.value)
             if len(args) > 1:
                 # If this looks familiar its also in
                 # QWidget and nottk (and maybe notk)
@@ -367,29 +382,67 @@ class enum(object):
                     " got more sequential args: %s"
                     % (args[1:])
                 )
+        else:
+            # cls.next_role doens't work (backtracks)
+            while enum.next_roles[className] in enum._typeNames[className]:
+                enum.next_roles[className] += 1
 
-            if args[0] in cls.used_values:
-                raise ValueError("%s is already used." % args[0])
-            return
-        while cls.next_value in cls.used_values:
-            cls.next_value += 1
+            self.value = enum.next_roles[className]
 
+        if self.value in enum._typeNames[className]:
+            raise ValueError("%s is already used." % self.value)
 
-        self.value = cls.next_value
-        cls.used_values.add(self.value)
+        if typeNames is None:
+            typeNames = []
+        # self.typeNames[self.value] = typeNames
+        # type(self).get_typeNames(self)[self.value] = typeNames
+        # ^ same for every subclass, still... :( so:
+        if not isinstance(typeNames, (list, tuple)):
+            raise TypeError("list or tuple is required")
+            
+        enum._typeNames[className][self.value] = typeNames
 
-        if types:
-            if not isinstance(types, (list, tuple)):
-                raise TypeError("list or tuple is required")
-            cls.types = types
+        enum.next_roles[className] += 1
 
-        cls.next_value += 1
+    def get(self):
+        return self.value
+    
+    def set(self, value):
+        self.value = value
+
 
 class Alignment(enum):  # mimic Qt::Alignment
     pass
+    """
+    typeNames = {}
+
+    next_role = 0
+    def __init__(self, *args, typeNames=None):
+        # Pass self so subclass has separate roles!
+        enum.__init__(self, *args, typeNames=typeNames)
+    """
+
 
 class ItemDataRole(enum):  # mimic Qt::ItemDataRole
     pass
+    """
+    Ugh...even this doesn't make a separate dict for
+    each. It gets reset each time an instance is made.
+
+    _typeNames = {}
+    def get_typeNames(self):
+        return type(self)._typeNames
+
+    def set_typeNames(self, value):
+        type(self)._typeNames = value
+
+    typeNames = property(get_typeNames, set_typeNames)
+
+    next_role = 0
+    def __init__(self, *args, typeNames=None):
+        # Pass self so subclass has separate roles!
+        enum.__init__(self, *args, typeNames=typeNames)
+    """
 
 class ItemFlag(enum):
     pass
@@ -397,22 +450,25 @@ class ItemFlag(enum):
 class CheckState(enum):
     pass
 
+
 class SortOrder(enum):
     pass
+
 
 class SizeMode(enum):
     pass
 
+
 class SizeHint(enum):
     pass
+
 
 class Qt:
     lightGray = QColor.fromRgb(192, 192, 192)
     darkGreen = QColor.fromRgb(0, 128, 0)
     black = QColor.fromRgb(0, 0, 0)
-    assert(Alignment.next_value == 0)
     AlignLeft = Alignment()
-    assert(Alignment.next_value != 0)
+    assert(enum.next_roles["Alignment"] == 1)
     AlignRight = Alignment()
     assert(AlignLeft.value != AlignRight.value)
     AlignBottom = Alignment()
@@ -423,25 +479,29 @@ class Qt:
     # AlignJustify etc. were in Qt4.
 
     # General purpose roles:
-    DisplayRole = ItemDataRole(types=["QString"])
+    DisplayRole = ItemDataRole(typeNames=["QString"])
     echo0("DisplayRole.value = %s" % DisplayRole.value)
     assert(DisplayRole.value == 0)
-    DecorationRole = ItemDataRole(1, types=["QColor", "QIcon", "QPixmap"])
-    EditRole = ItemDataRole(2, types=["QString"])
-    assert(DecorationRole.types == ["QColor", "QIcon", "QPixmap"])
-    ToolTipRole = ItemDataRole(3, types=["QString"])
-    StatusTipRole = ItemDataRole(4, types=["QString"])
-    WhatsThisRole = ItemDataRole(5, types=["QString"])
-    DisplayRole = ItemDataRole(6, types=["QString"])
-    SizeHintRole = ItemDataRole(13, types=["QSize"])
+    DecorationRole = ItemDataRole(1, typeNames=["QColor", "QIcon", "QPixmap"])
+    EditRole = ItemDataRole(2, typeNames=["QString"])
+    echo0("DecorationRole.typeNames = %s" % DecorationRole.typeNames)
+    echo0("enum._typeNames = %s" % enum._typeNames)
+    assert(DecorationRole.typeNames == ["QColor", "QIcon", "QPixmap"])
+    # TODO: ^ Why does this it change to EditRole's? Even commented
+    #   code for DecorationRole doesn't fix it. So try:
+    # assert(enum._typeNames['DecorationRole'] == ["QColor", "QIcon", "QPixmap"])
+    ToolTipRole = ItemDataRole(3, typeNames=["QString"])
+    StatusTipRole = ItemDataRole(4, typeNames=["QString"])
+    WhatsThisRole = ItemDataRole(5, typeNames=["QString"])
+    SizeHintRole = ItemDataRole(13, typeNames=["QSize"])
 
     # appearance and meta data roles:
-    FontRole = ItemDataRole(6, types=["QFont"])
-    TextAlignmentRole = ItemDataRole(7, types=["Alignment"])
-    BackgroundRole = ItemDataRole(8, types=["QBrush"])
-    ForegroundRole = ItemDataRole(9, types=["QBrush"])
-    CheckStateRole = ItemDataRole(10, types=["Checkstate"])
-    InitialSortOrderRole = ItemDataRole(14, types=["SortOrder"])
+    FontRole = ItemDataRole(6, typeNames=["QFont"])
+    TextAlignmentRole = ItemDataRole(7, typeNames=["Alignment"])
+    BackgroundRole = ItemDataRole(8, typeNames=["QBrush"])
+    ForegroundRole = ItemDataRole(9, typeNames=["QBrush"])
+    CheckStateRole = ItemDataRole(10, typeNames=["Checkstate"])
+    InitialSortOrderRole = ItemDataRole(14, typeNames=["SortOrder"])
 
     # Accessibility roles:
     AccessibleTextRole = ItemDataRole(11)
@@ -476,7 +536,6 @@ class Qt:
     MaximumSize = SizeHint(2)
     MinimumDescent = SizeHint(3)
     
-
 
 class QBrush:
     def __init__(self, qcolor):
@@ -543,6 +602,7 @@ class QStatusBar(ttk.Label):
     def _on_timeout(self):
         self.clearMessage()
 
+
 def connect(sender, sig, receiver, slot):
     '''
     Sequential arguments:
@@ -554,6 +614,7 @@ def connect(sender, sig, receiver, slot):
     '''
     sig.append(slot)
 
+
 '''
 class NoQtEvent:
     def __init__(self, fn, caller_obj=None):
@@ -563,8 +624,6 @@ class NoQtEvent:
 
 class NoQtEventHandler:
 '''
-
-
 
 
 class QTimer:
@@ -610,7 +669,6 @@ class QTimer:
         if not self._singleShot:
             self.start()
             # threading.Timer can only be started once.
-
 
 
 def _ui_subtree(ui, parentWidget, parentNode, ui_file, indent=""):
@@ -717,7 +775,7 @@ def _ui_loader(self, ui, ui_file):
     of the ui file is QMainWindow (usually or always (?)).
     """
     prefix = "[outputinspector noqt _ui_loader] "
-    echo0(prefix+"Loading %s in no-GUI mode." % ui_file)
+    echo0(prefix+"Loading %s in CLI mode." % ui_file)
     xmltree = ET.parse(ui_file)
     xmlroot = xmltree.getroot()  # such as <ui version="4.0">
     self.className = type(self).__name__
@@ -730,14 +788,56 @@ def _ui_loader(self, ui, ui_file):
             echo0(prefix+"Unknown tag %s under %s in %s"
                   % (node.tag, self.className, ui_file))
 
-
-
-class QMainWindow(QWidget, ttk.Frame):
+QMainWindow_callerName = None
+class QMainWindow(QWidget):
     def __init__(self, *args, ui_file=None):
+        global QMainWindow_callerName
         prefix = "[QMainWindow] "
+        # callerName = inspect.stack()[1][3]
+        # ^ callerName is useless, just "__init__"
+        callerName = type(self).__name__
+        message = prefix+"%s triggered init" % callerName
+        if QMainWindow_callerName is not None:
+            raise RuntimeError(
+                message+" (already done by %s)" % QMainWindow_callerName
+            )
+        else:
+            echo0(message)
+        QMainWindow_callerName = callerName
+        del message
         echo0(prefix+"initializing")
-        ttk.Frame.__init__(self)
         QWidget.__init__(self, *args)
+        # if not hasattr(self, "is_gui") or not self.is_gui():
+        # FIXME: Why isn't this ever False even when run from MainWindow?
+        import outputinspector
+        # if not outputinspector.ENABLE_GUI:
+        if not hasattr(self, "is_gui") or not self.is_gui():
+            import outputinspector.nottk
+            echo0(prefix+"using CLI frame for %s" % type(self).__name__)
+            outputinspector.nottk.Frame.__init__(self, *args)
+        else:
+            if not hasattr(self, "_setup"):
+                # ^ ok since "_setup", should *not* be in notk's, only tk's.
+                # This should *only* be true if subclass
+                #   is also a subclass of ttk.Frame.
+
+                # for some reason it is missing even though the
+                #   correct subclass is being used--must be since
+                #   the ttk.Frame class is incompete at this stage, so pass
+                pass
+                """
+                raise RuntimeError(
+                    prefix+"%s is using non-Tk subclass as GUI frame for %s"
+                    % (outputinspector.caller_info_str(),
+                       type(self).__name__)
+                )
+                """
+            # Only if it is a *real* tk.Widget subclass!
+            #   The fake one (non-subclassed OutputInspector
+            #   adds this method.)
+            ttk.Frame.__init__(self, *args)
+            # NOTE: ^ still, this will only help in subclass, since
+            #   this class doesn't have ttk.Frame methods!
         if ui_file is None:
             raise ValueError(
                 prefix+"In this Python shim (noqt.py),"
@@ -770,4 +870,6 @@ class QMainWindow(QWidget, ttk.Frame):
         _ui_loader(self, self._ui, ui_file)
         # ^ To behave like Qt, _ui (ui in Qt) must be
         # equivalent to the centralWidget of the ui file.
-        
+    
+    def is_gui(self):
+        return False  # override and return False in subclass in noqttk 
