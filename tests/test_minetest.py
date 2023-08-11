@@ -13,15 +13,14 @@ if sys.version_info.major < 3:
     FileNotFoundError = IOError
     ModuleNotFoundError = ImportError
 
-TEST_SUBMODULE_DIR = os.path.dirname(os.path.realpath(__file__))
-TEST_DATA_DIR = os.path.join(TEST_SUBMODULE_DIR, "data")
+TESTS_DIR = os.path.dirname(os.path.realpath(__file__))
+TEST_DATA_DIR = os.path.join(TESTS_DIR, "data")
 TEST_DEBUG_PATH = os.path.join(TEST_DATA_DIR, "debug.txt")
 if not os.path.isdir(TEST_DATA_DIR):
     raise FileNotFoundError(TEST_DATA_DIR)
 if not os.path.isfile(TEST_DEBUG_PATH):
     raise FileNotFoundError(TEST_DEBUG_PATH)
-MODULE_DIR = os.path.dirname(TEST_SUBMODULE_DIR)
-REPO_DIR = os.path.dirname(MODULE_DIR)
+REPO_DIR = os.path.dirname(TESTS_DIR)
 
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)

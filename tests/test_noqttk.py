@@ -6,9 +6,8 @@ import time
 import os
 import threading
 
-TEST_SUBMODULE_DIR = os.path.dirname(os.path.realpath(__file__))
-MODULE_DIR = os.path.dirname(TEST_SUBMODULE_DIR)
-REPO_DIR = os.path.dirname(MODULE_DIR)
+TESTS_DIR = os.path.dirname(os.path.realpath(__file__))
+REPO_DIR = os.path.dirname(TESTS_DIR)
 
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
