@@ -5,7 +5,7 @@ import outputinspector.nottk as ttk
 There is no ttk Listbox. Use notk for that.
 """
 import sys
-print("[nottk] loading", file=sys.stderr)
+# print("[nottk] loading", file=sys.stderr)
 import outputinspector.notk
 
 class Widget(outputinspector.notk.Widget):

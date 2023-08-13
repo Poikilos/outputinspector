@@ -31,18 +31,20 @@ REPO_DIR = os.path.dirname(MODULE_DIR)
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
     # ^ allows importing REPO_DIR
-print("[noqttk] loading", file=sys.stderr)
+# print("[noqttk] loading", file=sys.stderr)
 import outputinspector
 outputinspector.ENABLE_GUI = True  # set True *only* in noqttk. Defaults to False.
+import outputinspector.noqt as noqt
 from outputinspector.noqt import (
     Qt,
     enum,
-    QMainWindow as QMainWindowCLI,
+    QWidget,
+    QListWidgetItem as QListWidgetItemCLI,
 )
 
-class QMainWindow(QMainWindowCLI, ttk.Frame):
+class QMainWindow(noqt.QMainWindow, ttk.Frame):
     """Grab all the ttk.Frame methods.
-    
+
     The subclass will do Frame.__init__ if not a CLI subclass.
     """
     pass
@@ -53,7 +55,7 @@ class QMainWindow(QMainWindowCLI, ttk.Frame):
 #     darkGreen = QColor.fromRgb(0, 128, 0)
 #     black = QColor.fromRgb(0, 0, 0)
 
-verbosity = 2
+verbosity = 0
 max_verbosity = 2
 TMP = "/tmp"
 if platform.system() == "Windows":
@@ -147,17 +149,20 @@ class QListWidgetItem(tk.StringVar):
         each key-value pair in queued_tk_args after the
         noqt.QListWidgetItem is added to a noqt.QListView.
     '''
+    # TODO: Mostly use inherited stuff from QListWidgetItemCLI
+    #   or just delete this class and import it to avoid:
+    #   "TypeError: Cannot create a consistent method resolution
+    #   order (MRO) for bases StringVar, QListWidgetItem"
     def __init__(self, *args, **kwargs):
         prefix = "[noqttk QListWidgetItem] "
-        self.roles = []
-        self.roles.append("")
+        self.roles = {}
         if len(args) > 0:
-            echo0(prefix+"passed %s: %s" % (type(args[0]).__name__, args[0]))
+            echo1(prefix+"passed %s: %s" % (type(args[0]).__name__, args[0]))
             kwargs['value'] = args[0]
         if len(args) > 1:
             raise ValueError("Too many args")
         tk.StringVar.__init__(self, **kwargs)
-        echo0(prefix+"initialized to %s" % self.get())
+        echo1(prefix+"initialized to %s" % self.get())
         # ^ will raise an exception if MainWindow (or tk.Tk) not initialized
         self.parent = None
         self.index = None
@@ -177,8 +182,22 @@ class QListWidgetItem(tk.StringVar):
             value = var.get()
         else:
             value = var
+        self.roles[role] = value
         if role == Qt.DisplayRole:
             self.set(value)
+
+
+    def data(self, role):
+        var = self.roles[role]
+        if hasattr(var, "get"):
+            # Such as QVariant
+            value = var.get()
+        else:
+            # Create a QVariant so client code can call .toString() on it:
+            value = QVariant()
+            value.set(var)
+        return value
+
 
     def setForeground(self, qbrush):
         if (self.parent is None) or (self.index is None):
@@ -231,7 +250,7 @@ class NoQtMessage:
         self.start = noqt_tick()
 
 
-class QStatusBar(ttk.Label):
+class QStatusBar(QWidget, ttk.Label):
     def __init__(self, *args, **kwargs):
         if len(args) < 1:
             raise ValueError("You must specify a parent.")

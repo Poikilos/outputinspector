@@ -6,7 +6,7 @@ import inspect
 
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_DIR = os.path.dirname(MODULE_DIR)
-print("[settings] loading", file=sys.stderr)
+# print("[settings] loading", file=sys.stderr)
 """
 DO NOT import! Avoid circular import: outputinspector/__init__.py imports this
 try:
@@ -94,7 +94,13 @@ class Settings:
             echo0("The Settings object has no path.")
 
     def __del__(self):
-        callerName = inspect.stack()[1][3]
+        try:
+            callerName = inspect.stack()[1][3]
+        except KeyError:
+            # FIXME: Why does this happen?
+            # KeyError: '__main__'
+            # in inspect.py
+            callerName = None
         # Python 3.5: inspect.stack()[1].function (namedtuple, so [3] still ok)
         prefix = "[Settings __del__ via %s] " % callerName
         if self.data is not None:

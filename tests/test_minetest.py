@@ -51,19 +51,24 @@ for try_dir in try_dirs:
         break
 
 if mt_share_path is not None:
-    print("chdir %s (to find real files after removing elipses)"
+    print("[test_minetest] chdir %s (to find real files after removing elipses)"
           % pformat(mt_share_path))
     os.chdir(mt_share_path)
 else:
-    print("%s was not found (only dummy files should be found after"
+    print("[test_minetest] %s was not found (only dummy files should be found after"
           " removing elipses)." % pformat(default_basedir))
     mt_share_path = default_basedir
     os.chdir(TEST_DATA_DIR)
 
 
 class TestMinetest(unittest.TestCase):
-    def __init__(self):
-        unittest.TestCase.__init__(self)
+    # def __init__(self):
+    #     unittest.TestCase.__init__(self)
+    #     # ^ expected 2 arguments! Therefore:
+
+    def __init__(self, *args, **kwargs):
+        super(TestMinetest, self).__init__(*args, **kwargs)
+
         self.inspector = OutputInspector()
 
     def test_file_read(self):

@@ -42,7 +42,15 @@ class TestMainWindow(unittest.TestCase):
     def test_main(self):
         import outputinspector
         outputinspector.ENABLE_GUI = True
-        mainwindow.main()
+        if len(sys.argv) > 1:
+            # if not sys.argv[1].endswith(".txt"):
+            print("Warning: removing bad args: %s" % sys.argv[1:], file=sys.stderr)
+            sys.argv = sys.argv[:1]
+        try:
+            mainwindow.main()
+        except UnicodeDecodeError as ex:
+            print("Bad text file. Bad argument in %s?" % sys.argv[1:], file=sys.stderr)
+            raise
 
 
 if __name__ == "__main__":

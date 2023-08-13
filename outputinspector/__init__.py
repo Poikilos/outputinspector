@@ -6,6 +6,7 @@ import platform
 import time
 import re
 import inspect
+from pprint import pformat
 from subprocess import Popen, PIPE
 
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -13,7 +14,7 @@ REPO_DIR = os.path.dirname(MODULE_DIR)
 my_path = os.path.realpath(__file__)
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
-print("[outputinspector] loading", file=sys.stderr)
+# print("[outputinspector] loading", file=sys.stderr)
 ENABLE_GUI = False
 """
 from outputinspector.noqttk import (
@@ -28,8 +29,8 @@ from outputinspector.noqttk import (
     #   if Tk is not initialized.
 )
 """
-verbosity = 2
-max_verbosity = 2
+verbosity = 0
+max_verbosity = 2  # helps construct verbosities during set_verbosity
 TMP = "/tmp"
 if platform.system() == "Windows":
     TMP = os.environ['TEMP']
@@ -67,23 +68,28 @@ def fatal(*args, **kwargs):
 
 
 def pinfo(*args, **kwargs):
+    '''Print info.
+
+    This is a shim for `qInfo().noquote().nospace() << message`.
+    However, it checks verbosity first.
     '''
-    Print info.
-    '''
+    if verbosity < 1:
+        return False
     print(*args, file=sys.stderr, **kwargs)
+    return True
 
 
-def set_verbosity(v):
+def set_verbosity(level):
     '''
     Set verbosity to 1 for verbose messages and 2 for debug messages.
     '''
     verbosities = [True, False] + list(range(max_verbosity+1))
-    if v not in verbosities:
+    if level not in verbosities:
         raise ValueError(
             "{} is not valid. Verbosity should be one of: {}."
-            "".format(v, verbosities)
+            "".format(level, verbosities)
         )
-    verbosity = v
+    verbosity = level
 
 
 from outputinspector.settings import Settings
@@ -155,9 +161,11 @@ def set_ui_mode(enable_gui):
     prefix = "[outputinspector] "
     mode_caption = "GUI" if enable_gui else "CLI"
     echo0(prefix+"Switching to %s mode." % mode_caption)
-    echo0(prefix+"- Make a subclass that inherits OutputInspector and tk.Frame"
-          " to use a GUI.")
-    echo0(prefix+"- To use CLI, only import OutputInspector.")
+    if enable_gui:
+        echo0(prefix+"- To use CLI, only import OutputInspector.")
+    else:
+        echo0(prefix+"- Make a subclass that inherits OutputInspector and tk.Frame"
+              " to use a GUI.")
     global QListWidgetItem
     global QVariant
     global QBrush
@@ -247,14 +255,24 @@ def caller_info_str(skip=2):
 
 class OutputInspector:
     """Parse output from various compilers and linters.
-    
+
     This class has some methods that are redundant to noqt and noqttk.
     To allow either to be used, this class must behave like Widget but
     avoid inheriting it so this class works as a secondary superclass
     where primary superclass is either MainWindow which is already a
     widget, usually a notqtk widget that is not CLI-compatible like
     OutputInspector is if used directly instead of as a superclass.
+
+    Attributes:
+        errorsListFileName (string): The named source of the errors.
+            In the C++ version this was local to the constructor, but
+            the constructor was split (see load_stdin_or_file for what
+            was also there).
     """
+
+    _errorPathRoots = [
+        os.getcwd(),
+    ]
 
     def addChildWidget(self, widget):
         if not hasattr(self, '_children'):
@@ -270,9 +288,20 @@ class OutputInspector:
             self._layouts = []
         self._layouts.append(layout)
 
+
+    @classmethod
+    def addRoot(cls, path):
+        """Add a directory to which relative paths in errors may be referring.
+        """
+        if not os.path.isdir(path):
+            raise ValueError("You must specify an existing directory (got %s)"
+                             % pformat(path))
+        cls._errorPathRoots.append(path)
+
     def __init__(self):
         prefix = "[OutputInspector] "
         self._ui = None
+        self.errorsListFileName = None
         # self.name = "inspector"
         # leave out name to prevent _ui_subtree from constructing one
         def parentWidget(self):
@@ -284,7 +313,7 @@ class OutputInspector:
             #   the class is still incomplete.
             return UhOh()
         setattr(self, 'parentWidget', parentWidget)
-        echo0(prefix+"initializing")
+        echo1(prefix+"initializing")
         # if type(self).__name__ == "OutputInspector":
         if not hasattr(self, "is_gui") or not self.is_gui():
             echo0(prefix+"detected CLI mode")
@@ -385,7 +414,7 @@ class OutputInspector:
         else:
             pass
 
-        echo0(prefix+"initializing settings...")
+        echo1(prefix+"initializing settings...")
         # pinfo("Creating settings: {}".format(filePath))
         self.settings = Settings(filePath)
         pinfo(prefix+"used the settings file \"{}\""
@@ -481,12 +510,17 @@ class OutputInspector:
         for i in range(PARSE_PARTS_COUNT):
             linedef.append("")
         linedef[TOKEN_FILE] = "ERROR[Main]:"
-        linedef[TOKEN_PARAM_A] = ":"
+        linedef[TOKEN_PARAM_A] = ":"  # maybe look for .lua because if
+        #  only : is checked, addLine may cancel parsing the line since
+        #  TOKEN_PARAM_A is only accepted if followed by a number!
+        #  Mitigated by using regex and only finding it where followed
+        #  by a number.
         linedef[TOKEN_PARAM_B] = ""
         linedef[TOKEN_END_PARAMS] = ":"
         # linedef[PARSE_COLLECT] = COLLECT_REUSE
         linedef[PARSE_STACK] = ""
         linedef[PARSE_DESCRIPTION] = "Minetest Lua traceback"
+        self.STYLE_MINETEST_LUA_TRACEBACK = len(self.enclosures)
         self.enclosures.append(linedef)
 
         # An example of jshint output is the entire next comment:
@@ -598,7 +632,7 @@ class OutputInspector:
         self.brushes["Default"] = QBrush(Qt.black)
         self.brushes["Regular"] = QBrush(Qt.black)
 
-        echo0("* initialized brushes")
+        echo1("* initialized brushes")
 
         self.sInternalFlags.append("/site-packages/")
         internalS = "/usr/lib/python2.7/site-packages/nose/importer.py"
@@ -625,9 +659,9 @@ class OutputInspector:
             # pinfo("  items.size(): {}".format(itList.size()))
             if self.m_Verbose:
                 pinfo("  items: ['" + "', '".join(itList) + "']")
-        
+
         if type(self).__name__ == "OutputInspector":
-            echo0("Using CLI mode.")
+            echo0(prefix+"Using CLI mode.")
             # noqt.set_cli()
         echo0("Using QMainWindow from %s" % inspect.getfile(QMainWindow))
         QMainWindow.__init__(
@@ -637,16 +671,23 @@ class OutputInspector:
         # ^ set self._ui etc.
         return
 
-    @staticmethod
-    def unmangledPath(path):
+    @classmethod
+    def unmangledPath(cls, path):
         """Replace elipsis (3 or more dots) with the missing parts
         if a similar file can be found.
+
+        Args:
+            path (string): A good path, or a mangled path like
+                ...er/minetest-rsync/bin/../builtin/mainmenu/tab_online.lua
+                that exists in cwd or any path added via addRoot.
         """
         prefix = "[unmangledPath] "
         # a.k.a. remove_elipsis
         # QRegularExpression literalDotsRE("\\.\\.\\.+") '''*< Match 2 dots followed by more. '''
         # FIXME: make below act like above
         literalDotsRE = re.compile("\\.\\.\\.+")  #*< Match 2 dots followed by more.
+        slashRE = re.compile(re.escape(os.path.sep))  # match slash
+        #   (not os.pathsep with divides mutlple full paths!)
         match = literalDotsRE.match(path)
         # TODO: capturedEnd technically uses the last element in:
         '''
@@ -663,9 +704,11 @@ class OutputInspector:
             tryOffsets.append(-2)
             tryOffsets.append(1)
             tryOffsets.append(0)
+            for thisMatch in slashRE.finditer(path):
+                tryOffsets.append(thisMatch.span()[0]+1)  # look after *every* slash
             for tryOffset in tryOffsets:
                 tryPath = path[end+tryOffset:]
-                if os.path.isfile(tryPath):
+                if cls.absPathOrNone(tryPath):
                     # TODO: ^ originally exists(). Is isfile always ok?
                     if verbose:
                         pinfo(prefix+"transformed *.../dir"
@@ -684,7 +727,6 @@ class OutputInspector:
                 pinfo(prefix+"There is no \"...\""
                       " in the cited path: \"{}\""
                       "".format(path))
-
         return path
 
     def showinfo(self, title, msg):
@@ -734,6 +776,7 @@ class OutputInspector:
                 errorsListFileName = "err.txt"
         self.lineCount = 0
         self.load_stdin_or_file(errorsListFileName)
+        # ^ Sets self.errorsListFileName if errorsListFileName exists.
         self.inTimer = QTimer(self)
         self.inTimer.setInterval(500);  # milliseconds
         connect(self.inTimer, self.inTimer.timeout, self, self.readInput)
@@ -770,7 +813,7 @@ class OutputInspector:
             msg = my_path + ": Output Inspector cannot read the output file due to permissions or other read error (tried \"./" + errorsListFileName + "\")."
             self.showinfo(title, msg)
             # self.addLine(title + ":" + msg, True)
-
+        self.errorsListFileName = errorsListFileName
         echo0('* reading "{}"'.format(errorsListFileName))
         with open(errorsListFileName, 'r') as qtextNow:
             for rawL in qtextNow:
@@ -836,6 +879,7 @@ class OutputInspector:
                when reading information from standard input).
         '''
         prefix = "[addLine] "
+        echo2(prefix+"analyzing")
         self.lineCount += 1  # TODO: eliminate this?
 
         self.m_LineCount += 1
@@ -847,7 +891,6 @@ class OutputInspector:
                 self.m_NonBlankLineCount += 1
             if self.isFatalSourceError(line):
                 self._ui.mainListWidget.addItem(QListWidgetItem(line + " <your compiler (or other tool) recorded self fatal or summary error before outputinspector ran>", self._ui.mainListWidget))
-
             elif contains_any(line, self.sSectionBreakFlags):
                 self.m_ActualJump = ""
                 self.m_ActualJumpLine = ""
@@ -910,6 +953,11 @@ class OutputInspector:
                     lwi.setForeground(self.brushes["Internal"])
 
                 lwi.setData(ROLE_COLLECTED_LINE, QVariant(self.m_MasterLine))
+                _storedPath = lwi.data(ROLE_COLLECTED_FILE).get()
+                if not os.path.isfile(_storedPath):
+                    if ".lua" in line:
+                        raise RuntimeError("Got invalid path '%s' not in '%s' in line: `%s`"
+                                           % (_storedPath, os.getcwd(), line))
                 lwi.setData(ROLE_DETAILS, QVariant(line != self.m_MasterLine))
                 lwi.setData(ROLE_LOWER, QVariant(info["lower"]))
                 if info["good"] == "True":
@@ -945,7 +993,7 @@ class OutputInspector:
                 if self.settings.getBool("FindTODOs"):
                     if info["good"] == "True":
                         sFileX = ""  # = unmangledPath(info["file"])
-                        sFileX = absPathOrSame(sFileX)
+                        sFileX = self.absPathOrSame(sFileX)
                         # =line[0:line.find("(")]
                         if sFileX not in self.m_Files:
                             self.m_Files.append(sFileX)
@@ -1015,7 +1063,6 @@ class OutputInspector:
                                         "(processed {} line(s))"
                                         "".format(iSourceLineFindToDo)
                                     )
-                                qfileSource.close()
                                 # end with open sourcecode
 
                             # end if list does not already contain self
@@ -1103,7 +1150,7 @@ class OutputInspector:
         info -- a dictionary to modify
         '''
         prefix = "[lineInfo] "
-        info["file"] = ""
+        info["file"] = None
         # ^ same as info["file"]
         info["row"] = ""
         info["line"] = originalLine
@@ -1131,11 +1178,13 @@ class OutputInspector:
         # nOrZRE = re.compile("\\d*")
         # ^ a digit (\d), or more times (*)
         numOrMoreRE = re.compile("\\d+")
+
         # ^ a digit (\d), or more times (+)
         if self.m_VerboseParsing:
             pinfo("`{}`:".format(originalLine))
 
-        for itList in self.enclosures:
+        for parserI, itList in enumerate(self.enclosures):
+            linedef = itList
             if ((len(itList[TOKEN_FILE]) == 0)
                     or (itList[TOKEN_FILE] in line)):
                 fileToken = itList[TOKEN_FILE]
@@ -1145,6 +1194,12 @@ class OutputInspector:
                               "".format(fileToken))
 
                 paramAToken = itList[TOKEN_PARAM_A]
+
+                # paramAThenNumRE = re.compile(":\\d+") # + captures entire number
+                paramAThenNumRE = re.compile(re.escape(paramAToken)+r"\d+")
+                # ^ "+" captures entire cluster (number in this case)
+                # ^ also gets the colon though.
+
                 paramBToken = itList[TOKEN_PARAM_B]
                 # ^ coordinate delimiter (blank if no column)
                 endParamsToken = itList[TOKEN_END_PARAMS]
@@ -1152,24 +1207,73 @@ class OutputInspector:
                 if len(fileToken) != 0:
                     fileTokenI = line.find(fileToken)
                 else:
-                    fileTokenI = 0; # if file path at begining of line
+                    if "ERROR[" in line and ".lua" in line and linedef[PARSE_DESCRIPTION] == "Minetest Lua traceback":
+                        raise RuntimeError("The program failed to parse a Minetest Lua traceback: `%s`" % line)
+                    fileTokenI = 0  # if file path at beginning of line
+                noParamAWhy = "fileToken not found"
                 if fileTokenI > -1:
+                    noParamAWhy = None
                     if self.m_VerboseParsing:
                         pinfo("  has '{}' @ {}>= START"
                               "".format(fileToken, fileTokenI))
 
+                    if len(paramAToken) <= 0:
+                        if "ERROR[" in line and ".lua" in line and linedef[PARSE_DESCRIPTION] == "Minetest Lua traceback":
+                            raise RuntimeError("The program failed to parse a Minetest Lua traceback since TOKEN_PARAM_A is not set.")
                     if len(paramAToken) > 0:
-                        paramATokenI = line.find(
-                            paramAToken,
-                            fileTokenI + len(fileToken),
-                        )
-                        if paramATokenI >= 0:
-                            # if not numOrMoreRE.match(line[paramATokenI+len(paramAToken)]):
-                            if not numOrMoreRE.match(line[paramATokenI]):
-                                # Don't allow the opener if the next
-                                # character is not a digit.
-                                # - `not` works since None if no match
-                                paramATokenI = -1
+                        # paramATokenI = line.find(
+                        #     paramAToken,
+                        #     fileTokenI + len(fileToken),
+                        # )
+                        match = paramAThenNumRE.search(line, fileTokenI + len(fileToken))
+                        # ^ either None or <re.Match object; span=(86, 89), match=':46'>
+                        #   where match.span() is the slice (tuple; exclusive end)
+                        # ^ search looks anywhere, match looks at beginning.
+                        #   Also, only *compiled* regex objects have pos arg!
+
+                        if not match:
+                            paramATokenI = line.find(
+                                paramAToken,
+                                fileTokenI + len(fileToken),
+                            )
+                            if paramATokenI >= 0:
+                                noParamWhy = (
+                                    "paramA (line number usually) is not"
+                                    " followed by %s and number but has %s"
+                                    " so at least file will be collected."
+                                    % (paramAToken, paramAToken)
+                                )
+                                tryPath = line[fileTokenI+len(fileToken):paramATokenI].strip()
+                                tryAbsPath = self.unmangledPath(tryPath)
+                                if not os.path.isfile(tryAbsPath):
+                                    lastColonI = line.rfind(
+                                        paramAToken,
+                                    )
+                                    # skip past first colon such as in
+                                    # "2023-08-12 20:53:08: ERROR[Main]: GUIEngine:
+                                    # execution of menu script failed: Failed to load
+                                    # and run script from
+                                    # /home/owner/minetest-rsync/bin/../builtin/init.lua:"
+                                    if lastColonI > 0 and lastColonI > paramATokenI:
+                                        lastSpaceI = line.rfind(" ", 0, lastColonI)
+                                        if lastSpaceI >= 0:
+                                            tryPath = line[lastSpaceI+1:lastColonI]
+                                            tryAbsPath = self.unmangledPath(tryPath)
+                                            if not os.path.isfile(tryAbsPath):
+                                                raise RuntimeError(
+                                                    "Path '%s' not found in `%s`"
+                                                    % (tryPath, line)
+                                                )
+                                            else:
+                                                info["file"] = tryAbsPath
+                                else:
+                                    info["file"] = tryAbsPath
+                            else:
+                                noParamWhy = ("paramA (line number usually) is not followed by %s"
+                                            % paramAToken)
+                            # This is ok. See usage of noParamWhy.
+                        else:
+                            paramATokenI = match.span()[0]
                     elif len(endParamsToken) > 0:
                         paramATokenI = line.find(endParamsToken)
                         if paramATokenI < 0:
@@ -1277,31 +1381,58 @@ class OutputInspector:
                                     endParamsToken = ""
 
                                 fileI = fileTokenI + len(fileToken)
+                                msg = ("\nParser %s succeeded: %s on `%s`"
+                                       % (parserI, itList, line))
+                                # WARNING: pformat may wrap lines!
+                                echo2(msg)  # TODO: debug only (remove)
                                 break
-                            elif self.m_VerboseParsing:
+                            else:
+                                if self.m_VerboseParsing:
+                                    pinfo(
+                                        "        no post-params '{}' >="
+                                        " {} in '{}'"
+                                        "".format(endParamsToken,
+                                                  (paramBTokenI
+                                                   + len(paramBToken),
+                                                  line))
+                                    )
+                                if "ERROR[" in line and ".lua" in line and linedef[PARSE_DESCRIPTION] == "Minetest Lua traceback":
+                                    raise RuntimeError("The program failed to parse a Minetest Lua traceback: `%s`" % line)
+                        else:
+                            if self.m_VerboseParsing:
                                 pinfo(
-                                    "        no post-params '{}' >="
-                                    " {} in '{}'"
-                                    "".format(endParamsToken,
-                                              (paramBTokenI
-                                               + len(paramBToken),
-                                              line))
+                                    "      no pre-ParamB '{}' >= {} in '{}'"
+                                    "".format(paramBToken,
+                                              (paramATokenI
+                                               + len(paramAToken)),
+                                              line)
                                 )
-                        elif self.m_VerboseParsing:
-                            pinfo(
-                                "      no pre-ParamB '{}' >= {} in '{}'"
-                                "".format(paramBToken,
-                                          (paramATokenI
-                                           + len(paramAToken)),
-                                          line)
-                            )
-                    elif self.m_VerboseParsing:
-                        pinfo("    no pre-paramA '{}' >= {}"
-                              "".format(paramAToken,
-                                        (fileTokenI + len(fileToken))))
-                elif self.m_VerboseParsing:
-                    pinfo("  no pre-File '{}' >= START"
-                          "".format(fileToken))
+                            if "ERROR[" in line and ".lua" in line and linedef[PARSE_DESCRIPTION] == "Minetest Lua traceback":
+                                raise RuntimeError("The program failed to parse a Minetest Lua traceback: `%s`" % line)
+                    else:
+                        if self.m_VerboseParsing:
+                            pinfo("    no pre-paramA '{}' >= {} (reason: {})"
+                                    "".format(paramAToken,
+                                              (fileTokenI + len(fileToken)),
+                                              noParamWhy))
+                        # This is actually ok even in Minetest Lua Traceback. The
+                        #   first line of the whole traceback has no line, such as
+                        #   "2023-08-12 19:29:51: ERROR[Main]: GUIEngine: execution
+                        #   of menu script failed: Failed to load and run script
+                        #   from /home/owner/minetest-rsync/bin/../builtin/init.lua:"
+                        # so don't do:
+                        # if "ERROR[" in line and ".lua" in line and linedef[PARSE_DESCRIPTION] == "Minetest Lua traceback":
+                        #     raise RuntimeError("The program failed to parse a Minetest Lua traceback since couldn't find '%s' at or after %s (after fileToken '%s') in: `%s`" % (paramAToken, fileTokenI + len(fileToken), fileToken, line))
+
+                        # if "ERROR[" in line and ".lua" in line and linedef[PARSE_DESCRIPTION] == "Minetest Lua traceback":
+                        #     raise RuntimeError("The program failed to parse a Minetest Lua traceback: `%s`" % (line))
+                else:
+                    if self.m_VerboseParsing:
+                        pinfo("  no pre-File '{}' >= START"
+                              "".format(fileToken))
+                    if "ERROR[" in line and ".lua" in line and linedef[PARSE_DESCRIPTION] == "Minetest Lua traceback":
+                        raise RuntimeError("The program failed to parse a Minetest Lua traceback: `%s`" % line)
+
 
         # pinfo("fileTokenI: {}".format(fileTokenI))
         # pinfo("paramATokenI: {}".format(paramATokenI))
@@ -1315,25 +1446,35 @@ class OutputInspector:
             # Even if closer is not present,
             # endParamsTokenI is set to len IF applicable to self-
             # enclosure
-            filePath = ""
-            if paramATokenI > fileI:
-                filePath = line[fileI:paramATokenI]
-            else:
-                filePath = line[fileI:endParamsTokenI]
+            if not info.get("file"):
+                filePath = ""
+                if paramATokenI > fileI:
+                    filePath = line[fileI:paramATokenI]
+                else:
+                    filePath = line[fileI:endParamsTokenI]
 
-            filePath = filePath.strip()
-            if len(filePath) >= 2:
-                if ((filePath.startswith('"')
-                     and filePath.endswith('"'))
-                    or (filePath.startswith('\'')
-                        and filePath.endswith('\''))):
-                    filePath = filePath[1:-1]
+                filePath = filePath.strip()
+                if len(filePath) >= 2:
+                    if ((filePath.startswith('"')
+                        and filePath.endswith('"'))
+                        or (filePath.startswith('\'')
+                            and filePath.endswith('\''))):
+                        filePath = filePath[1:-1]
 
-            echo1(prefix+"[debug]"
-                  " file path before unmangling: \"{}\""
-                  "".format(filePath))
-            filePath = OutputInspector.unmangledPath(filePath)
-            info["file"] = filePath
+                echo1(prefix+"[debug]"
+                    " file path before unmangling: \"{}\""
+                    "".format(filePath))
+                filePath = OutputInspector.unmangledPath(filePath)
+                if not os.path.isfile(filePath) and ".lua" in filePath:
+                    raise RuntimeError(
+                        "Could not find parsed filename '%s' in line: `%s`"
+                        " in any root (use addRoot to try more): %s"
+                        % (filePath, line, type(self)._errorPathRoots))
+                # else it was basically parsed by a less-strict parser,
+                #   so forget about it since there is no file. Example:
+                #   "2023-08-12 21:32:18: ERROR[Main]: Subgame specified
+                #   in default_game [Bucket_Game] is invalid."
+                info["file"] = filePath
             info["row"] = line[paramAI:paramBTokenI]
             if len(paramBToken) > 0:
                 info["column"] = line[paramBI:endParamsTokenI]
@@ -1359,7 +1500,7 @@ class OutputInspector:
             if self.m_VerboseParsing:
                 pinfo("          length {}-{}".format(endParamsTokenI,
                                                       paramBI))
-            filePathLower = filePath.lower()
+            filePathLower = info["file"].lower()
             if filePathLower.endswith(".py"):
                 info["language"] = "python"
             elif filePathLower.endswith(".pyw"):
@@ -1385,10 +1526,10 @@ class OutputInspector:
             elif filePathLower.endswith(".php"):
                 info["language"] = "php"
             echo1("  detected file: '{}'"
-                  "".format(filePath))
+                  "".format(info["file"]))
             info["good"] = "True"
             # pinfo(prefix+"found a good line"
-            #       " with the following filename: {}".format(filePath))
+            #       " with the following filename: {}".format(info["file"]))
 
         else:
             info["good"] = "False"
@@ -1406,40 +1547,41 @@ class OutputInspector:
                 # (different styles in same output)
                 info["details"] = "True"
                 info["file"] = ""
-
-
-
+        return info
 
     def absPathOrSame(self, filePath):
-        # absFilePath = os.path.abspath(filePath)
-        absFilePath = ""
-        sCwd = os.getcwd()  # current() returns a QDir object
-        setuptoolsTryPkgPath = os.path.join(sCwd, os.path.split(sCwd)[1])
-        # ^ See if it is in a deeper directory created by setuptools
-        # FIXME: ^ Whether this code is correct is unclear--document
-        # a use case??
-        # - If should use filePath, remove the setuptoolsTryPkgPath join
-        #   call below (do not add the filename when generating
-        #   absFilePath if filename already part of
-        #   setuptoolsTryPkgPath).
-        if self.m_Verbose:
-            pinfo("setuptoolsTryPkgPath: {}"
-                  "".format(setuptoolsTryPkgPath))
-        absFilePath = filePath
-        if not filePath.startswith("/"):
-            absFilePath = os.path.join(sCwd, filePath)
-        if not os.path.exists(absFilePath) and os.path.exists(setuptoolsTryPkgPath):
-            absFilePath = os.path.join(setuptoolsTryPkgPath, filePath)
-        if not os.path.exists(absFilePath):
-            pinfo("- absFilePath doesn't exist: {}".format(absFilePath))
-        return absFilePath
+        # TODO: make it a @classmethod and replace type(self) & self with cls
+        absPath = type(self).absPathOrNone(filePath)
+        if absPath is not None:
+            return absPath
+        return filePath
 
+    @classmethod
+    def absPathOrNone(cls, filePath):
+        if os.path.exists(filePath):
+            return os.path.realpath(filePath)
+        for sCwd in cls._errorPathRoots:
+            # sCwd = os.getcwd()  # current() returns a QDir object
+            setuptoolsTryPkgPath = os.path.join(sCwd, os.path.basename(sCwd))
+            # ^ Look in somedir/somedir instead of only somedir
+            # - If should use filePath, remove the setuptoolsTryPkgPath join
+            #   call below (do not add the filename when generating
+            #   absFilePath if filename already part of
+            #   setuptoolsTryPkgPath).
+            for tryParent in [sCwd, setuptoolsTryPkgPath]:
+                tryPath = os.path.join(tryParent, filePath)
+                # ^ join automatically discards cCwd if filePath startswith /
+                if os.path.exists(tryPath):
+                    echo1("- found: {}".format(tryPath))
+                    return tryPath
+                echo1("- tried: {}".format(tryPath))
+        return None
 
     def on_mainListWidget_itemDoubleClicked(self, item):
         line = item.text()
-        actualJump = item.data(ROLE_COLLECTED_FILE).toString();
+        actualJump = item.data(ROLE_COLLECTED_FILE).toString()
         # item.toolTip()
-        actualJumpLine = item.data(ROLE_COLLECTED_LINE).toString();
+        actualJumpLine = item.data(ROLE_COLLECTED_LINE).toString()
         # item.toolTip()
         if len(actualJumpLine) > 0:
             line = actualJumpLine
@@ -1669,6 +1811,7 @@ class OutputInspector:
                 pinfo("[Output Inspector] No file was detected in line:"
                       " '{}'".format(line))
                 pinfo("[Output Inspector] ERROR: '{}'".format(errorMsg))
+        return None
 
     def readInput(self):
         limit = 50
@@ -1689,7 +1832,6 @@ class OutputInspector:
                 # self.addLine("OutputInspector: input is: {}"
                 #              "".format(line), True)
                 self.addLine(line, True)
-
             else:
                 # pinfo("OutputInspector: input has ended.")
                 # self.addLine("# OutputInspector: input has ended.",

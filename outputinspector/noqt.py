@@ -25,9 +25,11 @@ REPO_DIR = os.path.dirname(MODULE_DIR)
 if __name__ == "__main__":
     sys.path.insert(0, REPO_DIR)
     # ^ allows importing REPO_DIR
-print("[noqt] loading", file=sys.stderr)
+# print("[noqt] loading", file=sys.stderr)
+TK_ONLY_ATTRIBUTE = "_setup"
 
 import outputinspector
+
 
 if outputinspector.ENABLE_GUI:
     print("[noqt] detected GUI mode (import noqttk for GUI)",
@@ -46,7 +48,7 @@ else:
     import outputinspector.nottk as ttk
     from outputinspector.notkinter import messagebox
 
-verbosity = 2
+verbosity = 0
 max_verbosity = 2
 TMP = "/tmp"
 if platform.system() == "Windows":
@@ -155,7 +157,7 @@ class QWidget(object):
     - should be inherited by all widgets.
     - should have all necessary properties as listed at
       <https://doc.qt.io/qt-6/qwidget.html>
-    
+
     (Do not use ttk.Widget--it isn't supposed to be instantiated)
 
     Args:
@@ -181,7 +183,7 @@ class QWidget(object):
 
     def parentWidget(self):
         return self._parent
-    
+
     def size(self):
         return self._size
 
@@ -244,7 +246,7 @@ class QListWidget(QListView):
         # qlistwidgetitem.index = self._tk_size(self)  # maybe fancy this up better??
         qlistwidgetitem.index = tk.Listbox.size(self)
         # self.append(qlistwidgetitem)
-        echo0(prefix+"adding a %s from %s: %s" % (
+        echo2(prefix+"adding a %s from %s: %s" % (
             type(qlistwidgetitem).__name__,
             os.path.basename(inspect.getfile(type(qlistwidgetitem))),
             qlistwidgetitem.get(),
@@ -288,7 +290,10 @@ class QListWidgetItem(tk.StringVar):  # TODO: also inherit from QWidget?
         noqt.QListWidgetItem is added to a noqt.QListView.
     '''
     def __init__(self, *args, **kwargs):
-        echo0("WARNING: Using GUI-like QListWidgetItem in CLI\n")
+        if hasattr(self, "_tclCommands"):
+            echo0("WARNING: Using GUI-like QListWidgetItem in CLI\n")
+        # else imported notk as tk as expected in noqt (only noqttk uses
+        #   the *real* tk.
         QWidget.__init__(self, *args, **kwargs)
         # ^ sets self._parent
         self.roles = {}
@@ -308,18 +313,29 @@ class QListWidgetItem(tk.StringVar):  # TODO: also inherit from QWidget?
         return self.get()
 
     def setData(self, role, var):
-
         if hasattr(var, "get"):
             # Such as QVariant
             value = var.get()
         else:
             value = var
-        
+        self.roles[role] = value
+
+    def data(self, role):
+        var = self.roles[role]
+        if hasattr(var, "get"):
+            # Such as QVariant
+            value = var.get()
+        else:
+            # Create a QVariant so client code can call .toString() on it:
+            value = QVariant()
+            value.set(var)
+        return value
+
 
     def setForeground(self, qbrush):
         if (self._parent is None) or (self.index is None):
             # ^ self._parent should be set by QWidget constructor
-            #   which this subclass's constructor should call.  
+            #   which this subclass's constructor should call.
             # raise RuntimeError(
             #     no_listview_msg.format(self.parent, self.index)
             # )
@@ -399,14 +415,14 @@ class enum(object):
         # ^ same for every subclass, still... :( so:
         if not isinstance(typeNames, (list, tuple)):
             raise TypeError("list or tuple is required")
-            
+
         enum._typeNames[className][self.value] = typeNames
 
         enum.next_roles[className] += 1
 
     def get(self):
         return self.value
-    
+
     def set(self, value):
         self.value = value
 
@@ -480,12 +496,9 @@ class Qt:
 
     # General purpose roles:
     DisplayRole = ItemDataRole(typeNames=["QString"])
-    echo0("DisplayRole.value = %s" % DisplayRole.value)
     assert(DisplayRole.value == 0)
     DecorationRole = ItemDataRole(1, typeNames=["QColor", "QIcon", "QPixmap"])
     EditRole = ItemDataRole(2, typeNames=["QString"])
-    echo0("DecorationRole.typeNames = %s" % DecorationRole.typeNames)
-    echo0("enum._typeNames = %s" % enum._typeNames)
     assert(DecorationRole.typeNames == ["QColor", "QIcon", "QPixmap"])
     # TODO: ^ Why does this it change to EditRole's? Even commented
     #   code for DecorationRole doesn't fix it. So try:
@@ -535,7 +548,7 @@ class Qt:
     PreferredSize = SizeHint(1)
     MaximumSize = SizeHint(2)
     MinimumDescent = SizeHint(3)
-    
+
 
 class QBrush:
     def __init__(self, qcolor):
@@ -554,6 +567,9 @@ class QVariant(tk.StringVar):
         tk.StringVar.__init__(self, **kwargs)
         pass
 
+    def toString(self):
+        return self.get()
+
 
 class NoQtMessage:
     def __init__(self, text, timeout):
@@ -562,7 +578,7 @@ class NoQtMessage:
         self.start = noqt_tick()
 
 
-class QStatusBar(ttk.Label):
+class QStatusBar(QWidget, ttk.Label):
     def __init__(self, *args, **kwargs):
         if len(args) < 1:
             raise ValueError("You must specify a parent.")
@@ -702,17 +718,17 @@ def _ui_subtree(ui, parentWidget, parentNode, ui_file, indent=""):
                     )
                 if className not in globals():
                     raise NotImplementedError(className)
-            echo0(prefix+"[%s] %s" % (node.tag, className))
+            echo2(prefix+"[%s] %s" % (node.tag, className))
             subObj = thisType(parentWidget)
             # ^ Should never call QMainWindow constructor--that was
             #   already constructed (or constructor called this and
             #   it is incomplete)
             # ^ QLayoutItem only takes Alignment or nothing (don't
             #   use it anyway, because it has no addChild* methods)
-            
+
             subObj.name = varName
             if node.tag == "widget":
-                echo0(prefix+"  parent adding %s = %s()  # %s"
+                echo2(prefix+"  parent adding %s = %s()  # %s"
                         % (varName, className, node.tag))
                 if hasattr(parentWidget, "addChildWidget"):
                     parentWidget.addChildWidget(subObj)
@@ -720,7 +736,7 @@ def _ui_subtree(ui, parentWidget, parentNode, ui_file, indent=""):
                     # It is a layout and instead has:
                     parentWidget.addWidget(subObj)
             else:
-                echo0(prefix+"  parent adding %s = %s()  # %s"
+                echo2(prefix+"  parent adding %s = %s()  # %s"
                         % (varName, className, node.tag))
                 if hasattr(parentWidget, "addChildLayout"):
                     parentWidget.addChildLayout(subObj)
@@ -733,37 +749,37 @@ def _ui_subtree(ui, parentWidget, parentNode, ui_file, indent=""):
             if varName is not None:
                 setattr(parentWidget, varName, subObj)
                 if node.tag == "widget":
-                    echo0(prefix+"  +Adding %s = %s()  # %s to ui"
+                    echo2(prefix+"  +Adding %s = %s()  # %s to ui"
                           % (varName, className, node.tag))
                     setattr(ui, varName, subObj)
                     # ^ widget must always be a member of ui even if
                     #   in a layout (which can in turn be inside
                     #   QWidget centralWidget)
                 else:
-                    echo0(prefix+"  *not* adding %s = %s()  # %s to ui"
+                    echo2(prefix+"  *not* adding %s = %s()  # %s to ui"
                           % (varName, className, node.tag))
             else:
-                echo0(prefix+"  *not* adding %s = %s()  # %s to ui"
+                echo2(prefix+"  *not* adding %s = %s()  # %s to ui"
                         % (varName, className, node.tag))
 
             sub_count = _ui_subtree(ui, subObj, node, ui_file,
                                 indent=indent+"  ")
             count += 1
             if sub_count == 0:
-                echo0(prefix+"[/ leaf] done %s = %s()  # %s"
+                echo2(prefix+"[/ leaf] done %s = %s()  # %s"
                       % (varName, className, node.tag))
             else:
-                echo0(prefix+"[/ children=%s] done %s = %s()  # %s"
+                echo2(prefix+"[/ children=%s] done %s = %s()  # %s"
                       % (sub_count, varName, className, node.tag))
         elif node.tag == "property":
             name = node.attrib.get('name')
-            echo0(prefix+"NotImplemented: %s  # %s in %s"
+            echo1(prefix+"NotImplemented: %s  # %s in %s"
                   % (node.tag, name, ui_file))
         else:
             parentName = parentNode.attrib.get('name')
             if parentName is None:
                 parentName = "a " + parentNode.tag
-            echo0(prefix+'Unknown tag "%s"'
+            echo1(prefix+'Unknown tag "%s"'
                   ' under %s in %s'
                   % (node.tag, parentName, ui_file))
     return count
@@ -775,7 +791,7 @@ def _ui_loader(self, ui, ui_file):
     of the ui file is QMainWindow (usually or always (?)).
     """
     prefix = "[outputinspector noqt _ui_loader] "
-    echo0(prefix+"Loading %s in CLI mode." % ui_file)
+    echo1(prefix+"Loading %s in CLI mode." % ui_file)
     xmltree = ET.parse(ui_file)
     xmlroot = xmltree.getroot()  # such as <ui version="4.0">
     self.className = type(self).__name__
@@ -785,7 +801,7 @@ def _ui_loader(self, ui, ui_file):
         elif node.tag == "widget":
             _ui_subtree(ui, self, node, ui_file)
         else:
-            echo0(prefix+"Unknown tag %s under %s in %s"
+            echo1(prefix+"Unknown tag %s under %s in %s"
                   % (node.tag, self.className, ui_file))
 
 QMainWindow_callerName = None
@@ -802,10 +818,10 @@ class QMainWindow(QWidget):
                 message+" (already done by %s)" % QMainWindow_callerName
             )
         else:
-            echo0(message)
+            echo1(message)
         QMainWindow_callerName = callerName
         del message
-        echo0(prefix+"initializing")
+        echo1(prefix+"initializing")
         QWidget.__init__(self, *args)
         # if not hasattr(self, "is_gui") or not self.is_gui():
         # FIXME: Why isn't this ever False even when run from MainWindow?
@@ -816,7 +832,7 @@ class QMainWindow(QWidget):
             echo0(prefix+"using CLI frame for %s" % type(self).__name__)
             outputinspector.nottk.Frame.__init__(self, *args)
         else:
-            if not hasattr(self, "_setup"):
+            if not hasattr(self, TK_ONLY_ATTRIBUTE):
                 # ^ ok since "_setup", should *not* be in notk's, only tk's.
                 # This should *only* be true if subclass
                 #   is also a subclass of ttk.Frame.
@@ -843,7 +859,7 @@ class QMainWindow(QWidget):
                 prefix+"In this Python shim (noqt.py),"
                 " the ui_file keyword argument is required."
             )
-            
+
         if args:
             if not hasattr(args[0], "parentWidget"):
                 # ^ Every QWidget subclass has the parentWidget method
@@ -870,6 +886,6 @@ class QMainWindow(QWidget):
         _ui_loader(self, self._ui, ui_file)
         # ^ To behave like Qt, _ui (ui in Qt) must be
         # equivalent to the centralWidget of the ui file.
-    
+
     def is_gui(self):
-        return False  # override and return False in subclass in noqttk 
+        return False  # override and return False in subclass in noqttk

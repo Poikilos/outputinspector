@@ -17,7 +17,7 @@ window = None
 
 MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_DIR = os.path.dirname(MODULE_DIR)
-print("[mainwindow] loading", file=sys.stderr)
+# print("[mainwindow] loading", file=sys.stderr)
 
 # if __name__ == __main__:
 #     sys.path.insert(0, REPO_DIR)
@@ -73,7 +73,7 @@ class MainWindow(OutputInspector, QMainWindow):  # ttk.Frame
         # ^ OutputInspector should detect if it is a QMainWindow subclass
         #   OutputInspector to detect this case and not  in
         #   this case (may call noqt's instead of noqttk's)
-        echo0(prefix+"initializing")
+        echo1(prefix+"initializing")
         # ttk.Frame.__init__(self)
         self.root = root
         if root is not None:
@@ -86,7 +86,7 @@ class MainWindow(OutputInspector, QMainWindow):  # ttk.Frame
             pinfo("")
             pinfo("Output Inspector")
             pinfo("----------------")
-    
+
     def _window_init_timed(self):
         self._window_init(self.root)
 

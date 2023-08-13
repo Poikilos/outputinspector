@@ -6,11 +6,28 @@ import outputinspector.notk as tk
 import sys
 
 END = "end"
-print("[notk] loading", file=sys.stderr)
+# print("[notk] loading", file=sys.stderr)
 
+verbosity = 0
 
 def echo0(*args):
     print(*args, file=sys.stderr)
+    return True
+
+
+def echo1(*args):
+    if verbosity < 1:
+        return False
+    print(*args, file=sys.stderr)
+    return True
+
+
+def echo2(*args):
+    if verbosity < 2:
+        return False
+    print(*args, file=sys.stderr)
+    return True
+
 
 class Widget:
     def __init__(self, *args):
@@ -55,11 +72,11 @@ class Listbox(Widget):
             setattr(self, key, value)
         self._listbox_size = 0  # Avoid interfering with noqt _size
         if not hasattr(self, "size"):
-            echo0(prefix+"size is in Tk (not qt) compatibility mode")
+            echo1(prefix+"size is in Tk (not qt) compatibility mode")
             self.size = self._tk_size
         else:
             # This occurs if noqt subclassed Listbox.
-            echo0(prefix+"size is in Qt (not Tk) compatibility mode")
+            echo1(prefix+"size is in Qt (not Tk) compatibility mode")
             self._tk_size = Listbox.size
 
     # def _tk_size(self):  # Avoid overriding noqt size()
@@ -71,20 +88,20 @@ class Listbox(Widget):
         Usage: bind("<<ListboxSelect>>", _on_items_clicked)
         """
         prefix = "[Listbox bind] "
-        echo0(prefix+"Ignored bind %s since in console mode." % action)
+        echo1(prefix+"Ignored bind %s since in console mode." % action)
 
     def append(self, item):
         # self.insert(self.size(), item)
         # ^ noqt size() may interfere, so:
         self.insert(Listbox.size(self), item)
-    
+
     def insert(self, index, item):
-        prefix = "[Listbox insert]"
-        echo0(prefix+"into dummy UI for CLI")
+        prefix = "[Listbox insert] "
+        echo2(prefix+"into dummy UI for CLI")
         if index == END:
             index = len(self._items)
         self._items.insert(index, item)
-    
+
     def itemconfig(self, index, options):
         # TODO: filter to attributes allowed on a Tk list item
         for key, value in options.items():

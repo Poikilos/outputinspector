@@ -15,6 +15,8 @@ if __name__ == "__main__":
 from outputinspector.best_timer import best_timer as second_timer
 from outputinspector.noqt import (
     noqt_tick,
+    Alignment,
+    ItemDataRole,
 )
 
 
@@ -84,6 +86,34 @@ class TestLogging(unittest.TestCase):
     def print_something_else(self):
         print("* something else")
         self.last_message = "something else"
+    
+    def test_enum(self):
+        AlignLeft = Alignment()
+        assert(enum.next_roles["Alignment"] == 1)
+        AlignRight = Alignment()
+        assert(AlignLeft.value != AlignRight.value)
+        AlignBottom = Alignment()
+        AlignTop = Alignment()
+        AlignCenter = Alignment()
+        AlignHCenter = Alignment()
+        AlignVCenter = Alignment()
+        # AlignJustify etc. were in Qt4.
+
+        # General purpose roles:
+        DisplayRole = ItemDataRole(typeNames=["QString"])
+        echo0("DisplayRole.value = %s" % DisplayRole.value)
+        assert(DisplayRole.value == 0)
+        DecorationRole = ItemDataRole(1, typeNames=["QColor", "QIcon", "QPixmap"])
+        EditRole = ItemDataRole(2, typeNames=["QString"])
+        echo0("DecorationRole.typeNames = %s" % DecorationRole.typeNames)
+        echo0("enum._typeNames = %s" % enum._typeNames)
+        assert(DecorationRole.typeNames == ["QColor", "QIcon", "QPixmap"])
+    
+    def test_QMainWindow(self):
+        class MainWindow(QMainWindow):
+            pass
+        self.mainwindow = MainWindow()
+        echo0("Created CLI mainwindow.")
 
 
 if __name__ == "__main__":
