@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"auto-build.build.reuseTerminal": false,
+		"python.testing.unittestEnabled": true,
+		"python.testing.unittestArgs": [
+			"-v",
+			"-s",
+			".",
+			"-p",
+			"*test*.py",
+			"./tests"
+		]
+	}
+}
