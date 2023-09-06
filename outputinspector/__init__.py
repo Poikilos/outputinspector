@@ -431,7 +431,6 @@ class OutputInspector:
         #     self.config = Settings("/etc/outputinspector.conf")
         # elif os.path.isfile("/etc/outputinspector.conf"):
         #     self.config = Settings("/etc/outputinspector.conf")
-
         self.settings.setIfMissing("Kate2TabWidth", 8)
         self.settings.setIfMissing("CompilerTabWidth", 6)
         self.settings.setIfMissing("ShowWarningsLast", False)
@@ -458,6 +457,7 @@ class OutputInspector:
                 )
 
         self.settings.setIfMissing("editor", "/usr/bin/geany")
+        assert self.settings.getString("editor")
         # echo0("* outputinspector init...done")
 
         # def init(self, errorsListFileName):

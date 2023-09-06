@@ -49,7 +49,7 @@ def echo1(*args, **kwargs):  # formerly error
 _TRUTHIES = ["True", "1", "on", "yes"]
 
 
-def is_truthy(self, value):
+def is_truthy(value):
     '''
     @brief Check if the value is in a list of "Settings.
     _TRUTHIES" (True yes, on, 1, ...).
@@ -97,7 +97,10 @@ class Settings:
         if path is not None:
             if os.path.isfile(path):
                 self.readIni(path)
+            else:
+                self.data = {}
         else:
+            self.data = {}
             echo0("The Settings object has no path.")
 
     def __del__(self):
@@ -220,6 +223,7 @@ class Settings:
         else:
             self.sDebug += ("setIfMissing tried to set " + key
                             + "before Settings.data was ready.")
+            raise RuntimeError(self.sDebug)
         return changed
 
     def remove(self, key):

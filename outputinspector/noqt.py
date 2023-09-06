@@ -514,6 +514,8 @@ class Qt:
     AlignCenter = Alignment()
     AlignHCenter = Alignment()
     AlignVCenter = Alignment()
+    CaseInsensitive = 0
+    CaseSensitive = 1
     # AlignJustify etc. were in Qt4.
 
     # General purpose roles:
