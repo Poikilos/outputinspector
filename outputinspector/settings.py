@@ -56,8 +56,8 @@ def is_truthy(value):
     @param value
     @return
     '''
-    for s in _TRUTHIES:
-        if value.lower() == s.lower():
+    for true_str in _TRUTHIES:
+        if value.lower() == true_str.lower():
             return True
 
     return False
