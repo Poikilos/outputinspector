@@ -1,0 +1,11 @@
+-- This is only a stub to allow the test to work. OutputInspector
+-- un-mangling works by checking for an existing file that matches the
+-- traceback, using "..." as a wildcard.
+--
+-- If the test worked, you will see a full path instead of one with an ellipsis
+-- in each traceback step, and clicking it in your IDE (VSCode tested)
+-- on any operating system should work.
+--
+-- During real operation (not testing), the working directory should be
+-- the minetest directory containing both builtin and bin, and the
+-- real file should appear instead of this test file.

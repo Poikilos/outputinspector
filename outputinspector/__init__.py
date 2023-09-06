@@ -6,6 +6,8 @@ import platform
 import time
 import re
 import inspect
+import json
+
 from pprint import pformat
 from subprocess import Popen, PIPE
 
@@ -29,11 +31,12 @@ from outputinspector.noqttk import (
     #   if Tk is not initialized.
 )
 """
-verbosity = 0
+verbosity = 1
 max_verbosity = 2  # helps construct verbosities during set_verbosity
 TMP = "/tmp"
 if platform.system() == "Windows":
     TMP = os.environ['TEMP']
+    # profile is set further down (such as HOME)
 
 def warn(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -83,6 +86,7 @@ def set_verbosity(level):
     '''
     Set verbosity to 1 for verbose messages and 2 for debug messages.
     '''
+    global verbosity
     verbosities = [True, False] + list(range(max_verbosity+1))
     if level not in verbosities:
         raise ValueError(
@@ -145,7 +149,7 @@ PARSE_STACK = 5
 '''*< linedef[PARSE_STACK] flags a pattern as being for a
 callstack, such as to connect it to a previous error (see documentation
 for STACK_LOWER or for any later-added STACK_* constants). '''
-PARSE_DESCRIPTION = 5
+PARSE_DESCRIPTION = 6
 '''*< linedef[PARSE_STACK] describes the parser mode (linedef) in a
 human-readable way.'''
 PARSE_PARTS_COUNT = 7
@@ -273,6 +277,9 @@ class OutputInspector:
     _errorPathRoots = [
         os.getcwd(),
     ]
+    ERROR_VSCODE_FMT = 'File "{file}", line {row}'
+    # ^ resolves https://github.com/Poikilos/outputinspector/issues/26
+    # such as 'File "/home/owner/git/world_clock/worldclocktk/__init__.py", line 232, in <module>'
 
     def addChildWidget(self, widget):
         if not hasattr(self, '_children'):
@@ -300,6 +307,7 @@ class OutputInspector:
 
     def __init__(self):
         prefix = "[OutputInspector] "
+        self.processedLineFormat = type(self).ERROR_VSCODE_FMT
         self._ui = None
         self.errorsListFileName = None
         # self.name = "inspector"
@@ -354,7 +362,7 @@ class OutputInspector:
         #     self.m_VerboseParsing = True; '''*< Enable line-by-line parser output '''
         # else:
         self.m_Verbose = False
-        self.m_VerboseParsing = False
+        self.m_VerboseParsing = True
         # endif
         # private slots:
         # void on_mainListWidget_itemDoubleClicked(QListWidgetItem *item)
@@ -458,167 +466,177 @@ class OutputInspector:
         same TOKEN_FILE and PARSE_PARAM_A, because "\n" is forced
         (which would leave extra stuff at the end if there are more tokenings)
         '''
-        linedef = []
-        for i in range(PARSE_PARTS_COUNT):
-            linedef.append("")
-        linedef[TOKEN_FILE] = "  File "
-        linedef[TOKEN_PARAM_A] = ", line "
-        linedef[TOKEN_PARAM_B] = ")"
-        linedef[TOKEN_END_PARAMS] = ""
-        linedef[PARSE_COLLECT] = ""
-        linedef[PARSE_STACK] = ""
-        linedef[PARSE_DESCRIPTION] = "Nose error"
+        from collections import namedtuple
+        # Lowercase means has the feature, uppercase means does not:
+        # LineDef_flbE_CSD = namedtuple(
+        LineDef = namedtuple(
+            'LineDef',
+            ['file', 'paramA', 'paramB', 'paramsEnder',
+             'collect', 'stack', 'description'],
+        )
+        # linedef = []
+        # TOKEN_FILE = 0
+        # TOKEN_PARAM_A = 1
+        # TOKEN_PARAM_B = 2
+        # TOKEN_END_PARAMS = 3
+        # PARSE_COLLECT = 4
+        # PARSE_STACK = 5
+        # PARSE_DESCRIPTION = 6
+        # PARSE_PARTS_COUNT = 7
+        linedef = LineDef(
+            "  File ",  # TOKEN_FILE
+            ", line ",  # TOKEN_PARAM_A
+            ")",  # TOKEN_PARAM_B
+            "",  # TOKEN_END_PARAMS
+            "",  # PARSE_COLLECT
+            "",  # PARSE_STACK
+            "Nose error",  # PARSE_DESCRIPTION
+        )
         self.enclosures.append(linedef)
 
-        linedef = []
-        for i in range(PARSE_PARTS_COUNT):
-            linedef.append("")
-        linedef[TOKEN_FILE] = "  File "
-        linedef[TOKEN_PARAM_A] = ", line "
-        linedef[TOKEN_PARAM_B] = ""
-        linedef[TOKEN_END_PARAMS] = ","
-        linedef[PARSE_COLLECT] = COLLECT_REUSE
-        linedef[PARSE_STACK] = STACK_LOWER
-        linedef[PARSE_DESCRIPTION] = "Nose lower traceback"
+        linedef = LineDef(
+            "  File ",  # TOKEN_FILE
+            ", line ",  # TOKEN_PARAM_A
+            "",  # TOKEN_PARAM_B
+            ",",  # TOKEN_END_PARAMS
+            COLLECT_REUSE,  # PARSE_COLLECT
+            STACK_LOWER,  # PARSE_STACK
+            "Nose lower traceback",  # PARSE_DESCRIPTION
+        )
         self.enclosures.append(linedef)
 
-        linedef = []
-        for i in range(PARSE_PARTS_COUNT):
-            linedef.append("")
-        linedef[TOKEN_FILE] = "ERROR: Failure: SyntaxError (invalid syntax ("
-        linedef[TOKEN_PARAM_A] = ", line "
-        linedef[TOKEN_PARAM_B] = ""
-        linedef[TOKEN_END_PARAMS] = ")"
-        linedef[PARSE_COLLECT] = ""
-        linedef[PARSE_STACK] = ""
-        linedef[PARSE_DESCRIPTION] = "Nose syntax error"
+        linedef = LineDef(
+            "ERROR: Failure: SyntaxError (invalid syntax (",  # TOKEN_FILE
+            ", line ",  # TOKEN_PARAM_A
+            "",  # TOKEN_PARAM_B
+            ")",  # TOKEN_END_PARAMS
+            "",  # PARSE_COLLECT
+            "",  # PARSE_STACK
+            "Nose syntax error",  # PARSE_DESCRIPTION
+        )
         self.enclosures.append(linedef)
 
-        linedef = []
-        for i in range(PARSE_PARTS_COUNT):
-            linedef.append("")
-        linedef[TOKEN_FILE] = "  File "
-        linedef[TOKEN_PARAM_A] = ", line "
-        linedef[TOKEN_PARAM_B] = ""
-        linedef[TOKEN_END_PARAMS] = "\n"
-        linedef[PARSE_COLLECT] = COLLECT_REUSE
-        linedef[PARSE_STACK] = ""
-        linedef[PARSE_DESCRIPTION] = "Nose upper traceback"
+        linedef = LineDef(
+            "  File ",  # TOKEN_FILE
+            ", line ",  # TOKEN_PARAM_A
+            "",  # TOKEN_PARAM_B
+            "\n",  # TOKEN_END_PARAMS
+            COLLECT_REUSE,  # PARSE_COLLECT
+            "",  # PARSE_STACK
+            "Nose upper traceback",  # PARSE_DESCRIPTION
+        )
         self.enclosures.append(linedef)
 
-        linedef = []
-        for i in range(PARSE_PARTS_COUNT):
-            linedef.append("")
-        linedef[TOKEN_FILE] = "ERROR[Main]:"
-        linedef[TOKEN_PARAM_A] = ":"  # maybe look for .lua because if
+        linedef = LineDef(
+            "ERROR[Main]:",  # TOKEN_FILE
+            ":",  # TOKEN_PARAM_A
+            "",  # TOKEN_PARAM_B
+            ":",  # TOKEN_END_PARAMS
+            "",  # PARSE_COLLECT
+            "",  # PARSE_STACK
+            "Minetest Lua traceback",  # PARSE_DESCRIPTION
+        )
+        # TOKEN_PARAM_A: maybe look for ".lua" because if
         #  only : is checked, addLine may cancel parsing the line since
         #  TOKEN_PARAM_A is only accepted if followed by a number!
         #  Mitigated by using regex and only finding it where followed
         #  by a number.
-        linedef[TOKEN_PARAM_B] = ""
-        linedef[TOKEN_END_PARAMS] = ":"
         # linedef[PARSE_COLLECT] = COLLECT_REUSE
-        linedef[PARSE_STACK] = ""
-        linedef[PARSE_DESCRIPTION] = "Minetest Lua traceback"
         self.STYLE_MINETEST_LUA_TRACEBACK = len(self.enclosures)
         self.enclosures.append(linedef)
 
         # An example of jshint output is the entire next comment:
         # functions.js: line 32, 26, Use '!==' to compare with 'null'.
-        linedef = []
-        for i in range(PARSE_PARTS_COUNT):
-            linedef.append("")
-        linedef[TOKEN_FILE] = ""
-        linedef[TOKEN_PARAM_A] = ": line "
-        linedef[TOKEN_PARAM_B] = ", col "
-        linedef[TOKEN_END_PARAMS] = ", "
+        linedef = LineDef(
+            "",  # TOKEN_FILE
+            ": line ",  # TOKEN_PARAM_A
+            ", col ",  # TOKEN_PARAM_B
+            ", ",  # TOKEN_END_PARAMS
+            "",  # PARSE_COLLECT
+            "",  # PARSE_STACK
+            "hint from jshint",  # PARSE_DESCRIPTION
+        )
         # linedef[PARSE_COLLECT] = COLLECT_REUSE
-        linedef[PARSE_STACK] = ""
-        linedef[PARSE_DESCRIPTION] = "hint from jshint"
         self.enclosures.append(linedef)
 
-        linedef = []
-        for i in range(PARSE_PARTS_COUNT):
-            linedef.append("")
+        linedef = LineDef(
+            " accessed at ",  # TOKEN_FILE
+            ":",  # TOKEN_PARAM_A
+            "",  # TOKEN_PARAM_B
+            "\n",  # TOKEN_END_PARAMS
+            "",  # PARSE_COLLECT
+            "",  # PARSE_STACK
+            "Minetest access warning",  # PARSE_DESCRIPTION
+        )
         # TODO: change to "WARNING\[Server\].* accessed at " (requires:
         # implementing regex)
-        linedef[TOKEN_FILE] = " accessed at "
-        linedef[TOKEN_PARAM_A] = ":"
-        linedef[TOKEN_PARAM_B] = ""
-        linedef[TOKEN_END_PARAMS] = "\n"
         # linedef[PARSE_COLLECT] = COLLECT_REUSE
-        linedef[PARSE_STACK] = ""
-        linedef[PARSE_DESCRIPTION] = "Minetest access warning"
         self.enclosures.append(linedef)
 
-        linedef = []
-        for i in range(PARSE_PARTS_COUNT):
-            linedef.append("")
+        linedef = LineDef(
+            " inside a function at ",  # TOKEN_FILE
+            ":",  # TOKEN_PARAM_A
+            "",  # TOKEN_PARAM_B
+            ".",  # TOKEN_END_PARAMS
+            "",  # PARSE_COLLECT
+            "",  # PARSE_STACK
+            "Minetest warning 'inside a function'",  # PARSE_DESCRIPTION
+        )
         #/ TODO: change to "WARNING\[Server\].* accessed at " (requires:
         # implementing regex)
-        linedef[TOKEN_FILE] = " inside a function at "
-        linedef[TOKEN_PARAM_A] = ":"
-        linedef[TOKEN_PARAM_B] = ""
-        linedef[TOKEN_END_PARAMS] = "."
         # linedef[PARSE_COLLECT] = COLLECT_REUSE
-        linedef[PARSE_STACK] = ""
-        linedef[PARSE_DESCRIPTION] = "Minetest warning 'inside a function'"
         self.enclosures.append(linedef)
 
-        linedef = []; '''*< This is a fallback definition that applies
-                              to various parsers.
-                              Simpler definitions must be attempted in
-                              order from most to least complex to avoid
-                              False positives (Now there are even
-                              simpler ones after self one). '''
-
-        for i in range(PARSE_PARTS_COUNT):
-            linedef.append("")
-        linedef[TOKEN_FILE] = ""
-        linedef[TOKEN_PARAM_A] = "("
-        linedef[TOKEN_PARAM_B] = ","
-        linedef[TOKEN_END_PARAMS] = ")"
-        linedef[PARSE_COLLECT] = ""
-        linedef[PARSE_STACK] = ""
-        linedef[PARSE_DESCRIPTION] = "generic ('path(row,*col)')"
+        # This is a fallback definition that applies
+        #   to various parsers.
+        #   Simpler definitions must be attempted in
+        #   order from most to least complex to avoid
+        #   False positives (Now there are even
+        #   simpler ones after self one).
+        linedef = LineDef(
+            "",  # TOKEN_FILE
+            "(",  # TOKEN_PARAM_A
+            ",",  # TOKEN_PARAM_B
+            ")",  # TOKEN_END_PARAMS
+            "",  # PARSE_COLLECT
+            "",  # PARSE_STACK
+            "generic ('path(row,*col)')",  # PARSE_DESCRIPTION
+        )
         self.enclosures.append(linedef)
 
-        linedef = []
-        for i in range(PARSE_PARTS_COUNT):
-            linedef.append("")
-        linedef[TOKEN_FILE] = ""
-        linedef[TOKEN_PARAM_A] = ":"
-        linedef[TOKEN_PARAM_B] = ":"
-        linedef[TOKEN_END_PARAMS] = ":"
-        linedef[PARSE_COLLECT] = ""
-        linedef[PARSE_STACK] = ""
-        linedef[PARSE_DESCRIPTION] = "pycodestyle-like"
+        linedef = LineDef(
+            "",  # TOKEN_FILE
+            ":",  # TOKEN_PARAM_A
+            ":",  # TOKEN_PARAM_B
+            ":",  # TOKEN_END_PARAMS
+            "",  # PARSE_COLLECT
+            "",  # PARSE_STACK
+            "pycodestyle-like",  # PARSE_DESCRIPTION
+        )
         self.enclosures.append(linedef)
 
-        linedef = []
         # -n option for grep shows line # like:
         # <filename>:<number>:
-        for i in range(PARSE_PARTS_COUNT):
-            linedef.append("")
-        linedef[TOKEN_FILE] = ""
-        linedef[TOKEN_PARAM_A] = ":"
-        linedef[TOKEN_PARAM_B] = ""
-        linedef[TOKEN_END_PARAMS] = ":"
-        linedef[PARSE_COLLECT] = ""
-        linedef[PARSE_STACK] = ""
-        linedef[PARSE_DESCRIPTION] = "grep -n result"
+        linedef = LineDef(
+            "",  # TOKEN_FILE
+            ":",  # TOKEN_PARAM_A
+            "",  # TOKEN_PARAM_B
+            ":",  # TOKEN_END_PARAMS
+            "",  # PARSE_COLLECT
+            "",  # PARSE_STACK
+            "grep -n result",  # PARSE_DESCRIPTION
+        )
         self.enclosures.append(linedef)
 
-        linedef = []
-        for i in range(PARSE_PARTS_COUNT):
-            linedef.append("")
-        linedef[TOKEN_FILE] = ""
-        linedef[TOKEN_PARAM_A] = ""
-        linedef[TOKEN_PARAM_B] = ""
-        linedef[TOKEN_END_PARAMS] = ":"
-        linedef[PARSE_COLLECT] = ""
-        linedef[PARSE_STACK] = ""
-        linedef[PARSE_DESCRIPTION] = "grep-like result (path then colon)"
+        linedef = LineDef(
+            "",  # TOKEN_FILE
+            "",  # TOKEN_PARAM_A
+            "",  # TOKEN_PARAM_B
+            ":",  # TOKEN_END_PARAMS
+            "",  # PARSE_COLLECT
+            "",  # PARSE_STACK
+            "grep-like result (path then colon)",  # PARSE_DESCRIPTION
+        )
         self.enclosures.append(linedef)
 
         self.brushes["TracebackNotTop"] = QBrush(QColor.fromRgb(128, 60, 0))
@@ -655,11 +673,20 @@ class OutputInspector:
             # for i in range(len(itList)):
             #     pinfo("    - {}".format(itList[i]))
             #
-            assert(len(itList) >= PARSE_PARTS_COUNT)
+            assert(len(itList) == PARSE_PARTS_COUNT)
             # pinfo("  items.size(): {}".format(itList.size()))
             if self.m_Verbose:
                 pinfo("  items: ['" + "', '".join(itList) + "']")
-
+        config_name = "outputinspector.json"
+        config_path = os.path.join(myAppData, config_name)
+        if not os.path.isdir(myAppData):
+            os.makedirs(myAppData)
+        if not os.path.isfile(config_path):
+            self.config = {}
+            self.config['line_token_lists'] = self.enclosures
+            with open(config_path, 'w') as stream:
+                json.dump(self.config, stream, sort_keys=True, indent=2)
+                echo0(prefix+"Saved %s" % pformat(config_path))
         if type(self).__name__ == "OutputInspector":
             echo0(prefix+"Using CLI mode.")
             # noqt.set_cli()
@@ -905,10 +932,10 @@ class OutputInspector:
                 self.lineInfo(info, line, self.m_ActualJump, self.m_ActualJumpLine, True)
 
                 if info["master"] == "True":
-                    self.m_ActualJump = info["file"]
+                    self.m_ActualJump = info['file']
                     self.m_ActualJumpLine = line
-                    self.m_ActualJumpRow = info["row"]
-                    self.m_ActualJumpColumn = info["column"]
+                    self.m_ActualJumpRow = info['row']
+                    self.m_ActualJumpColumn = info['column']
                     self.m_IsJumpLower = (info["lower"] == "True")
                     echo1("(master) set actualJump to '{}'"
                           "".format(self.m_ActualJump))
@@ -931,10 +958,12 @@ class OutputInspector:
                     lwi.setData(ROLE_ROW, QVariant(self.m_ActualJumpRow))
                     lwi.setData(ROLE_COL, QVariant(self.m_ActualJumpColumn))
                 else:
-                    lwi.setData(ROLE_ROW, QVariant(info["row"]))
-                    lwi.setData(ROLE_COL, QVariant(info["column"]))
+                    lwi.setData(ROLE_ROW, QVariant(info['row']))
+                    lwi.setData(ROLE_COL, QVariant(info['column']))
 
                 if len(self.m_ActualJump) > 0:
+                    if not os.path.isfile(self.m_ActualJump):
+                        raise FileNotFoundError(self.m_ActualJump)
                     lwi.setData(ROLE_COLLECTED_FILE, QVariant(self.m_ActualJump))
                     if info["lower"] == "True":
                         lwi.setForeground(self.brushes["TracebackNotTop"])
@@ -943,7 +972,10 @@ class OutputInspector:
                     else:
                         lwi.setForeground(self.brushes[sColorPrefix + "Details"])
                 else:
-                    lwi.setData(ROLE_COLLECTED_FILE, QVariant(info["file"]))
+                    if not os.path.isfile(info['file']):
+                        raise FileNotFoundError(info['file'])
+
+                    lwi.setData(ROLE_COLLECTED_FILE, QVariant(info['file']))
                     if info["good"] == "True":
                         lwi.setForeground(self.brushes[sColorPrefix])
                     else:
@@ -955,7 +987,12 @@ class OutputInspector:
                 lwi.setData(ROLE_COLLECTED_LINE, QVariant(self.m_MasterLine))
                 _storedPath = lwi.data(ROLE_COLLECTED_FILE).get()
                 if not os.path.isfile(_storedPath):
-                    if ".lua" in line:
+                    if ".lua" in line and not ".lua]" in line:
+                        # Avoid crashing with .lua] because that is
+                        #   not a full path, but a partial path.
+                        #   Example: "2023-08-13 09:49:30: WARNING[Main]:
+                        #   [tab_online.lua] not loading password since
+                        #   address=nil, port=nil, playername=nil"
                         raise RuntimeError("Got invalid path '%s' not in '%s' in line: `%s`"
                                            % (_storedPath, os.getcwd(), line))
                 lwi.setData(ROLE_DETAILS, QVariant(line != self.m_MasterLine))
@@ -981,7 +1018,7 @@ class OutputInspector:
                     elif sTargetLanguage == "bat":
                         self.m_CommentToken = "rem "
 
-                # if ((is_jshint and info["file"].endswith(".js"))
+                # if ((is_jshint and info['file'].endswith(".js"))
                 #         or self.m_Error in line):
                 #  # ^ TODO?:
                 #  #   if (is_jshint or "previous error" not in line):
@@ -992,7 +1029,7 @@ class OutputInspector:
 
                 if self.settings.getBool("FindTODOs"):
                     if info["good"] == "True":
-                        sFileX = ""  # = unmangledPath(info["file"])
+                        sFileX = ""  # = unmangledPath(info['file'])
                         sFileX = self.absPathOrSame(sFileX)
                         # =line[0:line.find("(")]
                         if sFileX not in self.m_Files:
@@ -1150,11 +1187,11 @@ class OutputInspector:
         info -- a dictionary to modify
         '''
         prefix = "[lineInfo] "
-        info["file"] = None
-        # ^ same as info["file"]
-        info["row"] = ""
+        info['file'] = None
+        # ^ same as info['file']
+        info['row'] = ""
         info["line"] = originalLine
-        info["column"] = ""
+        info['column'] = ""
         info["language"] = ""
         # ^ only if language can be detected from self line
         info["good"] = "False"
@@ -1182,9 +1219,15 @@ class OutputInspector:
         # ^ a digit (\d), or more times (+)
         if self.m_VerboseParsing:
             pinfo("`{}`:".format(originalLine))
+        if not line.endswith("\n"):
+            line += "\n"
+
+        usedParserI = False
 
         for parserI, itList in enumerate(self.enclosures):
+            # To see how a parserI is accepted, see the case with `break`
             linedef = itList
+
             if ((len(itList[TOKEN_FILE]) == 0)
                     or (itList[TOKEN_FILE] in line)):
                 fileToken = itList[TOKEN_FILE]
@@ -1195,10 +1238,11 @@ class OutputInspector:
 
                 paramAToken = itList[TOKEN_PARAM_A]
 
-                # paramAThenNumRE = re.compile(":\\d+") # + captures entire number
+                # paramAThenNumRE = re.compile(":\\d+")
                 paramAThenNumRE = re.compile(re.escape(paramAToken)+r"\d+")
+                paramARE = re.compile(re.escape(paramAToken))
                 # ^ "+" captures entire cluster (number in this case)
-                # ^ also gets the colon though.
+                # ^ also gets the preceding colon though.
 
                 paramBToken = itList[TOKEN_PARAM_B]
                 # ^ coordinate delimiter (blank if no column)
@@ -1225,11 +1269,31 @@ class OutputInspector:
                         #     paramAToken,
                         #     fileTokenI + len(fileToken),
                         # )
-                        match = paramAThenNumRE.search(line, fileTokenI + len(fileToken))
+                        match = paramAThenNumRE.search(line, fileTokenI+len(fileToken))
                         # ^ either None or <re.Match object; span=(86, 89), match=':46'>
                         #   where match.span() is the slice (tuple; exclusive end)
                         # ^ search looks anywhere, match looks at beginning.
                         #   Also, only *compiled* regex objects have pos arg!
+                        number = None
+                        if match:
+                            number = line[match.span()[0]+len(linedef.paramA):match.span()[1]]
+                            if not number.isnumeric():
+                                echo0(prefix+"Skipped parser [%s] since %s is not a number in %s"
+                                      % (parserI, pformat(number), pformat(line)))
+                                continue
+                            earlyMatch = paramARE.search(line, fileTokenI+len(fileToken))
+                            if earlyMatch:
+                                if earlyMatch.span()[0] < match.span()[0]:
+                                    # [0] is start, [1] is end of slice
+                                    # echo0(
+                                    #     "ending filename at %s in `%s`"
+                                    #     % (earlyMatch, line)
+                                    # )
+                                    match = earlyMatch
+                                    # ^ Use the first colon even if no number after it,
+                                    #   in case this is a stray colon in a format without
+                                    #   a number.
+                                    # TODO: Only do this if no ender OR not isnumeric
 
                         if not match:
                             paramATokenI = line.find(
@@ -1260,21 +1324,62 @@ class OutputInspector:
                                             tryPath = line[lastSpaceI+1:lastColonI]
                                             tryAbsPath = self.unmangledPath(tryPath)
                                             if not os.path.isfile(tryAbsPath):
-                                                raise RuntimeError(
-                                                    "Path '%s' not found in `%s`"
-                                                    % (tryPath, line)
-                                                )
+                                                if ".lua" in line and not ".lua]" in line:
+                                                    raise RuntimeError(
+                                                        "Path '%s' not found in `%s`"
+                                                        % (tryPath, line)
+                                                    )
+                                                raise FileNotFoundError(tryAbsPath)
+                                                # else avoid crashing on line
+                                                #   that doesn't have a file:
+                                                #   "2023-08-13 09:51:19: ERROR[AsyncWorker-0]:
+                                                #   servers.minetest.org:32000/list?
+                                                #   proto_version_min=25&proto_version_max=32
+                                                #   not found (Couldn't resolve host name)
+                                                #   (response code 0)"
                                             else:
-                                                info["file"] = tryAbsPath
+                                                info['before'] = line[:lastSpaceI+1]
+                                                info['after'] = line[lastColonI+1:]
+                                                # ^ adjusted later if other params
+                                                info['file'] = tryAbsPath
+                                                if not os.path.isfile(tryAbsPath):
+                                                    raise FileNotFoundError(tryAbsPath)
+
                                 else:
-                                    info["file"] = tryAbsPath
+                                    info['before'] = line[:fileTokenI+len(fileToken)]
+                                    info['after'] = line[paramATokenI+len(paramAToken):]
+                                    # ^ adjusted later if other params
+                                    info['file'] = tryAbsPath
+                                    if not os.path.isfile(tryAbsPath):
+                                        raise FileNotFoundError(tryAbsPath)
                             else:
                                 noParamWhy = ("paramA (line number usually) is not followed by %s"
                                             % paramAToken)
                             # This is ok. See usage of noParamWhy.
+                            if paramAToken in line[:paramATokenI]:
+                                raise NotImplementedError(
+                                    "Got token in %s before paramA (token=%s, info=%s)"
+                                    % (pformat(line[:paramATokenI]), paramAToken, info)
+                                )
                         else:
+                            info['before'] = line[:fileTokenI+len(fileToken)]
+                            info['after'] = line[match.span()[1]:]  # [1]:after
+                            # ^ adjusted later if other params are found
                             paramATokenI = match.span()[0]
+                            # FIXME: Remove each FileNotFoundError but collect &
+                            #   display what parser failed and what the line
+                            #   content was or save the lineinfo object
+                            #   reference.
+                            if paramAToken in line[:paramATokenI]:
+                                raise NotImplementedError(
+                                    "Got token in %s before paramA (token=%s, info=%s)"
+                                    % (pformat(line[:paramATokenI]), paramAToken, info)
+                                )
+                            # if not line[fileI+len(info['file']+len(paramAToken)):paramATokenI].isnumeric():
+                            #     raise NotImplementedError("Not numeric: ")
+                            #     paramATokenI = -1
                     elif len(endParamsToken) > 0:
+                        # If there is no paramAToken, use endParamsToken to get paramA
                         paramATokenI = line.find(endParamsToken)
                         if paramATokenI < 0:
                             paramATokenI = len(line)
@@ -1324,6 +1429,8 @@ class OutputInspector:
                                            + len(paramBToken))
                             else:
                                 paramBI = paramBTokenI
+                            info['after'] = line[paramBI+len(paramBToken):]
+                            # ^ adjusted later if endParamsToken found
                             if len(endParamsToken) == 0:
                                 endParamsTokenI = paramBI
                                 if self.m_VerboseParsing:
@@ -1336,12 +1443,19 @@ class OutputInspector:
                                     paramBI
                                 )
                             else:
+                                # There is nothing after the gathered data
+                                # ('after' will be blank)
                                 endParamsTokenI = len(line)
                                 # endParamsToken = "<forced token=\""
                                 # + endParamsToken.replace("\"", "\\\"")
                                 # .replace("\n", "\\n") + "\">"
 
                             if endParamsTokenI > -1:
+                                if endParamsToken != "\n":
+                                    info['after'] = line[endParamsTokenI+len(endParamsToken):]
+                                else:
+                                    info['after'] = line[endParamsTokenI:]
+                                    # ^ technically correct but always ""
                                 if len(paramBToken) == 0:
                                     paramBTokenI = endParamsTokenI
                                     # so paramAI can be calculated
@@ -1384,7 +1498,18 @@ class OutputInspector:
                                 msg = ("\nParser %s succeeded: %s on `%s`"
                                        % (parserI, itList, line))
                                 # WARNING: pformat may wrap lines!
+                                tryRow = line[paramAI:paramBTokenI]
+                                if (len(tryRow) > 0) and (not tryRow.isnumeric()):
+                                    # Reject the match if not a number to not count
+                                    #   stray enders, such as a colon in a later part
+                                    #   of the error.
+                                    #   But if len is 0, that is ok (in that
+                                    #   (case row not required, so not wrong).
+                                    #
+                                    continue
+
                                 echo2(msg)  # TODO: debug only (remove)
+                                usedParserI = parserI
                                 break
                             else:
                                 if self.m_VerboseParsing:
@@ -1431,9 +1556,17 @@ class OutputInspector:
                         pinfo("  no pre-File '{}' >= START"
                               "".format(fileToken))
                     if "ERROR[" in line and ".lua" in line and linedef[PARSE_DESCRIPTION] == "Minetest Lua traceback":
-                        raise RuntimeError("The program failed to parse a Minetest Lua traceback: `%s`" % line)
+                        raise RuntimeError("The program failed to parse a Minetest Lua traceback: `%s`"
+                                           % pformat(line))
 
-
+        if usedParserI is None:
+            raise NotImplementedError(
+                "Even the last (most lax) parser didn't find anything useful for: %s"
+                % pformat(line)
+            )
+        else:
+            echo0("\nparsed by parser[%s]: line=%s (enclosures=%s)\n"
+                  % (usedParserI, pformat(line), self.enclosures[usedParserI]))
         # pinfo("fileTokenI: {}".format(fileTokenI))
         # pinfo("paramATokenI: {}".format(paramATokenI))
         # pinfo("paramBTokenI: {}".format(paramBTokenI))
@@ -1442,16 +1575,26 @@ class OutputInspector:
         # pinfo("paramAToken: {}".format(paramAToken))
         # pinfo("paramBToken: {}".format(paramBToken))
         # pinfo("endParamsToken: {}".format(endParamsToken))
-        if fileI >= 0 and (paramATokenI > fileI or endParamsToken > fileI):
+        if fileI >= 0 and (paramATokenI > fileI or endParamsTokenI > fileI):
+            # If done *all* parsers and there is still no file:
+
             # Even if closer is not present,
-            # endParamsTokenI is set to len IF applicable to self-
-            # enclosure
-            if not info.get("file"):
+            #   endParamsTokenI is set to len IF applicable to self-
+            #   enclosure
+            if not info.get('file'):
+                echo0(prefix+"[debug] no file yet in %s with parser %s"
+                      % (info, itList))
                 filePath = ""
                 if paramATokenI > fileI:
+                    endWhy = "paramA"
                     filePath = line[fileI:paramATokenI]
+                    tryEndI = paramATokenI
+                    tryEndToken = paramAToken
                 else:
+                    endWhy = "endParams"
                     filePath = line[fileI:endParamsTokenI]
+                    tryEndI = endParamsTokenI
+                    tryEndToken = endParamsToken
 
                 filePath = filePath.strip()
                 if len(filePath) >= 2:
@@ -1461,46 +1604,58 @@ class OutputInspector:
                             and filePath.endswith('\''))):
                         filePath = filePath[1:-1]
 
-                echo1(prefix+"[debug]"
-                    " file path before unmangling: \"{}\""
-                    "".format(filePath))
+                echo0(prefix+"[debug]"
+                    " file path before unmangling (endWhy=%s): %s"
+                    % (endWhy, filePath))
                 filePath = OutputInspector.unmangledPath(filePath)
                 if not os.path.isfile(filePath) and ".lua" in filePath:
                     raise RuntimeError(
                         "Could not find parsed filename '%s' in line: `%s`"
                         " in any root (use addRoot to try more): %s"
                         % (filePath, line, type(self)._errorPathRoots))
+                else:
+                    info['before'] = line[:fileI]
+                    debugMsg = " "  # At least put a space to avoid mangled
+                    # row in case row is at end of processedLineFormat
+                    debugMsg = ("(endWhy=%s, tryEndToken=%s)"
+                                % (endWhy, pformat(tryEndToken)))
+                    if 'after' not in info:
+                        info['after'] = debugMsg + line[tryEndI+len(tryEndToken):]
                 # else it was basically parsed by a less-strict parser,
                 #   so forget about it since there is no file. Example:
                 #   "2023-08-12 21:32:18: ERROR[Main]: Subgame specified
                 #   in default_game [Bucket_Game] is invalid."
-                info["file"] = filePath
-            info["row"] = line[paramAI:paramBTokenI]
+                info['file'] = filePath
+                if not os.path.isfile(filePath):
+                    echo0("line=%s" % (pformat(line)))
+                    # FIXME: Uh, oh, got /home/owner/.config/hexchat/logs/irc.minetest.org/oldcoder.log:Aug 12 19
+                    #   instead of just the path
+                    raise FileNotFoundError(pformat(filePath))
+                # end if 'file' *not* set even after all parsers are done
+            tryRow = line[paramAI:paramBTokenI]
+            info['row'] = tryRow
             if len(paramBToken) > 0:
-                info["column"] = line[paramBI:endParamsTokenI]
+                info['column'] = line[paramBI:endParamsTokenI]
             else:
-                info["column"] = ""
+                info['column'] = ""
             if self.m_VerboseParsing:
-                pinfo("        file '{}'"
-                      "".format(line[fileI:paramATokenI]))
+                pinfo("        file '{}'".format(line[fileI:paramATokenI]))
             # if self.m_VerboseParsing:
             #     pinfo("        row '{}'"
             #           "".format(line[paramAI:paramBTokenI]))
             if self.m_VerboseParsing:
-                pinfo("        row '{}'"
-                      "".format(info["row"]))
+                pinfo("        row '{}'".format(info['row']))
             if self.m_VerboseParsing:
-                pinfo("          length {}-{}"
-                      "".format(paramBTokenI, paramAI))
+                pinfo("          length {}-{}".format(paramBTokenI, paramAI))
             # if self.m_VerboseParsing:
             #     pinfo("        col '{}'"
             #           "".format(line[paramBI:endParamsTokenI]))
             if self.m_VerboseParsing:
-                pinfo("        col '{}'".format(info["column"]))
+                pinfo("        col '{}'".format(info['column']))
             if self.m_VerboseParsing:
                 pinfo("          length {}-{}".format(endParamsTokenI,
                                                       paramBI))
-            filePathLower = info["file"].lower()
+            filePathLower = info['file'].lower()
             if filePathLower.endswith(".py"):
                 info["language"] = "python"
             elif filePathLower.endswith(".pyw"):
@@ -1526,10 +1681,10 @@ class OutputInspector:
             elif filePathLower.endswith(".php"):
                 info["language"] = "php"
             echo1("  detected file: '{}'"
-                  "".format(info["file"]))
+                  "".format(info['file']))
             info["good"] = "True"
             # pinfo(prefix+"found a good line"
-            #       " with the following filename: {}".format(info["file"]))
+            #       " with the following filename: {}".format(info['file']))
 
         else:
             info["good"] = "False"
@@ -1546,8 +1701,138 @@ class OutputInspector:
                 # TODO: ^ possibly eliminate self for fault tolerance
                 # (different styles in same output)
                 info["details"] = "True"
-                info["file"] = ""
+                info['file'] = ""
         return info
+
+    def getLineInfos(self, processedLineFormat=None):
+        """Get info about every line, including original and cleaned line.
+
+        The data source is stdin, err.txt, or manually added via
+        addLine. In each case, addLine processed the data, but only the
+        copy of the metadata in mainListWidget (not via getLineInfo)
+        has the unmangled path (TODO: fix this; getLineInfo works fine
+        when called by getLineInfo but not when called externally).
+
+        addLine adds all of the metadata and must be done first (done
+        automatically by file or stdin read functions).
+
+        To get further info if addLine was used, run
+        processAllAddedLines() first (ONLY post-processing such as TODOs).
+
+
+        Args:
+            processedLineFormat (string): Formatting string for 'string'
+                in each returned dict. Available keys are at most:
+                {'file': '', 'row': '', 'all': '', 'column': '',
+                'language': '', 'good': 'False', 'lower': 'False',
+                'master': 'False', 'color': 'Default'} Defaults to
+                self.processedLineFormat. Where 'all' is the
+                processedLineString if available, otherwise
+                unprocessedLineString (See "Returns").
+
+        Returns:
+            list[dict]: Where each dict is line info. There will be at
+                least:
+                - 'all': processedLineString if available, otherwise
+                  unprocessedLineString.
+                - 'unprocessedLineString': The original line read from
+                  the source.
+                ...and if available:
+                - 'processedLineString': The line with the path, if
+                  present, made into an absolute path (TODO: or relative
+                  if in current working directory).
+                - 'row': Line number of error message in the analyzed
+                  log that points to the source code that resulted in
+                  the log line.
+                - 'column': Column number of error message in the analyzed
+                  log that points to the source code that resulted in
+                  the log line.
+        """
+        if processedLineFormat is None:
+            processedLineFormat = self.processedLineFormat
+        results = []
+
+        # In CLI mode of outputinspector, the line info must be
+        #   processed since there is no GUI equivalent to lineinfo
+        #   in this mode.
+        #   mainListWidget is usually a subclass of tk.Listbox,
+        #   but in CLI mode, it is using the notk submodule so
+        #   access the dummy items:
+        for i, item in enumerate(self._ui.mainListWidget._items):
+            # lvi is a QtListViewItem, but in CLI mode it is only
+            #   a dummy, so do something useful and make a properly-
+            #   formatted line to be clickable in VSCode.
+
+            # This would actually open the text editor (!):
+            # self.on_mainListWidget_itemDoubleClicked(item)
+
+            # The code below is from on_mainListWidget_itemDoubleClicked:
+            actualJump = item.data(ROLE_COLLECTED_FILE).toString()
+            filePath = item.data(ROLE_COLLECTED_FILE).toString()
+            # FIXME: ^ why does it get the wrong thing?
+            #   - gets "2023-08-12 20" when file is
+            # TODO: ^ Eliminate one of these in this code and
+            #   in OutputInspector.
+            actualJumpLine = item.data(ROLE_COLLECTED_LINE).toString()
+            # ^ ROLE_COLLECTED_LINE is data not row!
+            citedRowS = (item.data(ROLE_ROW)).toString()
+            citedColS = (item.data(ROLE_COL)).toString()
+            info = self.getLineInfo(actualJumpLine, actualJump,
+                                         actualJumpLine, False)
+            if os.path.isfile(filePath):  # Should already be unmangled
+                # FIXME: this basically always triggers:
+                # if info.get('file') is None:
+                #     raise NotImplementedError("info['file'] and info['file'] = '%s' is missing" % filePath)
+                # elif not os.path.isfile(info['file']):
+                #     raise NotImplementedError("info['file'] = '%s' is missing" % filePath)
+                if ((info.get('file') is None) or
+                        (not os.path.isfile(info['file']))):
+                    info['file'] = filePath.strip()
+                if (info.get('row') is None) or (not info['row'].strip()):
+                    # FIXME: why isn't this in info......
+                    info['row'] = item.data(ROLE_ROW).toString().strip()
+
+                less_info = {}
+                for key, value in info.items():
+                    if value is None:
+                        continue
+                    if "{%s}" % key in processedLineFormat:
+                        less_info[key] = str(value).strip()
+                showLine = processedLineFormat.format(**info)
+                before = info.get('before')
+                after = info.get('after')
+                errorShown = False
+                if before:
+                    showLine = "%s%s" % (before, showLine)
+                if after:
+                    errorShown = True
+                    showLine = "%s:%s" % (showLine, after)
+                if "\n" in showLine:
+                    raise RuntimeError("Line wasn't clean of newlines.")
+                if "\r" in showLine:
+                    raise RuntimeError("Line wasn't clean of returns.")
+                indentI = len(actualJumpLine.lstrip()) - len(actualJumpLine)
+                indent = actualJumpLine[:indentI]
+                info['unprocessedLineString'] = actualJumpLine.rstrip()
+                suffix = ""
+                if not errorShown:
+                    suffix = " <- " + actualJumpLine.rstrip()
+                    # Show the entire line since the info['after']
+                    #   file and params could not be detected.
+                if info.get('row'):
+                    info['processedLineString'] = \
+                        indent + showLine + " <- outputinspector" + suffix
+                else:
+                    info['processedLineString'] = \
+                        indent + filePath + " <- outputinspector" + suffix
+                info['all'] = info['processedLineString']
+            else:
+                info['unprocessedLineString'] = actualJumpLine.rstrip()
+                info['all'] = info['unprocessedLineString']
+            del info['line']  # deleted since ambiguous (is data not row!)
+            # info keys: See processedLineFormat docstring
+            results.append(info)
+        return results
 
     def absPathOrSame(self, filePath):
         # TODO: make it a @classmethod and replace type(self) & self with cls
@@ -1577,7 +1862,22 @@ class OutputInspector:
                 echo1("- tried: {}".format(tryPath))
         return None
 
-    def on_mainListWidget_itemDoubleClicked(self, item):
+    def on_mainListWidget_itemDoubleClicked(self, event):
+        # ^ The Qt way is that item instead of event is passed
+        #   (subwidget is arg, rather than parent being arg.widget the tk way)
+        # echo0("dir(%s item)=%s" % (type(event).__name__, dir(event)))
+        # ^ tkinter Event contains the following public members:
+        #   char, delta, 'height', 'keycode', 'keysym', 'keysym_num', 'num',
+        #   'send_event', 'serial', 'state', 'time', 'type', 'widget', 'width',
+        #   'x', 'x_root', 'y', 'y_root'
+        thisListWidget = event.widget
+        items = thisListWidget.selectedItems()
+        if len(items) < 1:
+            raise NotImplementedError("No items were selected during double-click")
+        elif len(items) > 1:
+            raise NotImplementedError("Multiple items were selected during double-click")
+        item = items[0]
+
         line = item.text()
         actualJump = item.data(ROLE_COLLECTED_FILE).toString()
         # item.toolTip()
@@ -1600,8 +1900,22 @@ class OutputInspector:
                 pinfo("citedRowS: '{}'".format(citedRowS))
                 pinfo("citedColS: '{}'".format(citedColS))
 
-            citedRow = int(citedRowS)
-            citedCol = int(citedColS)
+            citedRow = 0
+            if citedRowS:
+                citedRow = int(citedRowS)
+            citedCol = 0
+            if citedColS:
+                try:
+                    citedCol = int(citedColS)
+                except ValueError:
+                    # This is *loading not parsing* code.
+                    #   See enumerate(self.enclosures) for setting ROLE_COL
+                    # Ignore if not purely numerical between colons
+                    #   (The colon must be within the message,
+                    #   not denoting a column)
+                    echo0("Warning: not parsed correctly: ROLE_COL=%s"
+                          % item.data(ROLE_COL).toString())
+
             xEditorOffset = self.settings.getInt("xEditorOffset")
             yEditorOffset = self.settings.getInt("yEditorOffset")
             # region only for Kate <= 2
@@ -1745,8 +2059,6 @@ class OutputInspector:
                 #                           stdout=PIPE, stderr=PIPE)
                 # stdout, stderr = process.communicate()
                 # print(stdout)
-                process = Popen([self.settings.getString("editor")]
-                                 + qslistArgs)
                 '''
                 "...use poll() to check if the child process has
                 terminated, or use wait() to wait for it to terminate."
@@ -1756,11 +2068,17 @@ class OutputInspector:
                 if not os.path.isfile(self.settings.getString("editor")):
                     # ok to run anyway for fault tolerance, may be in
                     # system path
-                    self.showinfo("Output Inspector - Configuration",
-                                  (self.settings.getString("editor")
-                                   + " cannot be accessed.  Try setting"
-                                   " the value editor = in "
-                                   + self.settings.fileName()))
+                    editorStr = self.settings.getString("editor")
+                    if editorStr:
+                        editor_msg = "%s cannot be accessed." % editorStr
+                    else:
+                        editor_msg = "Editor is not set."
+                    self.showinfo(
+                        "Output Inspector - Configuration",
+                        ("%s Try setting the value editor = in %s"
+                         % (editor_msg, self.settings.fileName())))
+                process = Popen([self.settings.getString("editor")]
+                                 + qslistArgs)
 
                 # if self.m_Verbose:
                 self._ui.statusBar.showMessage(commandMsg, 0)

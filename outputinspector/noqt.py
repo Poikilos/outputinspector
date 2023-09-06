@@ -235,6 +235,13 @@ class QListView(QAbstractItemView, tk.Listbox):
         for i in self.curselection():
             print("curselection()[{}]={}".format(i, self.get(i)))
 
+    def selectedItems(self):
+        return [self._items[i] for i in self.curselection()]
+        # ^ uh oh, this gets strings
+        return [self.get(i) for i in self.curselection()]
+        # ^ curselection is the tk-like solution, and the
+        #   output is Qt-like (object list in the case of QListView)
+
 
 class QListWidget(QListView):
     def addItem(self, qlistwidgetitem):
@@ -251,10 +258,25 @@ class QListWidget(QListView):
             os.path.basename(inspect.getfile(type(qlistwidgetitem))),
             qlistwidgetitem.get(),
         ))
-        self.insert(tk.END, qlistwidgetitem)
+
+        # TODO: (?) Make something better than Listbox for QtListBox so it has
+        #   true widgets inside of it instead of objects with __str__ (Listbox
+        #   only uses items as str-like objects).
+        #   - For now the real bind call is in _window_init
+        # qlistwidgetitem.bind(
+        #     "<Double-Button-1>",
+        #     self.on_mainListWidget_itemDoubleClicked,
+        # )
+        if len(self._items) - 1 >= qlistwidgetitem.index:
+            # A fake append from notk or nottk has run that already did self._items
+            raise RuntimeError("non-tk widget is being used for noqt")
+        else:
+            self.insert(tk.END, qlistwidgetitem)  # This is the *real* tk so must do fake Qt-like op:
+            self._items.insert(qlistwidgetitem.index, qlistwidgetitem)
         for key, value in qlistwidgetitem.queued_tk_args.items():
             # tk.Listbox-like:
             self.itemconfig(qlistwidgetitem.index, {key: value})
+
 
 
 no_listview_msg = (
@@ -784,11 +806,18 @@ def _ui_subtree(ui, parentWidget, parentNode, ui_file, indent=""):
                   % (node.tag, parentName, ui_file))
     return count
 
+
 def _ui_loader(self, ui, ui_file):
     """
     To behave like Qt, _ui (ui in Qt) must be equivalent to the centralWidget of
     the ui file, even though _ui is inside of QMainWindow and the centralWidget
     of the ui file is QMainWindow (usually or always (?)).
+
+    This function is the reason that the code has no statements like
+    - _ui.mainListWidget = QListWidget
+    -
+
+    (Instead, the class named in the ui file is used, to imitate Qt.)
     """
     prefix = "[outputinspector noqt _ui_loader] "
     echo1(prefix+"Loading %s in CLI mode." % ui_file)
@@ -804,7 +833,10 @@ def _ui_loader(self, ui, ui_file):
             echo1(prefix+"Unknown tag %s under %s in %s"
                   % (node.tag, self.className, ui_file))
 
+
 QMainWindow_callerName = None
+
+
 class QMainWindow(QWidget):
     def __init__(self, *args, ui_file=None):
         global QMainWindow_callerName

@@ -100,10 +100,23 @@ class MainWindow(OutputInspector, QMainWindow):  # ttk.Frame
         # ^ _ui is only for graphical mode (must be set after
         #   OutputInspector.__init__(self))
         # textvariable = self.bV,
-        self._ui.mainListWidget.pack()  # self.mainListWidget.pack()
+
+        # Which *parent* is used in constructor supersedes pack order to
+        #   determine order if nesting varies for widgets packed!
+        #   - Constructor is called by ui file parser!
+
+        self._ui.mainListWidget.pack(
+            # side=tk.TOP,
+            fill=tk.BOTH,
+        )  # self.mainListWidget.pack()
+        self._ui.mainListWidget.bind(
+            "<Double-Button-1>",
+            self.on_mainListWidget_itemDoubleClicked,
+        )
+
         # from mainwindow.ui:
         # self.statusBar = QStatusBar(self)
-        self._ui.statusBar.pack(side=tk.BOTTOM, fill=tk.Y)  # self.statusBar.pack
+        self._ui.statusBar.pack(side=tk.BOTTOM, fill=tk.X)  # self.statusBar.pack
         self.root.geometry("1200x400")
         # ^ TODO: use noqt to call geometry from ui file
 
@@ -123,12 +136,16 @@ def main():
     # TODO: app.setWindowIcon(QIcon("outputinspector-64.png"))
     # app.setOrganizationDomain("poikilos.org")
     window = MainWindow(root)
-    sErrorsListFileName = ""  # reverts to err.txt if left blank
+    sErrorsListFileName = None  # reverts to err.txt if left blank
     i = 0
     # start at 1 since args[0] is self:
     for i in range(1, len(sys.argv)):
         arg = sys.argv[i]
         if not arg.startswith("--"):
+            if sErrorsListFileName is not None:
+                echo0("Error: Specify only one log file.")
+                # return 1  # commented so GUI isn't prevented from loading
+                # TODO: store startup errors and show them.
             sErrorsListFileName = arg
         else:
             signIndex = arg.find("=")

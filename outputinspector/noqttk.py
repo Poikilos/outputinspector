@@ -40,6 +40,7 @@ from outputinspector.noqt import (
     enum,
     QWidget,
     QListWidgetItem as QListWidgetItemCLI,
+    QVariant,
 )
 
 class QMainWindow(noqt.QMainWindow, ttk.Frame):
@@ -100,12 +101,20 @@ class QListView(tk.Listbox):
         prefix = "[noqttk addItem] "
         qlistwidgetitem.parent = self
         qlistwidgetitem.index = self.size()
-        self.append(qlistwidgetitem)
+        echo0("[noqttk addItem] calling append at %s" % qlistwidgetitem.index)
+        self.append(qlistwidgetitem)  # calls the *fake* one def below not tk
         for key, value in qlistwidgetitem.queued_tk_args.items():
             self.itemconfig(qlistwidgetitem.index, {key: value})
 
     def append(self, item):
-        self.insert(self.size(), item)
+        index = self.size()
+        self.insert(index, item)
+        echo0("[noqttk append] inserted at %s" % index)
+        if len(self._items) - 1 >= index:
+            # A fake append from notk or nottk has run that already did self._items
+            raise RuntimeError("non-tk widget is being used for noqttk")
+        else:
+            self._items.insert(index, item)
 
     def _on_items_selected(self, event):
         # print(event)
@@ -116,6 +125,8 @@ class QListView(tk.Listbox):
         # print("state={}".format(event.state))  # just says 0
         for i in self.curselection():
             print("curselection()[{}]={}".format(i, self.get(i)))
+            # KATE or geany
+            proc = subprocess.Popen(cmd_parts)
 
 no_listview_msg = (
     "This is noqt not qt, so you must first add the noqt.QListViewItem"
@@ -198,6 +209,8 @@ class QListWidgetItem(tk.StringVar):
             value.set(var)
         return value
 
+    def text(self):
+        return self.get()
 
     def setForeground(self, qbrush):
         if (self.parent is None) or (self.index is None):
@@ -231,17 +244,6 @@ class QBrush:
 
     def toTkColor(self):
         return self.qcolor.toTkColor()
-
-
-class QVariant(tk.StringVar):
-    def __init__(self, *args, **kwargs):
-        if len(args) > 0:
-            kwargs['value'] = args[0]
-        if len(args) > 1:
-            raise ValueError("Too many args")
-        tk.StringVar.__init__(self, **kwargs)
-        pass
-
 
 class NoQtMessage:
     def __init__(self, text, timeout):

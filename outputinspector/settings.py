@@ -31,11 +31,18 @@ from outputinspector import (
 # ^ Nothing can be imported, since __init__ imports settings (otherwise
 #   an incomplete module initialization error occurs).
 
+verbosity = 0
+
 def warn(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
-
 def echo0(*args, **kwargs):  # formerly error
+    print(*args, file=sys.stderr, **kwargs)
+    return True
+
+def echo1(*args, **kwargs):  # formerly error
+    if verbosity < 1:
+        return False
     print(*args, file=sys.stderr, **kwargs)
     return True
 
@@ -106,7 +113,7 @@ class Settings:
         if self.data is not None:
             self.sync()
         else:
-            warn(prefix+"The settings data was not initialized before `del`.")
+            echo1(prefix+"The settings data was not initialized before `del`.")
 
     def readIni(self, path):
         lineN = 0
