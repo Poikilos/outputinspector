@@ -1143,7 +1143,7 @@ class OutputInspector:
                         "Output Inspector - Finding Kate version...",
                         line
                     )
-                if line.startswith(sKateOpener, Qt.CaseInsensitive):
+                if line.lower().startswith(sKateOpener.lower()):
                     iDot = line.find(".")
                     if iDot > -1:
                         isFound = True
@@ -2135,7 +2135,7 @@ class OutputInspector:
         limit = 50
         count = 0
         line = " "
-        while (count < limit and not line.empty()):
+        while (count < limit and line):
             size = std.cin.rdbuf().in_avail()
             if size < 1:
                 # pinfo("OutputInspector: There is no input: got "

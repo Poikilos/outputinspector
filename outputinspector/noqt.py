@@ -384,8 +384,15 @@ class QColor:
 
 
 class enum(object):
-    """This is an enum that is better than Enum because type of value
-    is known when subclassed.
+    """Better than Enum because type of value is known when subclassed.
+
+    For example, a method can require Alignment instead of int or enum,
+    since only Alignment, not just any Enum, has the correct values.
+
+    Args:
+        value (Optional[int]): Set the value of the specific enum constant (Each
+            enum subtype has its own set). Defaults to 0 or each successive call
+            adds 1.
     """
     next_roles = {}
     _typeNames = {}
@@ -421,7 +428,7 @@ class enum(object):
                     % (args[1:])
                 )
         else:
-            # cls.next_role doens't work (backtracks)
+            # cls.next_role doesn't work (backtracks)
             while enum.next_roles[className] in enum._typeNames[className]:
                 enum.next_roles[className] += 1
 
@@ -448,8 +455,70 @@ class enum(object):
     def set(self, value):
         self.value = value
 
+    def __eq__(self, other):
+        if isinstance(other, int):
+            return self.value == other
+        return self.value == other.value
 
-class Alignment(enum):  # mimic Qt::Alignment
+
+class flags(enum):
+    def __init__(self, *args, typeNames=None):
+        cls = type(self)
+        className = cls.__name__
+        if className == "enum":
+            raise TypeError(
+                "You must subclass enum so each cls has its own typeNames"
+            )
+
+        if className not in flags._typeNames:
+            flags._typeNames[className] = {}
+            flags.next_roles[className] = 1
+
+        if args:
+            self.value = args[0]
+            if len(args) > 1:
+                # If this looks familiar its also in
+                # QWidget and nottk (and maybe notk)
+                raise ValueError(
+                    "Expected either value as 1st arg or no args but"
+                    " got more sequential args: %s"
+                    % (args[1:])
+                )
+        else:
+            # cls.next_role doesn't work (backtracks)
+            while flags.next_roles[className] in flags._typeNames[className]:
+                flags.next_roles[className] *= 2
+
+            self.value = flags.next_roles[className]
+
+        if self.value in flags._typeNames[className]:
+            raise ValueError("%s is already used." % self.value)
+
+        if typeNames is None:
+            typeNames = []
+        # self.typeNames[self.value] = typeNames
+        # type(self).get_typeNames(self)[self.value] = typeNames
+        # ^ same for every subclass, still... :( so:
+        if not isinstance(typeNames, (list, tuple)):
+            raise TypeError("list or tuple is required")
+
+        flags._typeNames[className][self.value] = typeNames
+
+        flags.next_roles[className] *= 2
+
+    def __or__(self, other):
+        if isinstance(other, int):
+            return self.value | other
+        return self.value | other.value
+
+    def __ror__(self, other):
+        """Define right "or" to make "or" commutative."""
+        if isinstance(other, int):
+            return other | self.value
+        return other.value | self.value
+
+
+class Alignment(flags):  # mimic Qt::Alignment
     pass
     """
     typeNames = {}
@@ -500,23 +569,50 @@ class SizeMode(enum):
 class SizeHint(enum):
     pass
 
+class CaseSensitivity(enum):
+    pass
+
 
 class Qt:
+    """Mimic Qt constants.
+
+    Each enum set is typed, to simplify generation and allow adding type
+    checking in Python.
+
+    https://doc.qt.io/qt-6/qt.html
+
+    Attributes:
+        AlignAbsolute (Alignment): Absolute alignment side in RTL languages.
+        AlignCenter (Alignment): Center on both dimensions.
+        CaseSensitive (CaseSensitivity): Set case sensitivity.
+    """
     lightGray = QColor.fromRgb(192, 192, 192)
     darkGreen = QColor.fromRgb(0, 128, 0)
     black = QColor.fromRgb(0, 0, 0)
     AlignLeft = Alignment()
-    assert(enum.next_roles["Alignment"] == 1)
+    assert(AlignLeft.value == 1)
+    assert(flags.next_roles["Alignment"] == 2)
     AlignRight = Alignment()
-    assert(AlignLeft.value != AlignRight.value)
-    AlignBottom = Alignment()
-    AlignTop = Alignment()
-    AlignCenter = Alignment()
+    assert(AlignRight.value == 2)
     AlignHCenter = Alignment()
-    AlignVCenter = Alignment()
-    CaseInsensitive = 0
-    CaseSensitive = 1
-    # AlignJustify etc. were in Qt4.
+    assert(AlignHCenter.value == 4)  # flags is exponential (enum is not)
+    AlignJustify = Alignment(8)
+    AlignAbsolute = Alignment(0x0010)
+    AlignTop = Alignment(0x0020)
+    AlignBottom = Alignment(0x0040)
+    AlignVCenter = Alignment(0x0080)
+    AlignBaseline = Alignment(0x0100)
+    AlignLeading = AlignLeft
+    AlignTrailing = AlignRight
+    AlignHorizontal_Mask = Alignment(AlignLeft | AlignRight | AlignHCenter | AlignJustify | AlignAbsolute)
+    AlignVertical_Mask = Alignment(AlignTop | AlignBottom | AlignVCenter | AlignBaseline)
+    AlignCenter = Alignment(AlignVCenter | AlignHCenter)
+    assert(AlignCenter == 4+128)
+
+    CaseInsensitive = CaseSensitivity()
+    CaseSensitive = CaseSensitivity()
+    assert(CaseSensitive.value == 1)
+
 
     # General purpose roles:
     DisplayRole = ItemDataRole(typeNames=["QString"])
