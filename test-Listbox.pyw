@@ -39,14 +39,14 @@ class MainWindow(ttk.Frame):  # (OutputInspector, tk.Tk)
     def _window_init(self, parent):
         # self.bV = tk.StringVar()
         ttk.Frame.__init__(self, parent)
-        self.pack(fill=tk.BOTH, expand=True)
         self.mainListWidget = tk.Listbox(
             self,
         )
+        self.mainListWidget.pack()  # ensure statusbar last
+        self.pack(fill=tk.BOTH, expand=True)
         #   textvariable=self.bV,
         # Avoid
         # "AttributeError: 'tkinter.ttk' has no attribute 'Listbox'"
-        self.mainListWidget.pack()
 
     def showinfo(self, title, msg):
         messagebox.showinfo(title, msg)

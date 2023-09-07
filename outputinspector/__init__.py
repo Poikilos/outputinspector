@@ -306,15 +306,21 @@ class OutputInspector:
         cls._errorPathRoots.append(path)
 
     def __init__(self):
+        # Should *not* get root. See _window_init for the actual Window
+        #   (OutputInspector is superclass not subclass of the window!)
         prefix = "[OutputInspector] "
-        self.processedLineFormat = type(self).ERROR_VSCODE_FMT
+        self.processedLineFormat = OutputInspector.ERROR_VSCODE_FMT
         self._ui = None
         self.errorsListFileName = None
         # self.name = "inspector"
         # leave out name to prevent _ui_subtree from constructing one
         def parentWidget(self):
             class UhOh:
-                pass
+                def __init__(self):
+                    echo0(prefix+"INFO: OutputInspector has no parent."
+                          " Do not use its parentWidget().")
+                    # unless set to something else other than this function later
+                    pass
             # Behave as a QWidget, but only to this extent.
             #   This must be done here since the ui loader
             #   will check for this during this constructor and
@@ -690,12 +696,8 @@ class OutputInspector:
         if type(self).__name__ == "OutputInspector":
             echo0(prefix+"Using CLI mode.")
             # noqt.set_cli()
-        echo0("Using QMainWindow from %s" % inspect.getfile(QMainWindow))
-        QMainWindow.__init__(
-            self,
-            ui_file=os.path.join(REPO_DIR, "mainwindow.ui"),
-        )
-        # ^ set self._ui etc.
+        # QMainWindow subclass *not* OutputInspector should run
+        #   _window_init (and set self._ui etc.)!
         return
 
     @classmethod
@@ -782,6 +784,13 @@ class OutputInspector:
         )
 
     def __del__(self):
+        prefix = "[OutputInspector __del__] "
+        if not hasattr(self, "inTimer"):
+            echo0(prefix+"Warning, OutputInspector's init may not have run,"
+                  " or it was already disposed.")
+            return
+        else:
+            echo0(prefix+"disposing")
         del self.inTimer
         del self.settings
         # del self._ui
@@ -798,16 +807,15 @@ class OutputInspector:
                 errorsListFileName = tryPath
                 pinfo(prefix+"detected \"{}\"...examining..."
                       "".format(tryPath))
-
-            else:
-                errorsListFileName = "err.txt"
+            # else leave it None so stdin will be tried
+            #   (setting it if doesn't exist would cause missing file error)!
         self.lineCount = 0
-        self.load_stdin_or_file(errorsListFileName)
-        # ^ Sets self.errorsListFileName if errorsListFileName exists.
-        self.inTimer = QTimer(self)
-        self.inTimer.setInterval(500);  # milliseconds
-        connect(self.inTimer, self.inTimer.timeout, self, self.readInput)
-        self.inTimer.start()
+        if self.load_stdin_or_file(errorsListFileName):
+            # ^ Sets self.errorsListFileName if errorsListFileName exists.
+            self.inTimer = QTimer(self)
+            self.inTimer.setInterval(500);  # milliseconds
+            connect(self.inTimer, self.inTimer.timeout, self, self.readInput)
+            self.inTimer.start()
         # end init
 
     def has_stdin(self):
@@ -832,7 +840,8 @@ class OutputInspector:
         # setCentralWidget(self._ui.mainListWidget)
         # self._ui.mainListWidget.setSizePolicy(QSizePolicy.)
         # OutputInspectorSleepThread.msleep(150); # wait for stdin (doesn't work)
-        if self.has_stdin():
+        # TODO: if self.has_stdin():
+        if errorsListFileName is None:
             return True
         if not os.path.isfile(errorsListFileName):
             # if std.cin.rdbuf().in_avail() < 1:
@@ -841,22 +850,25 @@ class OutputInspector:
             self.showinfo(title, msg)
             # self.addLine(title + ":" + msg, True)
         self.errorsListFileName = errorsListFileName
-        echo0('* reading "{}"'.format(errorsListFileName))
-        with open(errorsListFileName, 'r') as qtextNow:
-            for rawL in qtextNow:
-                line = rawL.rstrip()
-                self.addLine(line, False)
-            # end while not at end of file named errorsListFileName
-            self.processAllAddedLines()
-
-        # end if could open file named errorsListFileName
-        # else:
-        #     if std.cin.rdbuf().in_avail() < 1:
-        #         my_path = QCoreApplication.applicationFilePath()
-        #         title = "Output Inspector - Help"
-        #         msg = my_path + ": Output Inspector cannot find the output file to process (tried \"./" + errorsListFileName + "\")."
-        #         self.showinfo(title, msg)
-        #         # self.addLine(title + ":" + msg, True)
+        if self.errorsListFileName is not None:
+            echo0('* reading "{}"'.format(errorsListFileName))
+            with open(errorsListFileName, 'r') as qtextNow:
+                for rawL in qtextNow:
+                    line = rawL.rstrip()
+                    self.addLine(line, False)
+                # end while not at end of file named errorsListFileName
+                self.processAllAddedLines()
+            # end if could open file named errorsListFileName
+        else:
+            pass
+            # There should be an error if there is also no stdin.
+            # if std.cin.rdbuf().in_avail() < 1:
+            # my_path = QCoreApplication.applicationFilePath()
+            # my_path = os.getcwd()
+            # title = "Output Inspector - Help"
+            # msg = my_path + ": Output Inspector cannot find the output file to process (tried \"./" + errorsListFileName + "\")."
+            # self.showinfo(title, msg)
+            # self.addLine(title + ":" + msg, True)
 
     def processAllAddedLines(self):
         sNumErrors = str(self.iErrors)
@@ -972,8 +984,10 @@ class OutputInspector:
                     else:
                         lwi.setForeground(self.brushes[sColorPrefix + "Details"])
                 else:
-                    if not os.path.isfile(info['file']):
-                        raise FileNotFoundError(info['file'])
+                    if info.get('file'):
+                        if not os.path.isfile(info['file']):
+                            raise FileNotFoundError("info['file']=%s"
+                                                    % pformat(info['file']))
 
                     lwi.setData(ROLE_COLLECTED_FILE, QVariant(info['file']))
                     if info["good"] == "True":
@@ -1357,8 +1371,8 @@ class OutputInspector:
                                             % paramAToken)
                             # This is ok. See usage of noParamWhy.
                             if paramAToken in line[:paramATokenI]:
-                                raise NotImplementedError(
-                                    "Got token in %s before paramA (token=%s, info=%s)"
+                                echo0(
+                                    prefix+"Warning: Got token in %s before paramA (token=%s, info=%s)"
                                     % (pformat(line[:paramATokenI]), paramAToken, info)
                                 )
                         else:
@@ -1516,10 +1530,11 @@ class OutputInspector:
                                     pinfo(
                                         "        no post-params '{}' >="
                                         " {} in '{}'"
-                                        "".format(endParamsToken,
-                                                  (paramBTokenI
-                                                   + len(paramBToken),
-                                                  line))
+                                        "".format(
+                                            endParamsToken,
+                                            paramBTokenI + len(paramBToken),
+                                            line,
+                                        )
                                     )
                                 if "ERROR[" in line and ".lua" in line and linedef[PARSE_DESCRIPTION] == "Minetest Lua traceback":
                                     raise RuntimeError("The program failed to parse a Minetest Lua traceback: `%s`" % line)
@@ -1627,10 +1642,15 @@ class OutputInspector:
                 #   in default_game [Bucket_Game] is invalid."
                 info['file'] = filePath
                 if not os.path.isfile(filePath):
-                    echo0("line=%s" % (pformat(line)))
-                    # FIXME: Uh, oh, got /home/owner/.config/hexchat/logs/irc.minetest.org/oldcoder.log:Aug 12 19
-                    #   instead of just the path
-                    raise FileNotFoundError(pformat(filePath))
+                    echo0("INFO: There was no file detected in line=%s"
+                          % (pformat(line)))
+                    # raise FileNotFoundError("filePath=%s"
+                    #                         % pformat(filePath))
+                    # It is ok. It is probably just a stray ":". Even if it is a
+                    #   path, there is no way to utilize it if unmangledPath
+                    #   didn't work:
+                    filePath = None
+                    info['file'] = None  # Avoid FileNotFoundError later
                 # end if 'file' *not* set even after all parsers are done
             tryRow = line[paramAI:paramBTokenI]
             info['row'] = tryRow
@@ -1655,6 +1675,7 @@ class OutputInspector:
             if self.m_VerboseParsing:
                 pinfo("          length {}-{}".format(endParamsTokenI,
                                                       paramBI))
+        if info.get('file'):
             filePathLower = info['file'].lower()
             if filePathLower.endswith(".py"):
                 info["language"] = "python"
@@ -1701,7 +1722,7 @@ class OutputInspector:
                 # TODO: ^ possibly eliminate self for fault tolerance
                 # (different styles in same output)
                 info["details"] = "True"
-                info['file'] = ""
+                info['file'] = None
         return info
 
     def getLineInfos(self, processedLineFormat=None):
@@ -2132,31 +2153,35 @@ class OutputInspector:
         return None
 
     def readInput(self):
-        limit = 50
+        prefix = "[readInput] "
+        limit = 50000
         count = 0
         line = " "
-        while (count < limit and line):
-            size = std.cin.rdbuf().in_avail()
-            if size < 1:
-                # pinfo("OutputInspector: There is no input: got "
-                #       "".format(size))
-                # Prevent waiting forever for a line.
+        # import fileinput
+        # for line in fileinput.input():
+        while count < limit:
+            # size = std.cin.rdbuf().in_avail()
+            # if size < 1:
+            #     # pinfo("OutputInspector: There is no input: got "
+            #     #       "".format(size))
+            #     # Prevent waiting forever for a line.
+            #     break
+            line = sys.stdin.readline()
+            if not line:
                 break
-
-            std.getline(std.cin, line)
-            if not std.cin.eof():
-                # pinfo("OutputInspector: input is '{}'."
-                #       "".format(line))
-                # self.addLine("OutputInspector: input is: {}"
-                #              "".format(line), True)
-                self.addLine(line, True)
-            else:
-                # pinfo("OutputInspector: input has ended.")
-                # self.addLine("# OutputInspector: input has ended.",
-                #              True)
-                break
-
+            # std.getline(std.cin, line)
+            # if std.cin.eof():
+            #    # pinfo("OutputInspector: input has ended.")
+            #    # self.addLine("# OutputInspector: input has ended.",
+            #    #              True)
+            #    break
+            self.addLine(line, True)
+            #    # pinfo("OutputInspector: input is '{}'."
+            #    #       "".format(line))
+            #    # self.addLine("OutputInspector: input is: {}"
+            #    #              "".format(line), True)
             count += 1
+        echo2(prefix+"read %s line(s)" % count)
 
 
 def main():

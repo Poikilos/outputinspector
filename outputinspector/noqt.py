@@ -16,6 +16,7 @@ import threading
 import os
 import platform
 import inspect
+import copy
 
 import xml.etree.ElementTree as ET
 
@@ -105,7 +106,12 @@ class QLayoutItem(object):
         return not self._children
 
 
-class QLayout(QLayoutItem):
+class QLayout(QLayoutItem, ttk.Frame):
+    """This is a basic layout widget.
+
+    NOTE: Tk documentation says to avoid using "tk.Widget"
+      (only use subclasses).
+    """
     def __init__(self, *args, f=None):
         self._layouts = []
         self._children = []
@@ -119,6 +125,10 @@ class QLayout(QLayoutItem):
                     % (args[1:])
                 )
             self._parent = args[0]
+        ttk.Frame.__init__(
+            self,
+            self._parent,
+        )
 
     def addChildLayout(self, layout):
         self._layouts.append(layout)
@@ -151,7 +161,7 @@ class QSize(object):
         self.size = [0, 0]
 
 
-class QWidget(object):
+class QWidget(ttk.Frame):
     """
     For full operation this:
     - should be inherited by all widgets.
@@ -177,6 +187,9 @@ class QWidget(object):
                     % (args[1:])
                 )
             self._parent = args[0]
+        else:
+            raise ValueError("QWidget without parent")
+        ttk.Frame.__init__(self, self._parent)
 
     def setLayout(self, layout):
         self._layout = layout
@@ -215,7 +228,7 @@ class QAbstractItemView(QAbstractScrollArea):
 class QListView(QAbstractItemView, tk.Listbox):
     def __init__(self, *args, **kwargs):
         self._items = []
-        QAbstractItemView.__init__(self)  # set _size etc
+        QAbstractItemView.__init__(self, *args)  # set _size etc
         if args and hasattr(args[0], "grid_columnconfigure"):
             # It is really tk (or notk or nottk)
             tk.Listbox.__init__(self, args[0], **kwargs)
@@ -289,7 +302,7 @@ no_listview_msg = (
 )
 
 
-class QListWidgetItem(tk.StringVar):  # TODO: also inherit from QWidget?
+class QListWidgetItem(tk.StringVar):
     '''
     Usually in Tkinter, there is only one StringVar for a listbox:
     """
@@ -312,35 +325,61 @@ class QListWidgetItem(tk.StringVar):  # TODO: also inherit from QWidget?
         noqt.QListWidgetItem is added to a noqt.QListView.
     '''
     def __init__(self, *args, **kwargs):
+        prefix = "[QListWidgetItem __init__] "
         if hasattr(self, "_tclCommands"):
-            echo0("WARNING: Using GUI-like QListWidgetItem in CLI\n")
+            echo0("Using GUI-like QListWidgetItem\n")
         # else imported notk as tk as expected in noqt (only noqttk uses
         #   the *real* tk.
-        QWidget.__init__(self, *args, **kwargs)
+        # QWidget.__init__(self, *args, **kwargs)
         # ^ sets self._parent
         self.roles = {}
         if len(args) > 0:
+            echo1(prefix+"passed %s: %s" % (type(args[0]).__name__, args[0]))
             kwargs['value'] = args[0]
-        if len(args) > 1:
+        tk_args = copy.deepcopy(args)  # to be safe though tuple has no copy()
+        tk_args = list(tk_args)  # convert from tuple
+        value = None
+        if len(tk_args) > 1:
+            if isinstance(args[1], str):
+                value = tk_args[1]
+                del tk_args[1]
+        if len(tk_args) > 0:
+            if isinstance(args[0], str):
+                value = tk_args[0]
+                del tk_args[0]
+
+        # Optionally, first arg is parent (but only for tk.StringVar,
+        #   which doesn't need the string?)
+        if len(args) > 2:
             raise ValueError("Too many args")
-        if args:
-            tk.StringVar.__init__(self, args[0], **kwargs)
-        else:
-            tk.StringVar.__init__(self, **kwargs)
+
+        tk.StringVar.__init__(self, *tk_args, **kwargs)
+        if value is not None:
+            self.set(value)
+        echo1(prefix+"initialized to %s" % self.get())
         # ^ will raise an exception if MainWindow (or tk.Tk) not initialized
+        self.parent = None  # custom (may differ from tkinter _parent)
         self.index = None
         self.queued_tk_args = {}
 
     def __repr__(self):
         return self.get()
 
+    def __str__(self):
+        # Required so it works as a list item in tk.Listbox
+        return self.get()
+
     def setData(self, role, var):
+        prefix = "[noqttk QListWidgetItem setData] "
         if hasattr(var, "get"):
             # Such as QVariant
             value = var.get()
         else:
             value = var
         self.roles[role] = value
+        if role == Qt.DisplayRole:
+            self.set(value)
+
 
     def data(self, role):
         var = self.roles[role]
@@ -353,11 +392,11 @@ class QListWidgetItem(tk.StringVar):  # TODO: also inherit from QWidget?
             value.set(var)
         return value
 
+    def text(self):
+        return self.get()
 
     def setForeground(self, qbrush):
-        if (self._parent is None) or (self.index is None):
-            # ^ self._parent should be set by QWidget constructor
-            #   which this subclass's constructor should call.
+        if (self.parent is None) or (self.index is None):
             # raise RuntimeError(
             #     no_listview_msg.format(self.parent, self.index)
             # )
@@ -741,12 +780,12 @@ class QStatusBar(QWidget, ttk.Label):
 
 def connect(sender, sig, receiver, slot):
     '''
-    Sequential arguments:
-    sender -- the sending object
-    sig -- the sending object's event that occurs (implemented in noqt
-        as a list of slots)
-    receiver -- the handler object
-    slot -- the handler
+    Args:
+        sender: the sending object
+        sig: the sending object's event that occurs (implemented in noqt
+            as a list of slots)
+        receiver: the handler object
+        slot: the handler
     '''
     sig.append(slot)
 
@@ -764,6 +803,10 @@ class NoQtEventHandler:
 
 class QTimer:
     '''
+    Use the connect( function, which in noqt for Python, just adds the given
+    signal (just a function in noqt) to the slot (just a list below: timeout)
+
+
     Attributes:
     timeout -- It mimics the SLOTS feature of Qt in a much simpler way:
         It is just a list of slots (function references in this case)
@@ -789,7 +832,8 @@ class QTimer:
         # threads & blocking [by default] or polling if blocking=False).
         # The asyncio module & await aren't used since those aren't in
         # Python 2.
-        self._timer = threading.Timer(self._interval, self._on_timeout)
+        self._timer = threading.Timer(self._interval/1000.0, self._on_timeout)
+        # ^ Qt interval is in ms (Python threading.Timer is in seconds)!
         self._timer.start()
 
     def stop(self):
@@ -799,7 +843,8 @@ class QTimer:
             self._interval = None
 
     def _on_timeout(self):
-        echo2("* running _on_timeout")
+        prefix = "[QTimer _on_timeout] "
+        echo2(prefix+"running")
         for slot in self.timeout:
             slot()
         if not self._singleShot:
@@ -817,8 +862,14 @@ def _ui_subtree(ui, parentWidget, parentNode, ui_file, indent=""):
         parentNode: The xml node to traverse.
         ui_file (string): Path to ui file, only for traceable errors
     """
+    raise NotImplementedError(
+        "This works but is cumbersome (too many subclasses and"
+        " subtrees for noqqttk (as opposed to noqt with notk)"
+        " to work well)"
+    )
     count = 0
     prefix = "[outputinspector noqt _ui_subtree] " + indent
+    more_args = {}
     for node in parentNode:
         if node.tag in ("widget", "layout", "item"):
             if node.tag == "item":
@@ -836,10 +887,16 @@ def _ui_subtree(ui, parentWidget, parentNode, ui_file, indent=""):
                         "QMainWindow should be the highest parentWidget"
                         " under ui file's XML root but it was a child."
                     )
+                elif className == "QListWidget":  # "QListView"
+                    scrollbar = tk.Scrollbar(parentWidget, orient="vertical");
+                    more_args['yscrollcommand'] = scrollbar.set
                 if className not in globals():
                     raise NotImplementedError(className)
             echo2(prefix+"[%s] %s" % (node.tag, className))
-            subObj = thisType(parentWidget)
+            subObj = thisType(
+                parentWidget,
+                **more_args,
+            )
             # ^ Should never call QMainWindow constructor--that was
             #   already constructed (or constructor called this and
             #   it is incomplete)
@@ -849,7 +906,7 @@ def _ui_subtree(ui, parentWidget, parentNode, ui_file, indent=""):
             subObj.name = varName
             if node.tag == "widget":
                 echo2(prefix+"  parent adding %s = %s()  # %s"
-                        % (varName, className, node.tag))
+                      % (varName, className, node.tag))
                 if hasattr(parentWidget, "addChildWidget"):
                     parentWidget.addChildWidget(subObj)
                 else:
@@ -857,7 +914,7 @@ def _ui_subtree(ui, parentWidget, parentNode, ui_file, indent=""):
                     parentWidget.addWidget(subObj)
             else:
                 echo2(prefix+"  parent adding %s = %s()  # %s"
-                        % (varName, className, node.tag))
+                      % (varName, className, node.tag))
                 if hasattr(parentWidget, "addChildLayout"):
                     parentWidget.addChildLayout(subObj)
                 elif hasattr(parentWidget, "addLayout"):
@@ -911,9 +968,9 @@ def _ui_loader(self, ui, ui_file):
     the ui file, even though _ui is inside of QMainWindow and the centralWidget
     of the ui file is QMainWindow (usually or always (?)).
 
-    This function is the reason that the code has no statements like
+    Due to this function the code does *not* have statements like:
     - _ui.mainListWidget = QListWidget
-    -
+    - self.statusBar = QStatusBar(self)
 
     (Instead, the class named in the ui file is used, to imitate Qt.)
     """
@@ -998,10 +1055,12 @@ class QMainWindow(QWidget):
                 #   has a CLI mode so a subclass of OutputInspector
                 #   and QMainWindow is not always used--but
                 #   OutputInspector has the parentWidget method).
-                raise TypeError("Expected 1 parent widget"
-                                " (or no sequential args)"
-                                " but got a(n) %s."
-                                % type(args[0]).__name__)
+                echo0(
+                    "Warning: Expected 1 parent widget"
+                    " (or no sequential args)"
+                    " but got a(n) %s."
+                    % type(args[0]).__name__
+                )
         if not isinstance(ui_file, str):
             # We must be making self
             return

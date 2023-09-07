@@ -2,6 +2,7 @@
 from __future__ import print_function
 import os
 import sys
+import inspect
 
 if sys.version_info.major >= 3:
     import tkinter as tk
@@ -43,25 +44,35 @@ from outputinspector import (
 if outputinspector.ENABLE_GUI:
     echo0("[mainwindow] Using the GUI version of QMainWindow")
     from outputinspector.noqttk import (
-        QListView,
+        # QListView,
+        # QListWidget,
         QStatusBar,
         QMainWindow,
     )
 else:
     echo0("[mainwindow] Using the CLI version of QMainWindow")
     from outputinspector.noqt import (
-        QListView,
+        # QListView,
+        # QListWidget,
         QStatusBar,
         QMainWindow,
     )
 
+from outputinspector.noqt import (
+    # QListView,
+    QListWidget,
+)
+class WidgetCollection(object):
+    pass
 
-class MainWindow(OutputInspector, QMainWindow):  # ttk.Frame
+
+class MainWindow(OutputInspector, ttk.Frame):  # ttk.Frame
 
     def __init__(self, root):
         prefix = "[MainWindow] "
         OutputInspector.__init__(
             self,
+            # Should *not* do any GUI stuff. GUI subclass (MainWindow) should.
             # ui_file=os.path.join(REPO_DIR, "mainwindow.ui"),
             # ^ ui_file is already done by OutputInspector
         )
@@ -70,9 +81,16 @@ class MainWindow(OutputInspector, QMainWindow):  # ttk.Frame
         #     self,
         #     ui_file=os.path.join(REPO_DIR, "mainwindow.ui"),
         # )
-        # ^ OutputInspector should detect if it is a QMainWindow subclass
+        # FIXME: formerly, OutputInspector would detect if it is a QMainWindow subclass
         #   OutputInspector to detect this case and not  in
         #   this case (may call noqt's instead of noqttk's)
+        echo0("Using QMainWindow from %s" % inspect.getfile(QMainWindow))
+        # QMainWindow.__init__(
+        #     self,
+        #     root,
+        #     ui_file=os.path.join(REPO_DIR, "mainwindow.ui"),
+        # )
+        # ^ set self._ui etc.
         echo1(prefix+"initializing")
         # ttk.Frame.__init__(self)
         self.root = root
@@ -80,7 +98,9 @@ class MainWindow(OutputInspector, QMainWindow):  # ttk.Frame
             # TODO: eliminate this? Old way of detecting GUI mode
             # self._window_init(root)
             # wait until ttk.Frame class is complete:
-            root.after(10, self._window_init_timed)
+            # root.after(10, self._window_init_timed)
+            # ^ too late. self.load_stdin_or_file runs first. so:
+            self._window_init(self.root)
         else:
             # Use console mode.
             pinfo("")
@@ -92,32 +112,47 @@ class MainWindow(OutputInspector, QMainWindow):  # ttk.Frame
 
     def _window_init(self, parent):
         # self.bV = tk.StringVar()
-        # ttk.Frame.__init__(self, parent)
-        self.pack(fill=tk.BOTH, expand=True)
-
-        # self.mainListWidget = QListView(self)  # instead set in ui by noqt
+        ttk.Frame.__init__(self, parent)
+        self.pack(
+            side=tk.TOP,
+            fill=tk.BOTH,
+            expand=True,
+            anchor=tk.N,  # n, ne, e, se, s, sw, w, nw, or center
+        )
+        self._ui = WidgetCollection()  # ignore Qt ui file
         # self._ui = self  # REMOVED since loses ones added by noqt ui loader
         # ^ _ui is only for graphical mode (must be set after
         #   OutputInspector.__init__(self))
         # textvariable = self.bV,
 
+        # See _ui_loader
         # Which *parent* is used in constructor supersedes pack order to
         #   determine order if nesting varies for widgets packed!
-        #   - Constructor is called by ui file parser!
-
+        #   - Constructor is called by ui file parser! Unless:
+        scrollbar = tk.Scrollbar(root, orient="vertical")
+        self._ui.mainListWidget = QListWidget(
+            self,
+            yscrollcommand=scrollbar.set,
+        )
+        # self._ui.mainListWidget = QListView(self)  # instead set in ui by noqt
         self._ui.mainListWidget.pack(
-            # side=tk.TOP,
+            side=tk.TOP,
             fill=tk.BOTH,
-        )  # self.mainListWidget.pack()
+            expand=True,
+            anchor=tk.N,
+        )
+        # lb = tk.Listbox(root, width=50, height=20, yscrollcommand=scrollbar.set)
+        # self.mainListWidget.pack()
         self._ui.mainListWidget.bind(
             "<Double-Button-1>",
             self.on_mainListWidget_itemDoubleClicked,
         )
 
         # from mainwindow.ui:
-        # self.statusBar = QStatusBar(self)
+        self._ui.statusBar = QStatusBar(self)
         self._ui.statusBar.pack(side=tk.BOTTOM, fill=tk.X)  # self.statusBar.pack
-        self.root.geometry("1200x400")
+        # self.root.geometry("1200x400")
+        self.root.minsize(1200,32)
         # ^ TODO: use noqt to call geometry from ui file
 
 
@@ -157,7 +192,9 @@ def main():
                 window.settings.setValue(name, value)
                 pinfo("set {} to {}"
                       "".format(name, value))
-    window.init(sErrorsListFileName.strip())
+    if sErrorsListFileName is not None:
+        sErrorsListFileName = sErrorsListFileName.strip()
+    window.init(sErrorsListFileName)
     root.mainloop()
     return 0
 

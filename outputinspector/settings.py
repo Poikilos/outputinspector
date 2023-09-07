@@ -91,6 +91,7 @@ class Settings:
         # path="outputinspector.conf"
         self.path = path
         self.data = None  # or {}
+        self.autosave = True
         # public:
         self.filePath = ""
         self.checkedKeys = []
@@ -204,7 +205,10 @@ class Settings:
         if self.data is None:
             echo0("self.data is None in setValue")
             return False
+        changed = self.data.get('key') != value
         self.data[key] = value
+        if changed and self.autosave:
+            self.sync()
         return True
 
     def setIfMissing(self, key, value):
@@ -219,7 +223,8 @@ class Settings:
             if key not in self.data.keys():
                 self.data[key] = value
                 changed = True
-
+                if self.autosave():
+                    self.sync()
         else:
             self.sDebug += ("setIfMissing tried to set " + key
                             + "before Settings.data was ready.")
@@ -252,7 +257,14 @@ class Settings:
         if self.data is None:
             warn("The settings data was not initialized before `sync`.")
             return False
-        with open(self.path, 'w') as outs:
-            for k, v in self.data.items():
-                outs.write("{}={}\n".format(k, v))
+        try:
+            with open(self.path, 'w') as outs:
+                for k, v in self.data.items():
+                    outs.write("{}={}\n".format(k, v))
+        except NameError as ex:
+            if "'open' is not defined" in str(ex):
+                echo0("Warning: tried to save during garbage collection"
+                      " but Python's builtin 'open' was already disposed.")
+            else:
+                raise
         return True

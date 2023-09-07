@@ -15,6 +15,7 @@ import time
 import threading
 import os
 import platform
+import copy
 
 if sys.version_info.major >= 3:
     import tkinter as tk
@@ -41,14 +42,26 @@ from outputinspector.noqt import (
     QWidget,
     QListWidgetItem as QListWidgetItemCLI,
     QVariant,
+    QTimer,
+    connect,
+    QListWidgetItem,
 )
 
-class QMainWindow(noqt.QMainWindow, ttk.Frame):
+class QMainWindow(noqt.QMainWindow):
     """Grab all the ttk.Frame methods.
 
     The subclass will do Frame.__init__ if not a CLI subclass.
     """
-    pass
+    def __init__(self, *args, **kwargs):
+        tk_kwargs = kwargs
+        if "ui_file" in kwargs:
+            tk_kwargs = copy.deepcopy(kwargs)
+            del tk_kwargs['ui_file']
+            echo0("ui_file is not used by ttk.Frame")
+        # ttk.Frame.__init__(self, *args, **tk_kwargs)
+        noqt.QMainWindow.__init__(self, *args, **kwargs)
+        # ^ QMainWindow is already subclass of ttk.Frame
+
     def is_gui(self):
         return True
 # class Qt:
@@ -137,93 +150,6 @@ no_listview_msg = (
     " (parent={}, index={})."
 )
 
-
-class QListWidgetItem(tk.StringVar):
-    '''
-    Usually in Tkinter, there is only one StringVar for a listbox:
-    """
-    self.var = tk.StringVar(self._values)
-    Listbox(..., listvariable=self.var)
-    """
-    However, to make each list item able to be manipulated directly,
-    NoQt makes a Qt-like object for each list item. The item must
-    behave like a string, so the __str__ function must be overridden
-    (otherwise the listbox will show a series of internal IDs such as:
-    PY_VAR1, PY_VAR2, etc., one for each line).
-
-    Attributes:
-    queued_tk_args -- These values are automatically set. They exist
-        since Qt stores colors etc in the QListItem but Tk stores them
-        in the Listbox (set via its itemconfig method). The issue is
-        that Qt allows setting item options before the item is added to
-        a list. To compensate, the noqt.QListView runs itemconfig for
-        each key-value pair in queued_tk_args after the
-        noqt.QListWidgetItem is added to a noqt.QListView.
-    '''
-    # TODO: Mostly use inherited stuff from QListWidgetItemCLI
-    #   or just delete this class and import it to avoid:
-    #   "TypeError: Cannot create a consistent method resolution
-    #   order (MRO) for bases StringVar, QListWidgetItem"
-    def __init__(self, *args, **kwargs):
-        prefix = "[noqttk QListWidgetItem] "
-        self.roles = {}
-        if len(args) > 0:
-            echo1(prefix+"passed %s: %s" % (type(args[0]).__name__, args[0]))
-            kwargs['value'] = args[0]
-        if len(args) > 1:
-            raise ValueError("Too many args")
-        tk.StringVar.__init__(self, **kwargs)
-        echo1(prefix+"initialized to %s" % self.get())
-        # ^ will raise an exception if MainWindow (or tk.Tk) not initialized
-        self.parent = None
-        self.index = None
-        self.queued_tk_args = {}
-
-    def __repr__(self):
-        return self.get()
-
-    def __str__(self):
-        # Required so it works as a list item in tk.Listbox
-        return self.get()
-
-    def setData(self, role, var):
-        prefix = "[noqttk QListWidgetItem setData] "
-        if hasattr(var, "get"):
-            # Such as QVariant
-            value = var.get()
-        else:
-            value = var
-        self.roles[role] = value
-        if role == Qt.DisplayRole:
-            self.set(value)
-
-
-    def data(self, role):
-        var = self.roles[role]
-        if hasattr(var, "get"):
-            # Such as QVariant
-            value = var.get()
-        else:
-            # Create a QVariant so client code can call .toString() on it:
-            value = QVariant()
-            value.set(var)
-        return value
-
-    def text(self):
-        return self.get()
-
-    def setForeground(self, qbrush):
-        if (self.parent is None) or (self.index is None):
-            # raise RuntimeError(
-            #     no_listview_msg.format(self.parent, self.index)
-            # )
-            self.queued_tk_args['fg'] = qbrush.toTkColor()
-            return
-        self.parent.itemconfig(self.index, {'fg': qbrush.toTkColor()})
-        # or (naming is inconsistent):
-        # self.parent.itemconfig(0, foreground="purple")
-        # self.parent.itemconfig(2, bg='green')
-
 class QColor:
     def __init__(self, color_tuple):
         self.color = color_tuple
@@ -292,17 +218,6 @@ class QStatusBar(QWidget, ttk.Label):
     def _on_timeout(self):
         self.clearMessage()
 
-def connect(sender, sig, receiver, slot):
-    '''
-    Sequential arguments:
-    sender -- the sending object
-    sig -- the sending object's event that occurs (implemented in noqt
-        as a list of slots)
-    receiver -- the handler object
-    slot -- the handler
-    '''
-    sig.append(slot)
-
 '''
 class NoQtEvent:
     def __init__(self, fn, caller_obj=None):
@@ -312,48 +227,3 @@ class NoQtEvent:
 
 class NoQtEventHandler:
 '''
-
-
-class QTimer:
-    '''
-    Attributes:
-    timeout -- It mimics the SLOTS feature of Qt in a much simpler way:
-        It is just a list of slots (function references in this case)
-        for the timeout signal which is now a concept rather than a
-        construct (_on_timeout runs each function in the timeout list).
-    '''
-    def __init__(self, parent):
-        self.parent = parent
-        self.timeout = []
-        self._timer = None
-        self._event = None
-        self._interval = 0  # The default is 0 as per Qt 6 docs
-        self._singleShot = False
-
-    def setInterval(self, ms):
-        self.stop()
-        if not isinstance(ms, int):
-            raise ValueError("setInterval only takes a milliseconds int")
-        self._interval = ms
-
-    def start(self):
-        # See test_noqt.py for why to not use sched (cumbersome, needs
-        # threads & blocking [by default] or polling if blocking=False).
-        # The asyncio module & await aren't used since those aren't in
-        # Python 2.
-        self._timer = threading.Timer(self._interval, self._on_timeout)
-        self._timer.start()
-
-    def stop(self):
-        if self._timer is not None:
-            self._timer.cancel()
-            self._timer = None
-            self._interval = None
-
-    def _on_timeout(self):
-        echo2("* running _on_timeout")
-        for slot in self.timeout:
-            slot()
-        if not self._singleShot:
-            self.start()
-            # threading.Timer can only be started once.
