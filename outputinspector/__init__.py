@@ -1340,10 +1340,30 @@ class OutputInspector:
                                             if not os.path.isfile(tryAbsPath):
                                                 if ".lua" in line and not ".lua]" in line:
                                                     raise RuntimeError(
-                                                        "Path '%s' not found in `%s`"
+                                                        "Path '%s' not found"
+                                                        " in `%s`"
                                                         % (tryPath, line)
                                                     )
-                                                raise FileNotFoundError(tryAbsPath)
+                                                echo1(
+                                                    "INFO: A path cited"
+                                                    " by the log wasn't"
+                                                    " found: '%s' in `%s`"
+                                                    " so the format will"
+                                                    " be skipped: tryPath=%s"
+                                                    " in linedef=%s"
+                                                    % (tryAbsPath,
+                                                       pformat(line),
+                                                       tryPath,
+                                                       linedef)
+                                                )
+                                                # raise FileNotFoundError(
+                                                #     "Not found: %s in `%s`"
+                                                #     % (pformat(tryAbsPath),
+                                                #        pformat(line))
+                                                # )  # ^ must format, otherwise
+                                                #   if it is blank, it won't
+                                                #   show :( (will show the
+                                                #   variable name instead)
                                                 # else avoid crashing on line
                                                 #   that doesn't have a file:
                                                 #   "2023-08-13 09:51:19: ERROR[AsyncWorker-0]:
